@@ -5,7 +5,11 @@ import { randomBytes } from "crypto";
 import { storage } from "./storage";
 import type { User, PublicUser } from "@shared/schema";
 
-const SESSION_SECRET = process.env.SESSION_SECRET || "your-secret-key-change-in-production";
+if (!process.env.SESSION_SECRET) {
+  throw new Error('Missing required environment variable: SESSION_SECRET');
+}
+
+const SESSION_SECRET = process.env.SESSION_SECRET;
 const JWT_EXPIRY = "7d";
 const VERIFICATION_TOKEN_EXPIRY_HOURS = 24;
 

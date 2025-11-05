@@ -22,12 +22,17 @@ if (!process.env.STRIPE_SECRET_KEY) {
   throw new Error('Missing required Stripe secret: STRIPE_SECRET_KEY');
 }
 
+if (!process.env.STRIPE_WEBHOOK_SECRET) {
+  throw new Error('Missing required Stripe secret: STRIPE_WEBHOOK_SECRET');
+}
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2024-11-20.acacia",
 });
 
 // Stripe price ID - you need to create a product in Stripe dashboard
 const STRIPE_PRICE_ID = process.env.STRIPE_PRICE_ID || "price_1234567890"; // Replace with real price ID
+const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
@@ -130,11 +135,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Verify email
   app.post("/api/auth/verify-email", async (req, res) => {
     try {
-      const { token } = req.body;
+      const verificationSchema = z.object({
+        token: z.string().min(1, "Token requis"),
+      });
 
-      if (!token) {
-        return res.status(400).json({ message: "Token manquant" });
-      }
+      const { token } = verificationSchema.parse(req.body);
 
       const user = await storage.getUserByVerificationToken(token);
       if (!user) {
@@ -155,6 +160,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ message: "Email vérifié avec succès" });
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Données invalides" });
+      }
       console.error("Verify email error:", error);
       res.status(500).json({ message: "Erreur lors de la vérification" });
     }
@@ -260,10 +268,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     let event: Stripe.Event;
 
     try {
+      // Use raw body for webhook verification
+      const rawBody = (req as any).rawBody || req.body;
       event = stripe.webhooks.constructEvent(
-        req.body,
+        rawBody,
         sig,
-        process.env.STRIPE_WEBHOOK_SECRET || ''
+        STRIPE_WEBHOOK_SECRET
       );
     } catch (err: any) {
       console.error("Webhook signature verification failed:", err.message);
