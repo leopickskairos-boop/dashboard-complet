@@ -37,9 +37,9 @@ export default function VerifyEmail() {
       setStatus('success');
       setMessage('Votre email a été vérifié avec succès !');
       
-      // Redirect to subscription page after 2 seconds
+      // Redirect to login page after 2 seconds so user can authenticate
       setTimeout(() => {
-        setLocation('/subscribe');
+        setLocation('/login');
       }, 2000);
     } catch (error: any) {
       setStatus('error');
@@ -85,7 +85,7 @@ export default function VerifyEmail() {
         <CardContent>
           {status === 'success' && (
             <div className="text-center text-sm text-muted-foreground">
-              Redirection vers la page d'abonnement...
+              Redirection vers la page de connexion...
             </div>
           )}
           {status === 'error' && (

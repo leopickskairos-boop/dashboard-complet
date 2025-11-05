@@ -63,8 +63,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const tokenExpiry = getVerificationTokenExpiry();
       await storage.setVerificationToken(user.id, verificationToken, tokenExpiry);
 
-      // Send verification email
-      await sendVerificationEmail(user.email, verificationToken);
+      // Send verification email (don't fail if email sending fails)
+      try {
+        await sendVerificationEmail(user.email, verificationToken);
+      } catch (emailError) {
+        console.error("Failed to send verification email (non-critical):", emailError);
+        // Continue anyway - user can verify via manual link if needed
+      }
 
       res.status(201).json({ 
         message: "Inscription réussie. Veuillez vérifier votre email.",
