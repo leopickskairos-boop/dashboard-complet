@@ -64,7 +64,7 @@ const SubscribeForm = () => {
             <CardHeader className="text-center">
               <CardTitle className="text-2xl">Plan Professionnel</CardTitle>
               <div className="flex items-baseline justify-center gap-2 mt-4">
-                <span className="text-5xl font-bold">29€</span>
+                <span className="text-5xl font-bold">800€</span>
                 <span className="text-lg text-muted-foreground">/mois</span>
               </div>
               <CardDescription className="mt-2">
