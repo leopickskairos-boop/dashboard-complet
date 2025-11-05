@@ -361,19 +361,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ===== DASHBOARD ROUTES (Protected) =====
 
-  app.get("/api/stats", requireAuth, requireVerified, requireSubscription, async (req, res) => {
-    // Future: Return real call statistics
-    res.json({
-      totalCalls: 0,
-      averageDuration: 0,
-      responseRate: 0,
-      uniqueCallers: 0,
-    });
+  // Get call statistics
+  app.get("/api/calls/stats", requireAuth, requireVerified, requireSubscription, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const timeFilter = req.query.timeFilter as 'hour' | 'today' | 'two_days' | 'week' | undefined;
+      
+      const stats = await storage.getStats(userId, timeFilter);
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching stats:", error);
+      res.status(500).json({ message: "Erreur lors de la récupération des statistiques" });
+    }
   });
 
+  // Get calls list with filters
   app.get("/api/calls", requireAuth, requireVerified, requireSubscription, async (req, res) => {
-    // Future: Return call history
-    res.json([]);
+    try {
+      const userId = req.user!.id;
+      const timeFilter = req.query.timeFilter as 'hour' | 'today' | 'two_days' | 'week' | undefined;
+      const statusFilter = req.query.statusFilter as string | undefined;
+      
+      const calls = await storage.getCalls(userId, { timeFilter, statusFilter });
+      res.json(calls);
+    } catch (error) {
+      console.error("Error fetching calls:", error);
+      res.status(500).json({ message: "Erreur lors de la récupération des appels" });
+    }
+  });
+
+  // Get call detail by ID
+  app.get("/api/calls/:id", requireAuth, requireVerified, requireSubscription, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const callId = req.params.id;
+      
+      const call = await storage.getCallById(callId, userId);
+      if (!call) {
+        return res.status(404).json({ message: "Appel non trouvé" });
+      }
+      
+      res.json(call);
+    } catch (error) {
+      console.error("Error fetching call detail:", error);
+      res.status(500).json({ message: "Erreur lors de la récupération du détail de l'appel" });
+    }
+  });
+
+  // Get chart data for visualizations
+  app.get("/api/calls/chart-data", requireAuth, requireVerified, requireSubscription, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const timeFilter = req.query.timeFilter as 'hour' | 'today' | 'two_days' | 'week' | undefined;
+      
+      const chartData = await storage.getChartData(userId, timeFilter);
+      res.json(chartData);
+    } catch (error) {
+      console.error("Error fetching chart data:", error);
+      res.status(500).json({ message: "Erreur lors de la récupération des données de graphique" });
+    }
   });
 
   const httpServer = createServer(app);

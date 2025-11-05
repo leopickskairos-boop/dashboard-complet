@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, boolean, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -39,3 +39,31 @@ export type User = typeof users.$inferSelect;
 
 // Public user type (without sensitive data)
 export type PublicUser = Omit<User, 'password' | 'verificationToken' | 'verificationTokenExpiry'>;
+
+// Calls table for tracking phone calls
+export const calls = pgTable("calls", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  phoneNumber: text("phone_number").notNull(),
+  startTime: timestamp("start_time").notNull(),
+  endTime: timestamp("end_time"),
+  duration: integer("duration"), // Duration in seconds
+  status: text("status").notNull(), // 'active', 'completed', 'failed', 'canceled', 'no_answer'
+  summary: text("summary"),
+  emailSent: boolean("email_sent").notNull().default(false),
+  callSid: text("call_sid"), // External call reference from voice API
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Insert schema for calls
+export const insertCallSchema = createInsertSchema(calls, {
+  phoneNumber: z.string().min(1, "Numéro de téléphone requis"),
+  status: z.enum(['active', 'completed', 'failed', 'canceled', 'no_answer']),
+}).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Types for calls
+export type InsertCall = z.infer<typeof insertCallSchema>;
+export type Call = typeof calls.$inferSelect;

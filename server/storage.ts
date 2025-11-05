@@ -1,7 +1,7 @@
 // Reference: javascript_database blueprint - DatabaseStorage implementation
-import { users, type User, type InsertUser } from "@shared/schema";
+import { users, calls, type User, type InsertUser, type Call, type InsertCall } from "@shared/schema";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, and, gte, desc, sql, count } from "drizzle-orm";
 
 export interface IStorage {
   // User management
@@ -24,6 +24,26 @@ export interface IStorage {
     subscriptionStatus?: string;
     subscriptionCurrentPeriodEnd?: Date;
   }): Promise<User | undefined>;
+  
+  // Calls management
+  getCalls(userId: string, filters?: {
+    timeFilter?: 'hour' | 'today' | 'two_days' | 'week';
+    statusFilter?: string;
+  }): Promise<Call[]>;
+  getCallById(id: string, userId: string): Promise<Call | undefined>;
+  createCall(call: InsertCall): Promise<Call>;
+  getStats(userId: string, timeFilter?: 'hour' | 'today' | 'two_days' | 'week'): Promise<{
+    totalCalls: number;
+    activeCalls: number;
+    conversionRate: number;
+    averageDuration: number;
+  }>;
+  getChartData(userId: string, timeFilter?: 'hour' | 'today' | 'two_days' | 'week'): Promise<{
+    date: string;
+    totalCalls: number;
+    completedCalls: number;
+    averageDuration: number;
+  }[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -105,6 +125,160 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, userId))
       .returning();
     return user || undefined;
+  }
+
+  // ===== CALLS MANAGEMENT =====
+
+  private getTimeFilterDate(filter?: 'hour' | 'today' | 'two_days' | 'week'): Date | undefined {
+    if (!filter) return undefined;
+    
+    const now = new Date();
+    switch (filter) {
+      case 'hour':
+        return new Date(now.getTime() - 60 * 60 * 1000);
+      case 'today':
+        const startOfDay = new Date(now);
+        startOfDay.setHours(0, 0, 0, 0);
+        return startOfDay;
+      case 'two_days':
+        return new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000);
+      case 'week':
+        return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      default:
+        return undefined;
+    }
+  }
+
+  async getCalls(userId: string, filters?: {
+    timeFilter?: 'hour' | 'today' | 'two_days' | 'week';
+    statusFilter?: string;
+  }): Promise<Call[]> {
+    let query = db.select().from(calls).where(eq(calls.userId, userId));
+    
+    const conditions = [eq(calls.userId, userId)];
+    
+    if (filters?.timeFilter) {
+      const timeDate = this.getTimeFilterDate(filters.timeFilter);
+      if (timeDate) {
+        conditions.push(gte(calls.startTime, timeDate));
+      }
+    }
+    
+    if (filters?.statusFilter) {
+      conditions.push(eq(calls.status, filters.statusFilter));
+    }
+    
+    const result = await db
+      .select()
+      .from(calls)
+      .where(and(...conditions))
+      .orderBy(desc(calls.startTime));
+    
+    return result;
+  }
+
+  async getCallById(id: string, userId: string): Promise<Call | undefined> {
+    const [call] = await db
+      .select()
+      .from(calls)
+      .where(and(eq(calls.id, id), eq(calls.userId, userId)));
+    return call || undefined;
+  }
+
+  async createCall(insertCall: InsertCall): Promise<Call> {
+    const [call] = await db
+      .insert(calls)
+      .values(insertCall)
+      .returning();
+    return call;
+  }
+
+  async getStats(userId: string, timeFilter?: 'hour' | 'today' | 'two_days' | 'week'): Promise<{
+    totalCalls: number;
+    activeCalls: number;
+    conversionRate: number;
+    averageDuration: number;
+  }> {
+    const conditions = [eq(calls.userId, userId)];
+    
+    if (timeFilter) {
+      const timeDate = this.getTimeFilterDate(timeFilter);
+      if (timeDate) {
+        conditions.push(gte(calls.startTime, timeDate));
+      }
+    }
+
+    // Total calls
+    const totalResult = await db
+      .select({ count: count() })
+      .from(calls)
+      .where(and(...conditions));
+    const totalCalls = Number(totalResult[0]?.count || 0);
+
+    // Active calls
+    const activeResult = await db
+      .select({ count: count() })
+      .from(calls)
+      .where(and(...conditions, eq(calls.status, 'active')));
+    const activeCalls = Number(activeResult[0]?.count || 0);
+
+    // Conversion rate (completed calls / total calls)
+    const completedResult = await db
+      .select({ count: count() })
+      .from(calls)
+      .where(and(...conditions, eq(calls.status, 'completed')));
+    const completedCalls = Number(completedResult[0]?.count || 0);
+    const conversionRate = totalCalls > 0 ? (completedCalls / totalCalls) * 100 : 0;
+
+    // Average duration (only for completed calls)
+    const durationResult = await db
+      .select({ avgDuration: sql<number>`AVG(${calls.duration})` })
+      .from(calls)
+      .where(and(...conditions, eq(calls.status, 'completed')));
+    const averageDuration = Number(durationResult[0]?.avgDuration || 0);
+
+    return {
+      totalCalls,
+      activeCalls,
+      conversionRate: Math.round(conversionRate * 10) / 10, // Round to 1 decimal
+      averageDuration: Math.round(averageDuration),
+    };
+  }
+
+  async getChartData(userId: string, timeFilter?: 'hour' | 'today' | 'two_days' | 'week'): Promise<{
+    date: string;
+    totalCalls: number;
+    completedCalls: number;
+    averageDuration: number;
+  }[]> {
+    const conditions = [eq(calls.userId, userId)];
+    
+    if (timeFilter) {
+      const timeDate = this.getTimeFilterDate(timeFilter);
+      if (timeDate) {
+        conditions.push(gte(calls.startTime, timeDate));
+      }
+    }
+
+    // Group by date
+    const result = await db
+      .select({
+        date: sql<string>`DATE(${calls.startTime})`,
+        totalCalls: count(),
+        completedCalls: sql<number>`COUNT(CASE WHEN ${calls.status} = 'completed' THEN 1 END)`,
+        averageDuration: sql<number>`COALESCE(AVG(CASE WHEN ${calls.status} = 'completed' THEN ${calls.duration} END), 0)`,
+      })
+      .from(calls)
+      .where(and(...conditions))
+      .groupBy(sql`DATE(${calls.startTime})`)
+      .orderBy(sql`DATE(${calls.startTime})`);
+
+    return result.map(row => ({
+      date: row.date,
+      totalCalls: Number(row.totalCalls),
+      completedCalls: Number(row.completedCalls),
+      averageDuration: Math.round(Number(row.averageDuration)),
+    }));
   }
 }
 
