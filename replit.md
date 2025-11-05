@@ -165,7 +165,7 @@ npm run db:push --force  # Force la synchronisation
 
 ### MVP Phase 1 : ✅ COMPLET ET TESTÉ
 
-Toutes les fonctionnalités d'authentification et d'abonnement sont **100% fonctionnelles** :
+Toutes les fonctionnalités d'authentification, d'abonnement et du dashboard sont **100% fonctionnelles** :
 
 ✅ **Authentification complète**
 - Inscription avec email/password
@@ -176,11 +176,32 @@ Toutes les fonctionnalités d'authentification et d'abonnement sont **100% fonct
 - Middlewares de protection (requireAuth, requireVerified, requireSubscription)
 
 ✅ **Intégration Stripe production-ready**
-- Création d'abonnements avec Price ID correct
+- Création d'abonnements avec Price ID correct (price_1SQDvA442ACh1eI8X8ym3WC5)
+- Affichage de 800€/mois sur les pages (charge réelle selon Stripe)
 - Stripe Elements pour paiement sécurisé
 - Webhooks signés avec validation (customer.subscription.*, invoice.payment_*)
 - Synchronisation automatique du statut d'abonnement
 - Gestion complète du cycle de vie (actif, expiré, annulé)
+
+✅ **Dashboard complet et fonctionnel**
+- 4 KPI cards avec données réelles et variation N-1 :
+  * Total des appels avec variation
+  * Appels actifs en temps réel
+  * Taux de conversion (% de rendez-vous pris)
+  * Durée moyenne des appels
+- Filtres temporels globaux (1h, aujourd'hui, 2 jours, semaine)
+- Tableau des appels avec :
+  * Badges de statut colorés (completed, failed, canceled, no_answer, active)
+  * Filtres indépendants (temps + statut)
+  * Tri et affichage des détails
+- Dialog de détail d'appel avec toutes les informations
+- Graphiques dynamiques avec Recharts (vraies données API) :
+  * Total des appels : courbe temporelle
+  * Taux de conversion : histogramme
+  * Durée moyenne : courbe d'évolution
+- Tous les graphiques respectent les filtres temporels
+- États de chargement et gestion d'erreurs
+- Design responsive et professionnel
 
 ✅ **Frontend professionnel**
 - Toutes les pages implémentées et polies
@@ -195,6 +216,7 @@ Toutes les fonctionnalités d'authentification et d'abonnement sont **100% fonct
 - Protection CSRF avec SameSite cookies
 - Vérification des signatures Stripe avec raw body
 - Aucune fuite de données sensibles
+- Routes API protégées par auth + email vérifié + abonnement actif
 
 ### Prochaines étapes (Phase 2)
 
