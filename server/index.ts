@@ -1,4 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
+import cookieParser from "cookie-parser";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
@@ -9,12 +10,18 @@ declare module 'http' {
     rawBody: unknown
   }
 }
+
+// Stripe webhook needs raw body
+app.use('/api/webhooks/stripe', express.raw({ type: 'application/json' }));
+
+// Regular JSON parsing for other routes
 app.use(express.json({
   verify: (req, _res, buf) => {
     req.rawBody = buf;
   }
 }));
 app.use(express.urlencoded({ extended: false }));
+app.use(cookieParser());
 
 app.use((req, res, next) => {
   const start = Date.now();
