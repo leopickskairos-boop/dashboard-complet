@@ -9,6 +9,8 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Landing from "@/pages/landing";
 import Signup from "@/pages/signup";
 import Login from "@/pages/login";
+import ForgotPassword from "@/pages/forgot-password";
+import ResetPassword from "@/pages/reset-password";
 import VerifyEmailSent from "@/pages/verify-email-sent";
 import VerifyEmail from "@/pages/verify-email";
 import Subscribe from "@/pages/subscribe";
@@ -23,6 +25,8 @@ function Router() {
       <Route path="/" component={Login} />
       <Route path="/signup" component={Signup} />
       <Route path="/login" component={Login} />
+      <Route path="/forgot-password" component={ForgotPassword} />
+      <Route path="/reset-password" component={ResetPassword} />
       <Route path="/verify-email-sent" component={VerifyEmailSent} />
       <Route path="/verify-email" component={VerifyEmail} />
       

@@ -14,8 +14,8 @@ import {
   requireVerified,
   requireSubscription
 } from "./auth";
-import { sendVerificationEmail } from "./email";
-import { insertUserSchema, loginSchema } from "@shared/schema";
+import { sendVerificationEmail, sendPasswordResetEmail } from "./email";
+import { insertUserSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema } from "@shared/schema";
 import { z } from "zod";
 
 if (!process.env.STRIPE_SECRET_KEY) {
@@ -197,6 +197,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Resend verification error:", error);
       res.status(500).json({ message: "Erreur lors de l'envoi" });
+    }
+  });
+
+  // Forgot password - request reset
+  app.post("/api/auth/forgot-password", async (req, res) => {
+    try {
+      const data = forgotPasswordSchema.parse(req.body);
+      
+      // Find user by email (but don't reveal if user exists - security)
+      const user = await storage.getUserByEmail(data.email);
+      
+      // Always return success message to prevent email enumeration
+      if (!user) {
+        return res.json({ message: "Si cet email existe dans notre système, un lien de réinitialisation a été envoyé." });
+      }
+
+      // Generate reset token (1 hour expiry)
+      const resetToken = generateVerificationToken(); // Reuse same generator
+      const tokenExpiry = new Date();
+      tokenExpiry.setHours(tokenExpiry.getHours() + 1); // 1 hour expiry
+
+      await storage.setResetPasswordToken(user.id, resetToken, tokenExpiry);
+
+      // Send password reset email (don't fail if email sending fails)
+      try {
+        await sendPasswordResetEmail(user.email, resetToken);
+      } catch (emailError) {
+        console.error("Failed to send password reset email (non-critical):", emailError);
+        // Continue anyway - user can request another reset if needed
+      }
+
+      res.json({ message: "Si cet email existe dans notre système, un lien de réinitialisation a été envoyé." });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Email invalide" });
+      }
+      console.error("Forgot password error:", error);
+      res.status(500).json({ message: "Erreur lors de la demande de réinitialisation" });
+    }
+  });
+
+  // Reset password - actually reset with token
+  app.post("/api/auth/reset-password", async (req, res) => {
+    try {
+      const data = resetPasswordSchema.parse(req.body);
+      
+      // Find user by reset token
+      const user = await storage.getUserByResetPasswordToken(data.token);
+      if (!user) {
+        return res.status(400).json({ message: "Token invalide ou expiré" });
+      }
+
+      // Check token expiry
+      if (user.resetPasswordTokenExpiry) {
+        const now = new Date();
+        const expiry = new Date(user.resetPasswordTokenExpiry);
+        if (now > expiry) {
+          return res.status(400).json({ message: "Token expiré. Veuillez demander un nouveau lien de réinitialisation." });
+        }
+      }
+
+      // Hash new password
+      const hashedPassword = await hashPassword(data.password);
+
+      // Update password and clear reset token
+      await storage.resetPassword(user.id, hashedPassword);
+
+      res.json({ message: "Mot de passe réinitialisé avec succès. Vous pouvez maintenant vous connecter." });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Données invalides" });
+      }
+      console.error("Reset password error:", error);
+      res.status(500).json({ message: "Erreur lors de la réinitialisation du mot de passe" });
     }
   });
 

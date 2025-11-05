@@ -17,6 +17,11 @@ export interface IStorage {
   getUserByVerificationToken(token: string): Promise<User | undefined>;
   verifyEmail(userId: string): Promise<void>;
   
+  // Password reset
+  setResetPasswordToken(userId: string, token: string, expiry: Date): Promise<void>;
+  getUserByResetPasswordToken(token: string): Promise<User | undefined>;
+  resetPassword(userId: string, hashedPassword: string): Promise<void>;
+  
   // Stripe integration
   updateStripeInfo(userId: string, data: {
     stripeCustomerId?: string;
@@ -109,6 +114,35 @@ export class DatabaseStorage implements IStorage {
         isVerified: true,
         verificationToken: null,
         verificationTokenExpiry: null,
+      })
+      .where(eq(users.id, userId));
+  }
+
+  async setResetPasswordToken(userId: string, token: string, expiry: Date): Promise<void> {
+    await db
+      .update(users)
+      .set({
+        resetPasswordToken: token,
+        resetPasswordTokenExpiry: expiry,
+      })
+      .where(eq(users.id, userId));
+  }
+
+  async getUserByResetPasswordToken(token: string): Promise<User | undefined> {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.resetPasswordToken, token));
+    return user || undefined;
+  }
+
+  async resetPassword(userId: string, hashedPassword: string): Promise<void> {
+    await db
+      .update(users)
+      .set({
+        password: hashedPassword,
+        resetPasswordToken: null,
+        resetPasswordTokenExpiry: null,
       })
       .where(eq(users.id, userId));
   }

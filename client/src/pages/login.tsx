@@ -126,6 +126,12 @@ export default function Login() {
                   "Se connecter"
                 )}
               </Button>
+              
+              <div className="text-center">
+                <Link href="/forgot-password" className="text-sm text-muted-foreground hover:text-primary hover:underline" data-testid="link-forgot-password">
+                  Mot de passe oublié ?
+                </Link>
+              </div>
             </form>
           </Form>
         </CardContent>

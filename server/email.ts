@@ -72,6 +72,64 @@ export async function sendVerificationEmail(email: string, token: string) {
 }
 
 export async function sendPasswordResetEmail(email: string, token: string) {
-  // Future implementation for password reset
-  console.log("Password reset email would be sent to:", email, token);
+  const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5000'}/reset-password?token=${token}`;
+
+  try {
+    const info = await transporter.sendMail({
+      from: '"VoiceAI" <noreply@voiceai.com>',
+      to: email,
+      subject: "Réinitialisation de votre mot de passe - VoiceAI",
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+            .content { background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px; }
+            .button { display: inline-block; background: #3b82f6; color: white; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; margin: 20px 0; }
+            .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 14px; }
+            .warning { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px; margin: 20px 0; border-radius: 4px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1 style="margin: 0; font-size: 28px;">Réinitialisation de mot de passe 🔐</h1>
+            </div>
+            <div class="content">
+              <p>Bonjour,</p>
+              <p>Vous avez demandé une réinitialisation de votre mot de passe VoiceAI. Cliquez sur le bouton ci-dessous pour en choisir un nouveau :</p>
+              <div style="text-align: center;">
+                <a href="${resetUrl}" class="button">Réinitialiser mon mot de passe</a>
+              </div>
+              <p style="color: #6b7280; font-size: 14px;">Ou copiez ce lien dans votre navigateur :</p>
+              <p style="word-break: break-all; background: #f3f4f6; padding: 12px; border-radius: 4px; font-size: 13px;">${resetUrl}</p>
+              <div class="warning">
+                <p style="margin: 0; color: #92400e; font-size: 14px;"><strong>⚠️ Important :</strong> Ce lien expirera dans 1 heure pour des raisons de sécurité.</p>
+              </div>
+              <p style="margin-top: 30px; color: #6b7280; font-size: 14px;">Si vous n'avez pas demandé cette réinitialisation, vous pouvez ignorer cet email en toute sécurité.</p>
+            </div>
+            <div class="footer">
+              <p>Pour votre sécurité, ne partagez jamais ce lien avec qui que ce soit.</p>
+              <p>© 2025 VoiceAI. Tous droits réservés.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+    });
+
+    console.log("Password reset email sent:", info.messageId);
+    // For development with Ethereal, log the preview URL
+    if (process.env.NODE_ENV !== 'production') {
+      console.log("Preview URL:", nodemailer.getTestMessageUrl(info));
+    }
+  } catch (error) {
+    console.error("Error sending password reset email:", error);
+    throw new Error("Impossible d'envoyer l'email de réinitialisation");
+  }
 }
