@@ -26,12 +26,15 @@ if (!process.env.STRIPE_WEBHOOK_SECRET) {
   throw new Error('Missing required Stripe secret: STRIPE_WEBHOOK_SECRET');
 }
 
+if (!process.env.STRIPE_PRICE_ID) {
+  throw new Error('Missing required Stripe secret: STRIPE_PRICE_ID');
+}
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2024-11-20.acacia",
 });
 
-// Stripe price ID - you need to create a product in Stripe dashboard
-const STRIPE_PRICE_ID = process.env.STRIPE_PRICE_ID || "price_1234567890"; // Replace with real price ID
+const STRIPE_PRICE_ID = process.env.STRIPE_PRICE_ID;
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
 
 export async function registerRoutes(app: Express): Promise<Server> {
