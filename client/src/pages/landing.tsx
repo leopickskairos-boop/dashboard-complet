@@ -169,7 +169,7 @@ export default function Landing() {
                     Plan Professionnel
                   </div>
                   <div className="flex items-baseline justify-center gap-2">
-                    <span className="text-5xl font-bold text-foreground">29€</span>
+                    <span className="text-5xl font-bold text-foreground">800€</span>
                     <span className="text-lg text-muted-foreground">/mois</span>
                   </div>
                 </div>
