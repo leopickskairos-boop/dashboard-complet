@@ -46,18 +46,26 @@ VoiceAI est une plateforme SaaS permettant aux entreprises de gérer leurs appel
    - Authentification par email/password
    - Sessions sécurisées avec JWT
    - Redirection intelligente selon le statut
+   - Lien "Mot de passe oublié ?" vers /forgot-password
 
-4. **Abonnement Stripe** (`/subscribe`)
+4. **Réinitialisation mot de passe** (`/forgot-password`, `/reset-password`)
+   - Demande de réinitialisation avec email
+   - Envoi d'email avec lien sécurisé
+   - Token unique avec expiration 1h
+   - Formulaire de nouveau mot de passe
+   - Protection contre l'énumération d'emails
+
+5. **Abonnement Stripe** (`/subscribe`)
    - Plan unique : 29€/mois
    - Paiement sécurisé via Stripe Elements
    - Webhooks pour validation automatique
 
-5. **Dashboard protégé** (`/dashboard`)
+6. **Dashboard protégé** (`/dashboard`)
    - Accessible uniquement avec email vérifié + abonnement actif
    - Statistiques vides (prêtes pour intégration future)
    - Interface professionnelle suivant design guidelines
 
-6. **Gestion des expirations** (`/subscription-expired`)
+7. **Gestion des expirations** (`/subscription-expired`)
    - Détection automatique d'abonnement expiré
    - Redirection et possibilité de renouvellement
 
@@ -78,6 +86,8 @@ VoiceAI est une plateforme SaaS permettant aux entreprises de gérer leurs appel
   isVerified: boolean
   verificationToken: text
   verificationTokenExpiry: timestamp
+  resetPasswordToken: text
+  resetPasswordTokenExpiry: timestamp
   stripeCustomerId: text
   stripeSubscriptionId: text
   subscriptionStatus: text ('active', 'canceled', 'past_due', etc.)
@@ -148,7 +158,9 @@ npm run db:push --force  # Force la synchronisation
 ### Authentification
 - Mots de passe hashés avec bcrypt (salt rounds: 10)
 - Sessions JWT avec cookies httpOnly
-- Tokens de vérification email avec expiration
+- Tokens de vérification email avec expiration (24h)
+- Tokens de réinitialisation mot de passe avec expiration (1h)
+- Protection anti-énumération lors du reset password
 - Protection CSRF avec SameSite cookies
 
 ### Routes protégées
@@ -173,6 +185,8 @@ Toutes les fonctionnalités d'authentification, d'abonnement et du dashboard son
 - Génération et envoi d'emails de vérification
 - Tokens de vérification avec expiration (24h)
 - Connexion avec sessions JWT sécurisées (httpOnly cookies)
+- Réinitialisation mot de passe avec tokens sécurisés (1h expiration)
+- Protection anti-énumération (même réponse email valide/invalide)
 - Middlewares de protection (requireAuth, requireVerified, requireSubscription)
 
 ✅ **Intégration Stripe production-ready**
@@ -236,13 +250,15 @@ Toutes les fonctionnalités d'authentification, d'abonnement et du dashboard son
 
 ### Production-ready
 - ✅ Tests E2E complets (signup → verification → login → payment → dashboard)
+- ✅ Tests E2E réinitialisation mot de passe (forgot → reset → login)
 - ✅ Validation architecte (aucun problème de sécurité détecté)
 - ✅ Base de données PostgreSQL configurée et migrée
 - ✅ Stripe webhooks testés avec cartes de test (4242...)
 - ✅ Tous les flux utilisateur fonctionnels
 
 ### Points d'attention
-- Les erreurs SMTP sont non-bloquantes (signup continue même si email échoue)
-- En développement, récupérer les tokens de vérification via la DB si besoin
+- Les erreurs SMTP sont non-bloquantes (signup/reset continue même si email échoue)
+- En développement, récupérer les tokens (vérification/reset) via la DB si besoin
+- Tokens de reset expirent après 1h (vs 24h pour vérification email)
 - Tester les webhooks Stripe en mode test avant production
 - Configurer un domaine personnalisé pour les emails de production
