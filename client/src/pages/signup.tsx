@@ -128,10 +128,8 @@ export default function Signup() {
         <CardFooter className="flex flex-col gap-4">
           <div className="text-sm text-center text-muted-foreground">
             Déjà un compte ?{" "}
-            <Link href="/login">
-              <a className="text-primary font-medium hover:underline" data-testid="link-login">
-                Se connecter
-              </a>
+            <Link href="/login" className="text-primary font-medium hover:underline" data-testid="link-login">
+              Se connecter
             </Link>
           </div>
           <p className="text-xs text-center text-muted-foreground">
