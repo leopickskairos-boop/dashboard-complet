@@ -393,7 +393,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               storage,
               user.id,
               'subscription_created',
-              'Votre abonnement VoiceAI a été créé avec succès.'
+              'Votre abonnement SpeedAI a été créé avec succès.'
             );
           }
           break;
@@ -417,7 +417,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 storage,
                 user.id,
                 'subscription_renewed',
-                'Votre abonnement VoiceAI a été renouvelé avec succès.'
+                'Votre abonnement SpeedAI a été renouvelé avec succès.'
               );
             }
           }
@@ -439,7 +439,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               storage,
               user.id,
               'subscription_expired',
-              'Votre abonnement VoiceAI a expiré. Renouvelez-le pour continuer à utiliser nos services.'
+              'Votre abonnement SpeedAI a expiré. Renouvelez-le pour continuer à utiliser nos services.'
             );
           }
           break;

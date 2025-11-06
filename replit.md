@@ -1,8 +1,8 @@
-# VoiceAI - Plateforme IA Réceptionniste Vocale
+# SpeedAI - Plateforme IA Réceptionniste Vocale
 
 ## Overview
 
-VoiceAI is a SaaS platform designed to automate business phone calls using Artificial Intelligence. It provides companies with real-time call summaries and statistics through a professional dashboard, aiming to streamline communication and provide actionable insights. The project's ambition is to integrate advanced AI voice capabilities for a comprehensive receptionist solution.
+SpeedAI is a SaaS platform designed to automate business phone calls using Artificial Intelligence. It provides companies with real-time call summaries and statistics through a professional dashboard, aiming to streamline communication and provide actionable insights. The project's ambition is to integrate advanced AI voice capabilities for a comprehensive receptionist solution.
 
 ## User Preferences
 

@@ -341,7 +341,7 @@ export function generateReportHTML(
   <!-- Footer -->
   <div class="footer">
     <p>Rapport généré automatiquement le ${new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-    <p>VoiceAI - Plateforme IA Réceptionniste Vocale</p>
+    <p>SpeedAI - Plateforme IA Réceptionniste Vocale</p>
   </div>
 
   <!-- Chart.js Scripts -->

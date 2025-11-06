@@ -192,10 +192,10 @@ export function generateReportEmailHTML(
           <tr>
             <td style="padding: 32px 40px; background-color: #f9fafb; border-top: 1px solid #e5e7eb;">
               <p style="margin: 0; font-size: 13px; color: #6b7280; line-height: 1.5; text-align: center;">
-                Vous recevez cet email car vous êtes abonné à VoiceAI.
+                Vous recevez cet email car vous êtes abonné à SpeedAI.
               </p>
               <p style="margin: 12px 0 0; font-size: 13px; color: #6b7280; line-height: 1.5; text-align: center;">
-                © ${new Date().getFullYear()} VoiceAI - Plateforme IA Réceptionniste Vocale
+                © ${new Date().getFullYear()} SpeedAI - Plateforme IA Réceptionniste Vocale
               </p>
             </td>
           </tr>
@@ -251,9 +251,9 @@ Le rapport complet avec graphiques détaillés est disponible en pièce jointe (
 Vous pouvez également consulter votre dashboard à tout moment pour accéder à vos statistiques en temps réel.
 
 ---
-VoiceAI - Plateforme IA Réceptionniste Vocale
+SpeedAI - Plateforme IA Réceptionniste Vocale
 © ${new Date().getFullYear()}
 
-Vous recevez cet email car vous êtes abonné à VoiceAI.
+Vous recevez cet email car vous êtes abonné à SpeedAI.
   `.trim();
 }

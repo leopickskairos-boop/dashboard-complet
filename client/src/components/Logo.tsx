@@ -12,7 +12,7 @@ export function Logo({ className = "", showText = true }: LogoProps) {
         <Phone className="w-6 h-6 text-primary-foreground" />
       </div>
       {showText && (
-        <span className="text-xl font-bold text-foreground">VoiceAI</span>
+        <span className="text-xl font-bold text-foreground">SpeedAI</span>
       )}
     </div>
   );

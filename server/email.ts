@@ -17,9 +17,9 @@ export async function sendVerificationEmail(email: string, token: string) {
 
   try {
     const info = await transporter.sendMail({
-      from: '"VoiceAI" <noreply@voiceai.com>',
+      from: '"SpeedAI" <noreply@speedai.com>',
       to: email,
-      subject: "Vérifiez votre adresse email - VoiceAI",
+      subject: "Vérifiez votre adresse email - SpeedAI",
       html: `
         <!DOCTYPE html>
         <html>
@@ -38,11 +38,11 @@ export async function sendVerificationEmail(email: string, token: string) {
         <body>
           <div class="container">
             <div class="header">
-              <h1 style="margin: 0; font-size: 28px;">Bienvenue sur VoiceAI ! 🎉</h1>
+              <h1 style="margin: 0; font-size: 28px;">Bienvenue sur SpeedAI ! 🎉</h1>
             </div>
             <div class="content">
               <p>Bonjour,</p>
-              <p>Merci de vous être inscrit sur VoiceAI. Pour activer votre compte et accéder à toutes nos fonctionnalités, veuillez vérifier votre adresse email.</p>
+              <p>Merci de vous être inscrit sur SpeedAI. Pour activer votre compte et accéder à toutes nos fonctionnalités, veuillez vérifier votre adresse email.</p>
               <div style="text-align: center;">
                 <a href="${verificationUrl}" class="button">Vérifier mon email</a>
               </div>
@@ -51,8 +51,8 @@ export async function sendVerificationEmail(email: string, token: string) {
               <p style="margin-top: 30px; color: #6b7280; font-size: 14px;"><strong>Note :</strong> Ce lien expirera dans 24 heures.</p>
             </div>
             <div class="footer">
-              <p>Si vous n'avez pas créé de compte VoiceAI, vous pouvez ignorer cet email.</p>
-              <p>© 2025 VoiceAI. Tous droits réservés.</p>
+              <p>Si vous n'avez pas créé de compte SpeedAI, vous pouvez ignorer cet email.</p>
+              <p>© 2025 SpeedAI. Tous droits réservés.</p>
             </div>
           </div>
         </body>
@@ -76,9 +76,9 @@ export async function sendPasswordResetEmail(email: string, token: string) {
 
   try {
     const info = await transporter.sendMail({
-      from: '"VoiceAI" <noreply@voiceai.com>',
+      from: '"SpeedAI" <noreply@speedai.com>',
       to: email,
-      subject: "Réinitialisation de votre mot de passe - VoiceAI",
+      subject: "Réinitialisation de votre mot de passe - SpeedAI",
       html: `
         <!DOCTYPE html>
         <html>
@@ -102,7 +102,7 @@ export async function sendPasswordResetEmail(email: string, token: string) {
             </div>
             <div class="content">
               <p>Bonjour,</p>
-              <p>Vous avez demandé une réinitialisation de votre mot de passe VoiceAI. Cliquez sur le bouton ci-dessous pour en choisir un nouveau :</p>
+              <p>Vous avez demandé une réinitialisation de votre mot de passe SpeedAI. Cliquez sur le bouton ci-dessous pour en choisir un nouveau :</p>
               <div style="text-align: center;">
                 <a href="${resetUrl}" class="button">Réinitialiser mon mot de passe</a>
               </div>
@@ -115,7 +115,7 @@ export async function sendPasswordResetEmail(email: string, token: string) {
             </div>
             <div class="footer">
               <p>Pour votre sécurité, ne partagez jamais ce lien avec qui que ce soit.</p>
-              <p>© 2025 VoiceAI. Tous droits réservés.</p>
+              <p>© 2025 SpeedAI. Tous droits réservés.</p>
             </div>
           </div>
         </body>
@@ -150,7 +150,7 @@ export async function sendEmail(options: {
 }) {
   try {
     const info = await transporter.sendMail({
-      from: '"VoiceAI" <noreply@voiceai.com>',
+      from: '"SpeedAI" <noreply@speedai.com>',
       to: options.to,
       subject: options.subject,
       text: options.text,

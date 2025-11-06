@@ -46,7 +46,7 @@ export default function PaymentSuccess() {
         <CardContent className="space-y-6">
           <div className="bg-muted/50 rounded-lg p-4 text-sm">
             <p className="text-center text-muted-foreground">
-              Bienvenue dans VoiceAI ! Vous avez maintenant accès à toutes les fonctionnalités.
+              Bienvenue dans SpeedAI ! Vous avez maintenant accès à toutes les fonctionnalités.
             </p>
           </div>
 

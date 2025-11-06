@@ -27,7 +27,7 @@ export default function SubscriptionExpired() {
         <CardContent className="space-y-6">
           <div className="bg-muted/50 rounded-lg p-4 text-sm">
             <p className="mb-4">
-              Pour continuer à utiliser VoiceAI et accéder à votre dashboard, 
+              Pour continuer à utiliser SpeedAI et accéder à votre dashboard, 
               vous devez renouveler votre abonnement.
             </p>
             <ul className="space-y-2 text-muted-foreground">
@@ -46,7 +46,7 @@ export default function SubscriptionExpired() {
             <Button
               variant="outline"
               className="w-full"
-              onClick={() => window.location.href = 'mailto:support@voiceai.com'}
+              onClick={() => window.location.href = 'mailto:support@speedai.com'}
               data-testid="button-contact"
             >
               Contacter le support
