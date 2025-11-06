@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -7,11 +7,12 @@ import { useLocation, Link } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Loader2, Mail, Lock, Trash2, CreditCard, ChevronRight, Home } from "lucide-react";
+import { Loader2, Mail, Lock, Trash2, CreditCard, ChevronRight, Home, Bell } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -52,6 +53,45 @@ const deleteAccountSchema = z.object({
   password: z.string().min(1, "Mot de passe requis pour supprimer le compte"),
 });
 
+const notificationPreferencesSchema = z.object({
+  dailySummaryEnabled: z.boolean(),
+  failedCallsEnabled: z.boolean(),
+  activeCallEnabled: z.boolean(),
+  subscriptionAlertsEnabled: z.boolean(),
+});
+
+type User = {
+  id: string;
+  email: string;
+  stripeCustomerId?: string | null;
+  subscriptionStatus?: string | null;
+  subscriptionCurrentPeriodEnd?: Date | null;
+};
+
+type PaymentMethod = {
+  brand: string;
+  last4: string;
+  expMonth: number;
+  expYear: number;
+};
+
+type Payment = {
+  id: string;
+  amount: number;
+  created: number;
+  status: string;
+};
+
+type NotificationPreferences = {
+  userId: string;
+  dailySummaryEnabled: boolean;
+  failedCallsEnabled: boolean;
+  activeCallEnabled: boolean;
+  subscriptionAlertsEnabled: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 export default function Account() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
@@ -59,20 +99,49 @@ export default function Account() {
   const [showPasswordForm, setShowPasswordForm] = useState(false);
 
   // Fetch current user
-  const { data: user, isLoading: userLoading } = useQuery({
+  const { data: user, isLoading: userLoading } = useQuery<User>({
     queryKey: ['/api/auth/me'],
   });
 
   // Fetch payment history
-  const { data: payments, isLoading: paymentsLoading } = useQuery({
+  const { data: payments, isLoading: paymentsLoading } = useQuery<Payment[]>({
     queryKey: ['/api/account/payments'],
   });
 
   // Fetch current payment method (only if user has Stripe customer ID)
-  const { data: paymentMethod, isLoading: paymentMethodLoading } = useQuery({
+  const { data: paymentMethod, isLoading: paymentMethodLoading } = useQuery<PaymentMethod>({
     queryKey: ['/api/account/payment-method'],
     enabled: !!user?.stripeCustomerId,
   });
+
+  // Fetch notification preferences
+  const { data: notificationPreferences, isLoading: preferencesLoading } = useQuery<NotificationPreferences>({
+    queryKey: ['/api/notifications/preferences'],
+  });
+
+  // Notification preferences form
+  const notificationPreferencesForm = useForm({
+    resolver: zodResolver(notificationPreferencesSchema),
+    defaultValues: {
+      dailySummaryEnabled: true,
+      failedCallsEnabled: true,
+      activeCallEnabled: true,
+      subscriptionAlertsEnabled: true,
+    },
+  });
+
+  // Reset form when preferences are loaded
+  useEffect(() => {
+    if (notificationPreferences) {
+      // Extract only form fields to avoid passing extra fields like userId, timestamps
+      notificationPreferencesForm.reset({
+        dailySummaryEnabled: notificationPreferences.dailySummaryEnabled,
+        failedCallsEnabled: notificationPreferences.failedCallsEnabled,
+        activeCallEnabled: notificationPreferences.activeCallEnabled,
+        subscriptionAlertsEnabled: notificationPreferences.subscriptionAlertsEnabled,
+      });
+    }
+  }, [notificationPreferences, notificationPreferencesForm]);
 
   // Change email mutation
   const changeEmailForm = useForm({
@@ -183,6 +252,32 @@ export default function Account() {
     onSuccess: (data: { url: string }) => {
       // Redirect to Stripe Customer Portal
       window.location.href = data.url;
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erreur",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update notification preferences mutation
+  const updatePreferencesMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof notificationPreferencesSchema>) => {
+      const res = await apiRequest("POST", "/api/notifications/preferences", data);
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Erreur lors de la mise à jour des préférences");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Préférences mises à jour",
+        description: "Vos préférences de notifications ont été enregistrées.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/notifications/preferences'] });
     },
     onError: (error: Error) => {
       toast({
@@ -461,6 +556,132 @@ export default function Account() {
               </Form>
             )}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Notification Preferences */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Bell className="h-5 w-5" />
+            Préférences de notifications
+          </CardTitle>
+          <CardDescription>
+            Choisissez les notifications que vous souhaitez recevoir
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Form {...notificationPreferencesForm}>
+            <form
+              onSubmit={notificationPreferencesForm.handleSubmit((data) => updatePreferencesMutation.mutate(data))}
+              className="space-y-6"
+            >
+              {preferencesLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                </div>
+              ) : (
+                <>
+                <FormField
+                  control={notificationPreferencesForm.control}
+                  name="dailySummaryEnabled"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">Résumé quotidien</FormLabel>
+                        <FormDescription>
+                          Recevez un résumé quotidien de l'activité de votre réceptionniste IA
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          disabled={preferencesLoading}
+                          data-testid="switch-daily-summary"
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={notificationPreferencesForm.control}
+                  name="failedCallsEnabled"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">Appels échoués</FormLabel>
+                        <FormDescription>
+                          Soyez alerté quand un appel échoue ou qu'un problème survient
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          disabled={preferencesLoading}
+                          data-testid="switch-failed-calls"
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={notificationPreferencesForm.control}
+                  name="activeCallEnabled"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">Appels en cours</FormLabel>
+                        <FormDescription>
+                          Notification en temps réel lors du démarrage d'un nouvel appel
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          disabled={preferencesLoading}
+                          data-testid="switch-active-call"
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={notificationPreferencesForm.control}
+                  name="subscriptionAlertsEnabled"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">Alertes d'abonnement</FormLabel>
+                        <FormDescription>
+                          Notifications importantes concernant votre abonnement et vos paiements
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          disabled={preferencesLoading}
+                          data-testid="switch-subscription-alerts"
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                </>
+              )}
+              <Button
+                type="submit"
+                disabled={preferencesLoading || updatePreferencesMutation.isPending || !notificationPreferencesForm.formState.isDirty}
+                data-testid="button-save-preferences"
+              >
+                {updatePreferencesMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Enregistrer les préférences
+              </Button>
+            </form>
+          </Form>
         </CardContent>
       </Card>
 
