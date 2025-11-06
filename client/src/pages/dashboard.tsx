@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -57,6 +57,19 @@ export default function Dashboard() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedCall, setSelectedCall] = useState<Call | null>(null);
   const [chartDialog, setChartDialog] = useState<'total' | 'conversion' | 'duration' | null>(null);
+  const [isMobile, setIsMobile] = useState<boolean>(false);
+
+  // Detect mobile screen size
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Fetch stats with global time filter
   const { data: stats, isLoading: statsLoading } = useQuery<{
@@ -332,10 +345,19 @@ export default function Dashboard() {
                     {calls.map((call) => {
                       const config = statusConfig[call.status as keyof typeof statusConfig];
                       const StatusIcon = config?.icon || Phone;
+                      
+                      const handleRowClick = (e: React.MouseEvent) => {
+                        // Only handle row click on mobile and not when clicking the button
+                        if (isMobile && !(e.target as HTMLElement).closest('button')) {
+                          setSelectedCall(call);
+                        }
+                      };
+                      
                       return (
                         <tr 
                           key={call.id} 
-                          className="border-b hover-elevate transition-colors"
+                          className={`border-b hover-elevate active-elevate-2 transition-all ${isMobile ? 'cursor-pointer' : ''}`}
+                          onClick={handleRowClick}
                           data-testid={`call-row-${call.id}`}
                         >
                           <td className="py-4 px-4">
@@ -362,12 +384,19 @@ export default function Dashboard() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => setSelectedCall(call)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedCall(call);
+                              }}
+                              className={isMobile ? 'hidden' : ''}
                               data-testid={`button-view-call-${call.id}`}
                             >
                               <Eye className="w-4 h-4 mr-2" />
                               Détail
                             </Button>
+                            {isMobile && (
+                              <Eye className="w-4 h-4 text-muted-foreground" />
+                            )}
                           </td>
                         </tr>
                       );
