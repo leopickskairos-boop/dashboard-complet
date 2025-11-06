@@ -6,6 +6,7 @@ import { LogOut } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation, Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
+import { SubscriptionExpirationBanner } from "@/components/SubscriptionExpirationBanner";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -57,6 +58,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <LogOut className="h-5 w-5" />
             </Button>
           </header>
+          <SubscriptionExpirationBanner />
           <main className="flex-1 overflow-auto">
             {children}
           </main>
