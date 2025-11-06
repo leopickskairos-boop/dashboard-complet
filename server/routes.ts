@@ -3,6 +3,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import Stripe from "stripe";
 import { storage } from "./storage";
+import { fileStorage } from "./file-storage.service";
 import { 
   hashPassword, 
   comparePassword, 
@@ -1027,6 +1028,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Error updating notification preferences:", error);
       res.status(500).json({ message: "Erreur lors de la mise à jour des préférences" });
+    }
+  });
+
+  // ===== MONTHLY REPORTS ROUTES =====
+
+  // Get list of monthly reports for current user
+  app.get("/api/reports", requireAuth, requireVerified, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const reports = await storage.getMonthlyReports(userId);
+      res.json(reports);
+    } catch (error) {
+      console.error("Error fetching monthly reports:", error);
+      res.status(500).json({ message: "Erreur lors de la récupération des rapports" });
+    }
+  });
+
+  // Download a specific monthly report PDF
+  app.get("/api/reports/:id/download", requireAuth, requireVerified, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const reportId = req.params.id;
+
+      // Get report and verify ownership
+      const report = await storage.getMonthlyReportById(reportId, userId);
+      
+      if (!report) {
+        return res.status(404).json({ message: "Rapport introuvable" });
+      }
+
+      // Read PDF file
+      const pdfBuffer = await fileStorage.read(report.pdfPath);
+
+      // Set headers for PDF download
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="Rapport-Mensuel-${reportId}.pdf"`);
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error("Error downloading report:", error);
+      res.status(500).json({ message: "Erreur lors du téléchargement du rapport" });
     }
   });
 

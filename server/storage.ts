@@ -4,6 +4,7 @@ import {
   calls, 
   notifications,
   notificationPreferences,
+  monthlyReports,
   type User, 
   type InsertUser, 
   type Call, 
@@ -11,7 +12,9 @@ import {
   type Notification,
   type InsertNotification,
   type NotificationPreferences,
-  type InsertNotificationPreferences
+  type InsertNotificationPreferences,
+  type MonthlyReport,
+  type InsertMonthlyReport
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, desc, sql, count } from "drizzle-orm";
@@ -83,6 +86,13 @@ export interface IStorage {
   // Notification preferences
   getNotificationPreferences(userId: string): Promise<NotificationPreferences | undefined>;
   upsertNotificationPreferences(userId: string, preferences: Partial<InsertNotificationPreferences>): Promise<NotificationPreferences>;
+  
+  // Monthly reports
+  getMonthlyReports(userId: string): Promise<MonthlyReport[]>;
+  getMonthlyReportById(id: string, userId: string): Promise<MonthlyReport | undefined>;
+  getMonthlyReportByPeriod(userId: string, periodStart: Date, periodEnd: Date): Promise<MonthlyReport | undefined>;
+  createMonthlyReport(report: InsertMonthlyReport): Promise<MonthlyReport>;
+  getUsersForMonthlyReportGeneration(): Promise<User[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -513,6 +523,71 @@ export class DatabaseStorage implements IStorage {
       .returning();
     
     return created;
+  }
+
+  // Monthly reports implementations
+  async getMonthlyReports(userId: string): Promise<MonthlyReport[]> {
+    const reports = await db
+      .select()
+      .from(monthlyReports)
+      .where(eq(monthlyReports.userId, userId))
+      .orderBy(desc(monthlyReports.periodStart));
+    
+    return reports;
+  }
+
+  async getMonthlyReportById(id: string, userId: string): Promise<MonthlyReport | undefined> {
+    const [report] = await db
+      .select()
+      .from(monthlyReports)
+      .where(and(
+        eq(monthlyReports.id, id),
+        eq(monthlyReports.userId, userId)
+      ));
+    
+    return report || undefined;
+  }
+
+  async getMonthlyReportByPeriod(userId: string, periodStart: Date, periodEnd: Date): Promise<MonthlyReport | undefined> {
+    const [report] = await db
+      .select()
+      .from(monthlyReports)
+      .where(and(
+        eq(monthlyReports.userId, userId),
+        eq(monthlyReports.periodStart, periodStart),
+        eq(monthlyReports.periodEnd, periodEnd)
+      ));
+    
+    return report || undefined;
+  }
+
+  async createMonthlyReport(insertReport: InsertMonthlyReport): Promise<MonthlyReport> {
+    const [report] = await db
+      .insert(monthlyReports)
+      .values(insertReport)
+      .returning();
+    
+    return report;
+  }
+
+  async getUsersForMonthlyReportGeneration(): Promise<User[]> {
+    // Get users whose subscription renews in approximately 2 days
+    // We look for subscriptionCurrentPeriodEnd between 1.5 and 2.5 days from now
+    const now = new Date();
+    const minDate = new Date(now.getTime() + 1.5 * 24 * 60 * 60 * 1000);
+    const maxDate = new Date(now.getTime() + 2.5 * 24 * 60 * 60 * 1000);
+    
+    const eligibleUsers = await db
+      .select()
+      .from(users)
+      .where(and(
+        eq(users.subscriptionStatus, 'active'),
+        gte(users.subscriptionCurrentPeriodEnd, minDate),
+        sql`${users.subscriptionCurrentPeriodEnd} <= ${maxDate}`,
+        eq(users.role, 'user') // Exclude admins
+      ));
+    
+    return eligibleUsers;
   }
 }
 

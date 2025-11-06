@@ -133,3 +133,41 @@ export async function sendPasswordResetEmail(email: string, token: string) {
     throw new Error("Impossible d'envoyer l'email de réinitialisation");
   }
 }
+
+/**
+ * Generic email sending function with attachment support
+ */
+export async function sendEmail(options: {
+  to: string;
+  subject: string;
+  text: string;
+  html: string;
+  attachments?: Array<{
+    filename: string;
+    content: Buffer;
+    contentType: string;
+  }>;
+}) {
+  try {
+    const info = await transporter.sendMail({
+      from: '"VoiceAI" <noreply@voiceai.com>',
+      to: options.to,
+      subject: options.subject,
+      text: options.text,
+      html: options.html,
+      attachments: options.attachments,
+    });
+
+    console.log("Email sent:", info.messageId);
+    
+    // For development with Ethereal, log the preview URL
+    if (process.env.NODE_ENV !== 'production') {
+      console.log("Preview URL:", nodemailer.getTestMessageUrl(info));
+    }
+    
+    return info;
+  } catch (error) {
+    console.error("Error sending email:", error);
+    throw new Error("Impossible d'envoyer l'email");
+  }
+}
