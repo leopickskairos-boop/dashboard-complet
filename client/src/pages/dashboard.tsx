@@ -52,8 +52,8 @@ const statusFilterOptions = [
 ];
 
 export default function Dashboard() {
-  const [globalTimeFilter, setGlobalTimeFilter] = useState<string>("");
-  const [callsTimeFilter, setCallsTimeFilter] = useState<string>("");
+  const [globalTimeFilter, setGlobalTimeFilter] = useState<string>("all");
+  const [callsTimeFilter, setCallsTimeFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedCall, setSelectedCall] = useState<Call | null>(null);
   const [chartDialog, setChartDialog] = useState<'total' | 'conversion' | 'duration' | null>(null);
@@ -68,7 +68,7 @@ export default function Dashboard() {
     queryKey: ['/api/calls/stats', globalTimeFilter],
     queryFn: async () => {
       const params = new URLSearchParams();
-      if (globalTimeFilter) params.set('timeFilter', globalTimeFilter);
+      if (globalTimeFilter && globalTimeFilter !== 'all') params.set('timeFilter', globalTimeFilter);
       const res = await fetch(`/api/calls/stats?${params}`);
       if (!res.ok) throw new Error('Failed to fetch stats');
       return res.json();
@@ -80,7 +80,7 @@ export default function Dashboard() {
     queryKey: ['/api/calls', callsTimeFilter, statusFilter],
     queryFn: async () => {
       const params = new URLSearchParams();
-      if (callsTimeFilter) params.set('timeFilter', callsTimeFilter);
+      if (callsTimeFilter && callsTimeFilter !== 'all') params.set('timeFilter', callsTimeFilter);
       if (statusFilter && statusFilter !== 'all') params.set('statusFilter', statusFilter);
       const res = await fetch(`/api/calls?${params}`);
       if (!res.ok) throw new Error('Failed to fetch calls');
@@ -98,7 +98,7 @@ export default function Dashboard() {
     queryKey: ['/api/calls/chart-data', globalTimeFilter],
     queryFn: async () => {
       const params = new URLSearchParams();
-      if (globalTimeFilter) params.set('timeFilter', globalTimeFilter);
+      if (globalTimeFilter && globalTimeFilter !== 'all') params.set('timeFilter', globalTimeFilter);
       const res = await fetch(`/api/calls/chart-data?${params}`);
       if (!res.ok) throw new Error('Failed to fetch chart data');
       return res.json();
@@ -151,7 +151,7 @@ export default function Dashboard() {
               <SelectValue placeholder="Toutes les périodes" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Toutes les périodes</SelectItem>
+              <SelectItem value="all">Toutes les périodes</SelectItem>
               {timeFilterOptions.map(option => (
                 <SelectItem key={option.value} value={option.value}>
                   {option.label}
@@ -273,7 +273,7 @@ export default function Dashboard() {
                     <SelectValue placeholder="Toutes les périodes" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Toutes les périodes</SelectItem>
+                    <SelectItem value="all">Toutes les périodes</SelectItem>
                     {timeFilterOptions.map(option => (
                       <SelectItem key={option.value} value={option.value}>
                         {option.label}
