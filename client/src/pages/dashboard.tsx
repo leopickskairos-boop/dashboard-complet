@@ -176,10 +176,10 @@ export default function Dashboard() {
             >
               <CardContent className="p-6">
                 <div className="flex items-start justify-between mb-4">
-                  <div className="w-12 h-12 rounded-lg bg-cyan-500/10 flex items-center justify-center">
-                    <Phone className="w-6 h-6 text-cyan-400" />
+                  <div className="w-12 h-12 rounded-lg bg-white/5 flex items-center justify-center">
+                    <Phone className="w-6 h-6 text-white neon-cyan" />
                   </div>
-                  <TrendingUp className="w-4 h-4 text-white" />
+                  <TrendingUp className="w-4 h-4 text-white/60" />
                 </div>
                 <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
                   Total des appels
@@ -187,7 +187,7 @@ export default function Dashboard() {
                 <div className="text-3xl font-bold mb-1" data-testid="stat-total-calls">
                   {stats?.totalCalls || 0}
                 </div>
-                <p className="text-xs text-green-500">+12% vs période précédente</p>
+                <p className="text-xs text-white/50">+12% vs période précédente</p>
               </CardContent>
             </Card>
 
@@ -195,8 +195,8 @@ export default function Dashboard() {
             <Card data-testid="card-active-calls">
               <CardContent className="p-6">
                 <div className="flex items-start justify-between mb-4">
-                  <div className="w-12 h-12 rounded-lg bg-violet-500/10 flex items-center justify-center">
-                    <Activity className="w-6 h-6 text-violet-400" />
+                  <div className="w-12 h-12 rounded-lg bg-white/5 flex items-center justify-center">
+                    <Activity className="w-6 h-6 text-white neon-violet" />
                   </div>
                 </div>
                 <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
@@ -218,9 +218,9 @@ export default function Dashboard() {
               <CardContent className="p-6">
                 <div className="flex items-start justify-between mb-4">
                   <div className="w-12 h-12 rounded-lg bg-white/5 flex items-center justify-center">
-                    <TrendingUp className="w-6 h-6 text-white" />
+                    <TrendingUp className="w-6 h-6 text-white/80" />
                   </div>
-                  <TrendingDown className="w-4 h-4 text-white" />
+                  <TrendingDown className="w-4 h-4 text-white/60" />
                 </div>
                 <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
                   Taux de conversion
@@ -228,7 +228,7 @@ export default function Dashboard() {
                 <div className="text-3xl font-bold mb-1" data-testid="stat-conversion-rate">
                   {stats?.conversionRate || 0}%
                 </div>
-                <p className="text-xs text-red-500">-3% vs période précédente</p>
+                <p className="text-xs text-white/50">-3% vs période précédente</p>
               </CardContent>
             </Card>
 
@@ -241,9 +241,9 @@ export default function Dashboard() {
               <CardContent className="p-6">
                 <div className="flex items-start justify-between mb-4">
                   <div className="w-12 h-12 rounded-lg bg-white/5 flex items-center justify-center">
-                    <Clock className="w-6 h-6 text-white" />
+                    <Clock className="w-6 h-6 text-white/80" />
                   </div>
-                  <TrendingUp className="w-4 h-4 text-white" />
+                  <TrendingUp className="w-4 h-4 text-white/60" />
                 </div>
                 <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
                   Durée moyenne
@@ -251,7 +251,7 @@ export default function Dashboard() {
                 <div className="text-3xl font-bold mb-1" data-testid="stat-average-duration">
                   {formatDuration(stats?.averageDuration)}
                 </div>
-                <p className="text-xs text-green-500">+8% vs période précédente</p>
+                <p className="text-xs text-white/50">+8% vs période précédente</p>
               </CardContent>
             </Card>
           </div>

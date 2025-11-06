@@ -132,55 +132,55 @@
   --elevate-1: rgba(255,255,255, .04);
   --elevate-2: rgba(255,255,255, .09);
 
-  --background: 210 5% 8%;
+  --background: 0 0% 4%;
 
-  --foreground: 210 6% 92%;
+  --foreground: 0 0% 95%;
 
-  --border: 210 6% 18%;
+  --border: 0 0% 15%;
 
-  --card: 210 5% 10%;
+  --card: 0 0% 6%;
 
-  --card-foreground: 210 6% 90%;
+  --card-foreground: 0 0% 92%;
 
-  --card-border: 210 6% 16%;
+  --card-border: 0 0% 12%;
 
-  --sidebar: 210 5% 12%;
+  --sidebar: 0 0% 5%;
 
-  --sidebar-foreground: 210 6% 88%;
+  --sidebar-foreground: 0 0% 90%;
 
-  --sidebar-border: 210 6% 20%;
+  --sidebar-border: 0 0% 14%;
 
   --sidebar-primary: 217 91% 50%;
 
-  --sidebar-primary-foreground: 210 10% 98%;
+  --sidebar-primary-foreground: 0 0% 98%;
 
-  --sidebar-accent: 210 8% 18%;
+  --sidebar-accent: 0 0% 10%;
 
-  --sidebar-accent-foreground: 210 7% 86%;
+  --sidebar-accent-foreground: 0 0% 88%;
 
   --sidebar-ring: 217 91% 50%;
 
-  --popover: 210 6% 14%;
+  --popover: 0 0% 7%;
 
-  --popover-foreground: 210 6% 86%;
+  --popover-foreground: 0 0% 90%;
 
-  --popover-border: 210 7% 22%;
+  --popover-border: 0 0% 15%;
 
   --primary: 217 91% 50%;
 
-  --primary-foreground: 210 10% 98%;
+  --primary-foreground: 0 0% 98%;
 
-  --secondary: 210 8% 18%;
+  --secondary: 0 0% 12%;
 
-  --secondary-foreground: 210 7% 86%;
+  --secondary-foreground: 0 0% 88%;
 
-  --muted: 210 10% 16%;
+  --muted: 0 0% 10%;
 
-  --muted-foreground: 210 6% 70%;
+  --muted-foreground: 0 0% 65%;
 
-  --accent: 210 12% 16%;
+  --accent: 0 0% 10%;
 
-  --accent-foreground: 210 7% 84%;
+  --accent-foreground: 0 0% 86%;
 
   --destructive: 0 84% 48%;
 
@@ -345,5 +345,16 @@
   .border.active-elevate-2:not(.no-active-interaction-elevate)::after,
   .border.hover-elevate:not(.no-hover-interaction-elevate)::after {
     inset: -1px;
+  }
+
+  /* Neon glow effects for KPI icons */
+  .neon-cyan {
+    filter: drop-shadow(0 0 8px rgba(34, 211, 238, 0.6)) 
+            drop-shadow(0 0 12px rgba(34, 211, 238, 0.4));
+  }
+
+  .neon-violet {
+    filter: drop-shadow(0 0 8px rgba(167, 139, 250, 0.6)) 
+            drop-shadow(0 0 12px rgba(167, 139, 250, 0.4));
   }
 }
