@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Loader2, Mail, Lock, Trash2, CreditCard, ChevronRight, Home, Bell } from "lucide-react";
+import { Loader2, Mail, Lock, Trash2, CreditCard, ChevronRight, Home, Bell, FileText, Download } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -92,6 +92,17 @@ type NotificationPreferences = {
   updatedAt: Date;
 };
 
+type MonthlyReport = {
+  id: string;
+  userId: string;
+  periodStart: Date;
+  periodEnd: Date;
+  pdfPath: string;
+  fileSize: number;
+  checksum: string;
+  createdAt: Date;
+};
+
 export default function Account() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
@@ -117,6 +128,11 @@ export default function Account() {
   // Fetch notification preferences
   const { data: notificationPreferences, isLoading: preferencesLoading } = useQuery<NotificationPreferences>({
     queryKey: ['/api/notifications/preferences'],
+  });
+
+  // Fetch monthly reports
+  const { data: monthlyReports, isLoading: reportsLoading } = useQuery<MonthlyReport[]>({
+    queryKey: ['/api/reports'],
   });
 
   // Notification preferences form
@@ -815,6 +831,65 @@ export default function Account() {
           ) : (
             <p className="text-sm text-muted-foreground text-center py-8">
               Aucun paiement enregistré
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Monthly Reports */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Rapports mensuels
+          </CardTitle>
+          <CardDescription>
+            Téléchargez vos rapports d'activité mensuels
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {reportsLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            </div>
+          ) : monthlyReports && monthlyReports.length > 0 ? (
+            <div className="space-y-3">
+              {monthlyReports.map((report) => (
+                <div
+                  key={report.id}
+                  className="flex items-center justify-between gap-4 p-4 border rounded-lg hover-elevate"
+                  data-testid={`report-${report.id}`}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-primary/10">
+                      <FileText className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-medium">
+                        Rapport {format(new Date(report.periodStart), 'MMMM yyyy', { locale: fr })}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {format(new Date(report.periodStart), 'dd MMM', { locale: fr })} - {format(new Date(report.periodEnd), 'dd MMM yyyy', { locale: fr })}
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      window.open(`/api/reports/${report.id}/download`, '_blank');
+                    }}
+                    data-testid={`button-download-${report.id}`}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Télécharger
+                  </Button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground text-center py-8">
+              Aucun rapport disponible pour le moment
             </p>
           )}
         </CardContent>
