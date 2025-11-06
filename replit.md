@@ -69,6 +69,22 @@ VoiceAI est une plateforme SaaS permettant aux entreprises de gérer leurs appel
    - Détection automatique d'abonnement expiré
    - Redirection et possibilité de renouvellement
 
+8. **Gestion du compte** (`/account`)
+   - Page dédiée accessible via sidebar "Mon compte"
+   - Modification de l'email avec vérification du mot de passe
+   - Changement du mot de passe sécurisé
+   - Gestion de la méthode de paiement Stripe
+   - Historique complet des paiements
+   - Suppression sécurisée du compte avec annulation d'abonnement
+
+### Gestion des méthodes de paiement (Stripe Customer Portal)
+- **Affichage conditionnel** : Visible uniquement pour les utilisateurs avec un client Stripe actif
+- **Consultation** : Affichage de la carte actuelle (marque, 4 derniers chiffres, expiration)
+- **Modification** : Redirection sécurisée vers le Stripe Customer Portal
+- **Gestion d'erreurs gracieuse** : Pas d'erreur 500 si le client Stripe n'existe pas
+- **États multiples** : Affichage d'un état vide si aucune carte enregistrée
+- **Logging structuré** : Logs détaillés pour le debugging en production
+
 ### Phase 2 : Intégration IA vocale (À venir)
 - Connexion avec Retell.ai / VAPI / ElevenLabs
 - Affichage des appels en temps réel
@@ -231,6 +247,21 @@ Toutes les fonctionnalités d'authentification, d'abonnement et du dashboard son
 - Vérification des signatures Stripe avec raw body
 - Aucune fuite de données sensibles
 - Routes API protégées par auth + email vérifié + abonnement actif
+
+✅ **Gestion de compte complète**
+- Page /account avec sidebar navigation minimale
+- Modification email avec confirmation par mot de passe
+- Changement de mot de passe sécurisé (validation côté client + backend)
+- **Gestion méthode de paiement** :
+  * Section conditionnelle (visible si stripeCustomerId existe)
+  * Affichage de la carte actuelle (brand, last4, expiration)
+  * Bouton de modification vers Stripe Customer Portal
+  * Gestion d'erreurs gracieuse (retourne null au lieu de 500)
+  * Logging structuré avec contexte (customerId, userId, error)
+  * React Query optimisé avec `enabled: !!user?.stripeCustomerId`
+- Historique complet des paiements
+- Suppression de compte avec annulation d'abonnement Stripe
+- Tous les formulaires avec validation Zod et gestion d'erreurs
 
 ### Prochaines étapes (Phase 2)
 

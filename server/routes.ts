@@ -664,6 +664,101 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get current payment method
+  app.get("/api/account/payment-method", requireAuth, requireVerified, requireSubscription, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+
+      // Get current user
+      const user = await storage.getUserById(userId);
+      if (!user || !user.stripeCustomerId) {
+        return res.json(null);
+      }
+
+      // Fetch customer payment methods
+      try {
+        const paymentMethods = await stripe.paymentMethods.list({
+          customer: user.stripeCustomerId,
+          type: 'card',
+          limit: 1,
+        });
+
+        if (paymentMethods.data.length === 0) {
+          return res.json(null);
+        }
+
+        const card = paymentMethods.data[0].card;
+        if (!card) {
+          return res.json(null);
+        }
+
+        // Return formatted payment method info
+        res.json({
+          brand: card.brand,
+          last4: card.last4,
+          expMonth: card.exp_month,
+          expYear: card.exp_year,
+        });
+      } catch (stripeError: any) {
+        // If customer doesn't exist in Stripe or other Stripe error, return null gracefully
+        console.warn("Stripe payment method fetch failed for customer:", {
+          customerId: user.stripeCustomerId,
+          userId: user.id,
+          error: stripeError.message,
+          action: "returning_null"
+        });
+        return res.json(null);
+      }
+    } catch (error) {
+      console.error("Error fetching payment method:", error);
+      res.status(500).json({ message: "Erreur lors de la récupération de la méthode de paiement" });
+    }
+  });
+
+  // Create Stripe Customer Portal session
+  app.post("/api/account/create-portal-session", requireAuth, requireVerified, requireSubscription, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+
+      // Get current user
+      const user = await storage.getUserById(userId);
+      if (!user || !user.stripeCustomerId) {
+        return res.status(400).json({ message: "Aucun client Stripe associé" });
+      }
+
+      // Get return URL from request or use default
+      const returnUrl = process.env.NODE_ENV === 'production' 
+        ? 'https://your-domain.com/account'
+        : `${req.protocol}://${req.get('host')}/account`;
+
+      try {
+        // Create portal session with payment method update flow
+        const session = await stripe.billingPortal.sessions.create({
+          customer: user.stripeCustomerId,
+          return_url: returnUrl,
+          flow_data: {
+            type: 'payment_method_update',
+          },
+        });
+
+        res.json({ url: session.url });
+      } catch (stripeError: any) {
+        console.error("Stripe portal session creation failed:", {
+          customerId: user.stripeCustomerId,
+          userId: user.id,
+          error: stripeError.message,
+          type: stripeError.type,
+        });
+        return res.status(400).json({ 
+          message: "Impossible de créer la session. Veuillez réessayer ou contacter le support." 
+        });
+      }
+    } catch (error) {
+      console.error("Error creating portal session:", error);
+      res.status(500).json({ message: "Erreur lors de la création de la session portal" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

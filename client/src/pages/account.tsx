@@ -68,6 +68,12 @@ export default function Account() {
     queryKey: ['/api/account/payments'],
   });
 
+  // Fetch current payment method (only if user has Stripe customer ID)
+  const { data: paymentMethod, isLoading: paymentMethodLoading } = useQuery({
+    queryKey: ['/api/account/payment-method'],
+    enabled: !!user?.stripeCustomerId,
+  });
+
   // Change email mutation
   const changeEmailForm = useForm({
     resolver: zodResolver(changeEmailSchema),
@@ -154,6 +160,29 @@ export default function Account() {
         description: "Votre compte a été supprimé avec succès.",
       });
       setLocation("/login");
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erreur",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Create portal session mutation
+  const createPortalSessionMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/account/create-portal-session");
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Erreur lors de la création de la session");
+      }
+      return res.json();
+    },
+    onSuccess: (data: { url: string }) => {
+      // Redirect to Stripe Customer Portal
+      window.location.href = data.url;
     },
     onError: (error: Error) => {
       toast({
@@ -434,6 +463,85 @@ export default function Account() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Payment Method - Only shown if user has Stripe customer ID */}
+      {user?.stripeCustomerId && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5" />
+              Méthode de paiement actuelle
+            </CardTitle>
+            <CardDescription>
+              Méthode utilisée pour le prélèvement mensuel de l'abonnement
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {paymentMethodLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              </div>
+            ) : paymentMethod ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/30">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-primary/10">
+                      <CreditCard className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-medium capitalize">
+                        {paymentMethod.brand} •••• {paymentMethod.last4}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Expire le {String(paymentMethod.expMonth).padStart(2, '0')}/{paymentMethod.expYear}
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={() => createPortalSessionMutation.mutate()}
+                    disabled={createPortalSessionMutation.isPending}
+                    data-testid="button-update-payment-method"
+                  >
+                    {createPortalSessionMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Redirection...
+                      </>
+                    ) : (
+                      'Modifier'
+                    )}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  La modification vous redirigera vers une page sécurisée Stripe pour mettre à jour votre carte.
+                </p>
+              </div>
+            ) : (
+              <div className="text-center py-8 space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Aucune méthode de paiement enregistrée
+                </p>
+                <Button
+                  variant="outline"
+                  onClick={() => createPortalSessionMutation.mutate()}
+                  disabled={createPortalSessionMutation.isPending}
+                  data-testid="button-add-payment-method"
+                >
+                  {createPortalSessionMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Redirection...
+                    </>
+                  ) : (
+                    'Ajouter une méthode de paiement'
+                  )}
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Payment History */}
       <Card>
