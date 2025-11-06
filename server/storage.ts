@@ -6,11 +6,15 @@ import { eq, and, gte, desc, sql, count } from "drizzle-orm";
 export interface IStorage {
   // User management
   getUser(id: string): Promise<User | undefined>;
+  getUserById(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   getUserByStripeCustomerId(customerId: string): Promise<User | undefined>;
   getUserByStripeSubscriptionId(subscriptionId: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
+  updateUserEmail(userId: string, email: string): Promise<void>;
+  updateUserPassword(userId: string, hashedPassword: string): Promise<void>;
+  deleteUser(userId: string): Promise<void>;
   
   // Email verification
   setVerificationToken(userId: string, token: string, expiry: Date): Promise<void>;
@@ -159,6 +163,31 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, userId))
       .returning();
     return user || undefined;
+  }
+
+  async getUserById(id: string): Promise<User | undefined> {
+    return this.getUser(id);
+  }
+
+  async updateUserEmail(userId: string, email: string): Promise<void> {
+    await db
+      .update(users)
+      .set({ email })
+      .where(eq(users.id, userId));
+  }
+
+  async updateUserPassword(userId: string, hashedPassword: string): Promise<void> {
+    await db
+      .update(users)
+      .set({ password: hashedPassword })
+      .where(eq(users.id, userId));
+  }
+
+  async deleteUser(userId: string): Promise<void> {
+    // First delete all user's calls
+    await db.delete(calls).where(eq(calls.userId, userId));
+    // Then delete the user
+    await db.delete(users).where(eq(users.id, userId));
   }
 
   // ===== CALLS MANAGEMENT =====

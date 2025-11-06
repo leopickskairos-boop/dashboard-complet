@@ -496,6 +496,174 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== ACCOUNT MANAGEMENT ROUTES =====
+
+  // Change email
+  app.post("/api/account/change-email", requireAuth, requireVerified, requireSubscription, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { newEmail, password } = req.body;
+
+      // Validate input
+      const changeEmailSchema = z.object({
+        newEmail: z.string().email("Email invalide"),
+        password: z.string().min(1, "Mot de passe requis"),
+      });
+      const data = changeEmailSchema.parse({ newEmail, password });
+
+      // Get current user
+      const user = await storage.getUserById(userId);
+      if (!user) {
+        return res.status(404).json({ message: "Utilisateur non trouvé" });
+      }
+
+      // Verify password
+      const isPasswordValid = await comparePassword(password, user.password);
+      if (!isPasswordValid) {
+        return res.status(401).json({ message: "Mot de passe incorrect" });
+      }
+
+      // Check if new email already exists
+      const existingUser = await storage.getUserByEmail(data.newEmail);
+      if (existingUser && existingUser.id !== userId) {
+        return res.status(400).json({ message: "Cet email est déjà utilisé" });
+      }
+
+      // Update email
+      await storage.updateUserEmail(userId, data.newEmail);
+
+      res.json({ message: "Email mis à jour avec succès" });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors[0].message });
+      }
+      console.error("Error changing email:", error);
+      res.status(500).json({ message: "Erreur lors du changement d'email" });
+    }
+  });
+
+  // Change password
+  app.post("/api/account/change-password", requireAuth, requireVerified, requireSubscription, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { currentPassword, newPassword } = req.body;
+
+      // Validate input
+      const changePasswordSchema = z.object({
+        currentPassword: z.string().min(1, "Mot de passe actuel requis"),
+        newPassword: z.string().min(8, "Le nouveau mot de passe doit contenir au moins 8 caractères"),
+      });
+      const data = changePasswordSchema.parse({ currentPassword, newPassword });
+
+      // Get current user
+      const user = await storage.getUserById(userId);
+      if (!user) {
+        return res.status(404).json({ message: "Utilisateur non trouvé" });
+      }
+
+      // Verify current password
+      const isPasswordValid = await comparePassword(data.currentPassword, user.password);
+      if (!isPasswordValid) {
+        return res.status(401).json({ message: "Mot de passe actuel incorrect" });
+      }
+
+      // Hash and update new password
+      const hashedPassword = await hashPassword(data.newPassword);
+      await storage.updateUserPassword(userId, hashedPassword);
+
+      res.json({ message: "Mot de passe mis à jour avec succès" });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors[0].message });
+      }
+      console.error("Error changing password:", error);
+      res.status(500).json({ message: "Erreur lors du changement de mot de passe" });
+    }
+  });
+
+  // Delete account
+  app.post("/api/account/delete", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { password } = req.body;
+
+      // Validate input
+      const deleteAccountSchema = z.object({
+        password: z.string().min(1, "Mot de passe requis"),
+      });
+      const data = deleteAccountSchema.parse({ password });
+
+      // Get current user
+      const user = await storage.getUserById(userId);
+      if (!user) {
+        return res.status(404).json({ message: "Utilisateur non trouvé" });
+      }
+
+      // Verify password
+      const isPasswordValid = await comparePassword(data.password, user.password);
+      if (!isPasswordValid) {
+        return res.status(401).json({ message: "Mot de passe incorrect" });
+      }
+
+      // Cancel Stripe subscription if exists
+      if (user.stripeSubscriptionId) {
+        try {
+          await stripe.subscriptions.cancel(user.stripeSubscriptionId);
+        } catch (stripeError) {
+          console.error("Error canceling Stripe subscription:", stripeError);
+          // Continue with account deletion even if Stripe fails
+        }
+      }
+
+      // Delete user account
+      await storage.deleteUser(userId);
+
+      // Clear session
+      req.logout(() => {
+        res.json({ message: "Compte supprimé avec succès" });
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors[0].message });
+      }
+      console.error("Error deleting account:", error);
+      res.status(500).json({ message: "Erreur lors de la suppression du compte" });
+    }
+  });
+
+  // Get payment history
+  app.get("/api/account/payments", requireAuth, requireVerified, requireSubscription, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+
+      // Get current user
+      const user = await storage.getUserById(userId);
+      if (!user || !user.stripeCustomerId) {
+        return res.json([]);
+      }
+
+      // Fetch payment history from Stripe
+      const charges = await stripe.charges.list({
+        customer: user.stripeCustomerId,
+        limit: 10,
+      });
+
+      // Format payments for frontend
+      const payments = charges.data.map((charge) => ({
+        id: charge.id,
+        amount: charge.amount,
+        created: charge.created,
+        status: charge.status,
+        description: charge.description,
+      }));
+
+      res.json(payments);
+    } catch (error) {
+      console.error("Error fetching payment history:", error);
+      res.status(500).json({ message: "Erreur lors de la récupération de l'historique des paiements" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
