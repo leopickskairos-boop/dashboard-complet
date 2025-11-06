@@ -501,6 +501,28 @@ export default function Dashboard() {
                   </div>
                 )}
 
+                {/* Date du rendez-vous - Uniquement pour les appels avec statut "completed" */}
+                {selectedCall.status === 'completed' && selectedCall.appointmentDate && (
+                  <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                        <CheckCircle2 className="w-5 h-5 text-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1.5">
+                          📅 Date du rendez-vous
+                        </div>
+                        <div className="text-base font-semibold">
+                          {format(new Date(selectedCall.appointmentDate), "EEEE dd MMMM yyyy 'à' HH:mm", { locale: fr })}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          Rendez-vous confirmé
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div>
                   <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
                     ID de référence

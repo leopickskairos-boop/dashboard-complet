@@ -82,6 +82,7 @@ export const calls = pgTable("calls", {
   duration: integer("duration"), // Duration in seconds
   status: text("status").notNull(), // 'active', 'completed', 'failed', 'canceled', 'no_answer'
   summary: text("summary"),
+  appointmentDate: timestamp("appointment_date"), // Date du rendez-vous (seulement pour status 'completed')
   emailSent: boolean("email_sent").notNull().default(false),
   callSid: text("call_sid"), // External call reference from voice API
   createdAt: timestamp("created_at").notNull().defaultNow(),
