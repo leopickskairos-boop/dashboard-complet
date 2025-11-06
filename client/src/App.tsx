@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { DashboardLayout } from "@/components/DashboardLayout";
 
 // Pages
 import Landing from "@/pages/landing";
@@ -16,6 +17,7 @@ import VerifyEmail from "@/pages/verify-email";
 import Subscribe from "@/pages/subscribe";
 import PaymentSuccess from "@/pages/payment-success";
 import Dashboard from "@/pages/dashboard";
+import Account from "@/pages/account";
 import SubscriptionExpired from "@/pages/subscription-expired";
 import NotFound from "@/pages/not-found";
 
@@ -46,7 +48,17 @@ function Router() {
       {/* Protected: requires verified email + active subscription */}
       <Route path="/dashboard">
         <ProtectedRoute requireVerified={true} requireSubscription={true}>
-          <Dashboard />
+          <DashboardLayout>
+            <Dashboard />
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/account">
+        <ProtectedRoute requireVerified={true} requireSubscription={true}>
+          <DashboardLayout>
+            <Account />
+          </DashboardLayout>
         </ProtectedRoute>
       </Route>
 
