@@ -176,10 +176,10 @@ export default function Dashboard() {
             >
               <CardContent className="p-6">
                 <div className="flex items-start justify-between mb-4">
-                  <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <Phone className="w-6 h-6 text-primary" />
+                  <div className="w-12 h-12 rounded-lg bg-cyan-500/10 flex items-center justify-center">
+                    <Phone className="w-6 h-6 text-cyan-400" />
                   </div>
-                  <TrendingUp className="w-4 h-4 text-green-500" />
+                  <TrendingUp className="w-4 h-4 text-white" />
                 </div>
                 <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
                   Total des appels
@@ -195,8 +195,8 @@ export default function Dashboard() {
             <Card data-testid="card-active-calls">
               <CardContent className="p-6">
                 <div className="flex items-start justify-between mb-4">
-                  <div className="w-12 h-12 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                    <Activity className="w-6 h-6 text-blue-500" />
+                  <div className="w-12 h-12 rounded-lg bg-violet-500/10 flex items-center justify-center">
+                    <Activity className="w-6 h-6 text-violet-400" />
                   </div>
                 </div>
                 <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
@@ -217,10 +217,10 @@ export default function Dashboard() {
             >
               <CardContent className="p-6">
                 <div className="flex items-start justify-between mb-4">
-                  <div className="w-12 h-12 rounded-lg bg-green-500/10 flex items-center justify-center">
-                    <TrendingUp className="w-6 h-6 text-green-500" />
+                  <div className="w-12 h-12 rounded-lg bg-white/5 flex items-center justify-center">
+                    <TrendingUp className="w-6 h-6 text-white" />
                   </div>
-                  <TrendingDown className="w-4 h-4 text-red-500" />
+                  <TrendingDown className="w-4 h-4 text-white" />
                 </div>
                 <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
                   Taux de conversion
@@ -240,10 +240,10 @@ export default function Dashboard() {
             >
               <CardContent className="p-6">
                 <div className="flex items-start justify-between mb-4">
-                  <div className="w-12 h-12 rounded-lg bg-orange-500/10 flex items-center justify-center">
-                    <Clock className="w-6 h-6 text-orange-500" />
+                  <div className="w-12 h-12 rounded-lg bg-white/5 flex items-center justify-center">
+                    <Clock className="w-6 h-6 text-white" />
                   </div>
-                  <TrendingUp className="w-4 h-4 text-green-500" />
+                  <TrendingUp className="w-4 h-4 text-white" />
                 </div>
                 <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
                   Durée moyenne
