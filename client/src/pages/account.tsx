@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Loader2, Mail, Lock, Trash2, CreditCard } from "lucide-react";
+import { Loader2, Mail, Lock, Trash2, CreditCard, ChevronRight, Home } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -174,11 +174,31 @@ export default function Account() {
 
   return (
     <div className="container max-w-5xl mx-auto p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Mon compte</h1>
-        <p className="text-muted-foreground mt-2">
-          Gérez vos informations personnelles et votre abonnement
-        </p>
+      {/* Breadcrumb Navigation */}
+      <nav className="flex items-center gap-2 text-sm text-muted-foreground" aria-label="Breadcrumb">
+        <Link href="/dashboard" data-testid="link-breadcrumb-dashboard">
+          <span className="hover:text-foreground flex items-center gap-1 cursor-pointer transition-colors">
+            <Home className="h-4 w-4" />
+            Dashboard
+          </span>
+        </Link>
+        <ChevronRight className="h-4 w-4" />
+        <span className="text-foreground font-medium">Mon compte</span>
+      </nav>
+
+      {/* Header with back button */}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Mon compte</h1>
+          <p className="text-muted-foreground mt-2">
+            Gérez vos informations personnelles et votre abonnement
+          </p>
+        </div>
+        <Link href="/dashboard">
+          <Button variant="outline" data-testid="button-back-home">
+            ← Retour à l'accueil
+          </Button>
+        </Link>
       </div>
 
       {/* Account Information */}

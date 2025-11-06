@@ -4,7 +4,7 @@ import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 
 interface DashboardLayoutProps {
@@ -41,7 +41,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           <header className="flex items-center justify-between gap-4 p-4 border-b bg-background">
             <div className="flex items-center gap-4">
               <SidebarTrigger data-testid="button-sidebar-toggle" />
-              <Logo />
+              <Link href="/dashboard" data-testid="link-logo">
+                <div className="cursor-pointer hover-elevate rounded-lg transition-colors">
+                  <Logo />
+                </div>
+              </Link>
             </div>
             <Button
               variant="ghost"
