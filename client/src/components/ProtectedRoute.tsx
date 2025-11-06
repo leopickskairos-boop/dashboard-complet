@@ -29,6 +29,11 @@ export function ProtectedRoute({
       return;
     }
 
+    // Admins bypass all verification and subscription checks
+    if (user.role === 'admin') {
+      return;
+    }
+
     if (requireVerified && !user.isVerified) {
       setLocation('/verify-email-sent');
       return;

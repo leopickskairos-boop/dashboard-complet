@@ -82,6 +82,11 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
 export async function requireVerified(req: Request, res: Response, next: NextFunction) {
   const user = (req as any).user as User;
   
+  // Admins bypass email verification
+  if (user.role === 'admin') {
+    return next();
+  }
+  
   if (!user.isVerified) {
     return res.status(403).json({ message: "Email non vérifié" });
   }
@@ -92,6 +97,11 @@ export async function requireVerified(req: Request, res: Response, next: NextFun
 // Require active subscription middleware
 export async function requireSubscription(req: Request, res: Response, next: NextFunction) {
   const user = (req as any).user as User;
+  
+  // Admins bypass subscription requirement
+  if (user.role === 'admin') {
+    return next();
+  }
   
   if (!user.subscriptionStatus || user.subscriptionStatus !== 'active') {
     return res.status(403).json({ message: "Abonnement requis" });

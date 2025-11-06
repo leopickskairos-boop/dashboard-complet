@@ -37,6 +37,12 @@ export default function Login() {
 
       const result = await response.json();
 
+      // Admins go directly to dashboard, bypassing verification and subscription checks
+      if (result.user.role === 'admin') {
+        setLocation("/dashboard");
+        return;
+      }
+
       // Redirect based on user status
       if (!result.user.isVerified) {
         setLocation("/verify-email-sent");

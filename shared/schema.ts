@@ -8,6 +8,7 @@ export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
+  role: text("role").notNull().default("user"), // 'user' or 'admin'
   isVerified: boolean("is_verified").notNull().default(false),
   verificationToken: text("verification_token"),
   verificationTokenExpiry: timestamp("verification_token_expiry"),
