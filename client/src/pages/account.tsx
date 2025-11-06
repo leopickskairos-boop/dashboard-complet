@@ -313,29 +313,29 @@ export default function Account() {
   }
 
   return (
-    <div className="container max-w-5xl mx-auto p-6 space-y-6">
+    <div className="container max-w-5xl mx-auto px-4 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
       {/* Breadcrumb Navigation */}
-      <nav className="flex items-center gap-2 text-sm text-muted-foreground" aria-label="Breadcrumb">
+      <nav className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground" aria-label="Breadcrumb">
         <Link href="/dashboard" data-testid="link-breadcrumb-dashboard">
           <span className="hover:text-foreground flex items-center gap-1 cursor-pointer transition-colors">
-            <Home className="h-4 w-4" />
-            Dashboard
+            <Home className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">Dashboard</span>
           </span>
         </Link>
-        <ChevronRight className="h-4 w-4" />
+        <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
         <span className="text-foreground font-medium">Mon compte</span>
       </nav>
 
       {/* Header with back button */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Mon compte</h1>
-          <p className="text-muted-foreground mt-2">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex-1 min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Mon compte</h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-1.5 sm:mt-2 max-w-2xl">
             Gérez vos informations personnelles et votre abonnement
           </p>
         </div>
-        <Link href="/dashboard">
-          <Button variant="outline" data-testid="button-back-home">
+        <Link href="/dashboard" className="shrink-0">
+          <Button variant="outline" size="sm" className="w-full sm:w-auto" data-testid="button-back-home">
             ← Retour à l'accueil
           </Button>
         </Link>
