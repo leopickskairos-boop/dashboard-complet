@@ -13,7 +13,8 @@ export const notificationTypeEnum = pgEnum('notification_type', [
   'subscription_renewed',
   'subscription_created',
   'subscription_expired',
-  'subscription_expiring_soon'
+  'subscription_expiring_soon',
+  'monthly_report_ready'
 ]);
 
 // Users table with authentication, email verification, and Stripe subscription
@@ -122,7 +123,8 @@ export const insertNotificationSchema = createInsertSchema(notifications, {
     'subscription_renewed',
     'subscription_created',
     'subscription_expired',
-    'subscription_expiring_soon'
+    'subscription_expiring_soon',
+    'monthly_report_ready'
   ]),
   title: z.string().min(1, "Titre requis"),
   message: z.string().min(1, "Message requis"),
@@ -155,3 +157,35 @@ export const insertNotificationPreferencesSchema = createInsertSchema(notificati
 // Types for notification preferences
 export type InsertNotificationPreferences = z.infer<typeof insertNotificationPreferencesSchema>;
 export type NotificationPreferences = typeof notificationPreferences.$inferSelect;
+
+// Monthly reports table for storing generated PDF reports
+export const monthlyReports = pgTable("monthly_reports", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  subscriptionRenewalAt: timestamp("subscription_renewal_at").notNull(),
+  metrics: text("metrics").notNull(), // JSON string with all KPIs and aggregated data
+  pdfPath: text("pdf_path").notNull(),
+  pdfChecksum: text("pdf_checksum"),
+  generatedAt: timestamp("generated_at").notNull().defaultNow(),
+  emailedAt: timestamp("emailed_at"),
+  notificationId: varchar("notification_id").references(() => notifications.id, { onDelete: 'set null' }),
+  retryCount: integer("retry_count").notNull().default(0),
+});
+
+// Insert schema for monthly reports
+export const insertMonthlyReportSchema = createInsertSchema(monthlyReports, {
+  periodStart: z.date(),
+  periodEnd: z.date(),
+  subscriptionRenewalAt: z.date(),
+  metrics: z.string().min(1, "Metrics data required"),
+  pdfPath: z.string().min(1, "PDF path required"),
+}).omit({
+  id: true,
+  generatedAt: true,
+});
+
+// Types for monthly reports
+export type InsertMonthlyReport = z.infer<typeof insertMonthlyReportSchema>;
+export type MonthlyReport = typeof monthlyReports.$inferSelect;
