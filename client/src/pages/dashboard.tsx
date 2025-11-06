@@ -417,7 +417,7 @@ export default function Dashboard() {
                 Informations complètes sur cet appel
               </DialogDescription>
             </DialogHeader>
-            {selectedCall && (
+            {selectedCall && (console.log('Selected Call Data:', selectedCall),
               <div className="space-y-6">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
