@@ -863,6 +863,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Mark all notifications as read
+  app.post("/api/notifications/mark-all-read", requireAuth, requireVerified, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      await storage.markAllNotificationsAsRead(userId);
+      res.json({ message: "Toutes les notifications ont été marquées comme lues" });
+    } catch (error) {
+      console.error("Error marking all notifications as read:", error);
+      res.status(500).json({ message: "Erreur lors de la mise à jour des notifications" });
+    }
+  });
+
   // Mark notification as read
   app.patch("/api/notifications/:id/read", requireAuth, requireVerified, async (req, res) => {
     try {

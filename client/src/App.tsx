@@ -17,6 +17,7 @@ import VerifyEmail from "@/pages/verify-email";
 import Subscribe from "@/pages/subscribe";
 import PaymentSuccess from "@/pages/payment-success";
 import Dashboard from "@/pages/dashboard";
+import Notifications from "@/pages/notifications";
 import Account from "@/pages/account";
 import SubscriptionExpired from "@/pages/subscription-expired";
 import NotFound from "@/pages/not-found";
@@ -50,6 +51,14 @@ function Router() {
         <ProtectedRoute requireVerified={true} requireSubscription={true}>
           <DashboardLayout>
             <Dashboard />
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/notifications">
+        <ProtectedRoute requireVerified={true} requireSubscription={true}>
+          <DashboardLayout>
+            <Notifications />
           </DashboardLayout>
         </ProtectedRoute>
       </Route>
