@@ -23,6 +23,10 @@ import {
   insertNotificationSchema
 } from "@shared/schema";
 import { z } from "zod";
+import {
+  notifySubscriptionAlert,
+  notifyPasswordChanged,
+} from "./notifications";
 
 if (!process.env.STRIPE_SECRET_KEY) {
   throw new Error('Missing required Stripe secret: STRIPE_SECRET_KEY');
@@ -371,7 +375,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Handle the event
     try {
       switch (event.type) {
-        case 'customer.subscription.created':
+        case 'customer.subscription.created': {
+          const subscription = event.data.object as Stripe.Subscription;
+          const customerId = subscription.customer as string;
+
+          // Find user by customer ID
+          const user = await storage.getUserByStripeCustomerId(customerId);
+          if (user) {
+            await storage.updateStripeInfo(user.id, {
+              subscriptionStatus: subscription.status,
+              subscriptionCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
+            });
+            
+            // Notify user about subscription creation
+            await notifySubscriptionAlert(
+              storage,
+              user.id,
+              'subscription_created',
+              'Votre abonnement VoiceAI a été créé avec succès.'
+            );
+          }
+          break;
+        }
+        
         case 'customer.subscription.updated': {
           const subscription = event.data.object as Stripe.Subscription;
           const customerId = subscription.customer as string;
@@ -383,6 +409,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
               subscriptionStatus: subscription.status,
               subscriptionCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
             });
+            
+            // Notify user if subscription was renewed
+            if (subscription.status === 'active') {
+              await notifySubscriptionAlert(
+                storage,
+                user.id,
+                'subscription_renewed',
+                'Votre abonnement VoiceAI a été renouvelé avec succès.'
+              );
+            }
           }
           break;
         }
@@ -396,6 +432,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             await storage.updateStripeInfo(user.id, {
               subscriptionStatus: 'canceled',
             });
+            
+            // Notify user about subscription expiration
+            await notifySubscriptionAlert(
+              storage,
+              user.id,
+              'subscription_expired',
+              'Votre abonnement VoiceAI a expiré. Renouvelez-le pour continuer à utiliser nos services.'
+            );
           }
           break;
         }
@@ -576,6 +620,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Hash and update new password
       const hashedPassword = await hashPassword(data.newPassword);
       await storage.updateUserPassword(userId, hashedPassword);
+      
+      // Notify user about password change
+      await notifyPasswordChanged(storage, userId);
 
       res.json({ message: "Mot de passe mis à jour avec succès" });
     } catch (error) {
