@@ -1,0 +1,94 @@
+🎯 Objectif :
+Mettre en place un système de notifications structuré, utile et non-intrusif pour les utilisateurs, avec une rubrique dédiée dans le menu latéral du dashboard.
+
+---
+
+## 1. ✅ Types de notifications à afficher
+
+### 📅 Résumé quotidien (affiché en fin de journée)
+- Exemple : “Aujourd’hui, vous avez confirmé **3** rendez-vous.”  
+- Bouton ou lien vers la liste des rendez-vous du jour
+
+### 🚫 Appels sans aboutissement
+- Exemple : “**2** appels aujourd’hui n’ont donné lieu à aucun aboutissement.”  
+- ➕ **Mot utilisé : “aucun aboutissement”** (ne pas utiliser "erreur")
+
+### 📞 Appel actif
+- Exemple : “Un appel est en cours actuellement.”  
+- ➕ S’affiche **uniquement si l’utilisateur est connecté au dashboard**
+
+---
+
+## 2. 🔁 Notifications liées à l’activité du compte
+
+🛑 **Pas de pop-up** → uniquement visible dans le **centre de notifications**
+
+- 🔐 “Votre mot de passe a été modifié avec succès.”
+- 💳 “Votre moyen de paiement a été mis à jour.”
+- 🔁 “Votre abonnement a été renouvelé avec succès.”
+- 🧾 “Vous avez souscrit à l’abonnement [Nom de l’offre] le [date].”
+- ❌ “Votre abonnement est arrivé à expiration.”
+
+---
+
+## 3. 🕐 Rappels automatiques d’abonnement
+
+- 5 jours avant expiration :
+  - “Votre abonnement expire dans 5 jours. Pensez à le renouveler pour conserver l’accès à vos données.”
+
+- 2 jours avant expiration :
+  - “⚠ Plus que 2 jours avant la fin de votre abonnement.”
+  - ➕ Affichage bandeau rouge discret en haut du dashboard
+  - ➕ Bouton “Renouveler maintenant”
+
+→ Ces alertes s’affichent à la fois dans :
+- Le **centre de notifications**
+- Le **bandeau UX** en haut du dashboard (bannière discrète)
+
+---
+
+## 4. ⚙️ Gestion des préférences de notifications
+
+Dans **la rubrique “Mon compte”** ➝ Section dédiée "Notifications" :
+
+L’utilisateur peut choisir d’activer/désactiver les notifications suivantes :
+- Résumé quotidien
+- Appels sans aboutissement
+- Appel actif en direct
+- Rappels d’abonnement
+
+🛑 Les notifications liées aux actions du compte (mot de passe, paiement, etc.) sont **toujours enregistrées** (non désactivables).
+
+---
+
+## 5. 🗂 Rubrique “Centre de notifications” (dashboard)
+
+Créer une **rubrique complète**, comme “Mon compte”, accessible via le **menu latéral** :
+
+- Titre dans le menu : **Notifications**
+- Position dans le menu : juste en dessous de “Mon compte”
+
+Fonctionnalités attendues :
+- Affichage de toutes les notifications reçues
+- 📥 État : “Lu / Non lu”
+- 🗂 Tri par type (RDV, abonnement, paiement, appel...)
+- ⏳ Filtres temporels :
+  - 1 jour
+  - 2 jours
+  - 3 jours
+  - Cette semaine
+  - Ce mois
+
+---
+
+## 🧠 UX — Objectifs & bonnes pratiques
+
+- ✅ Notifications utiles, précises, catégorisées
+- ✅ Non-intrusives (pas de pop-up intempestif)
+- ✅ Centre lisible, filtrable, bien structuré
+- ✅ Personnalisation des alertes dans “Mon compte”
+
+---
+
+Merci à toute l’équipe pour la mise en place de cette fonctionnalité 🙏  
+Léo 🚀

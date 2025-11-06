@@ -116,10 +116,9 @@ export default function Login() {
                         />
                         <button
                           type="button"
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus:text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 rounded transition-colors"
                           onClick={() => setShowPassword(!showPassword)}
                           data-testid="button-toggle-password"
-                          tabIndex={-1}
                           aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
                         >
                           {showPassword ? (
