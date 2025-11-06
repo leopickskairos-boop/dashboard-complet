@@ -15,7 +15,13 @@ import {
   requireSubscription
 } from "./auth";
 import { sendVerificationEmail, sendPasswordResetEmail } from "./email";
-import { insertUserSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema } from "@shared/schema";
+import { 
+  insertUserSchema, 
+  loginSchema, 
+  forgotPasswordSchema, 
+  resetPasswordSchema,
+  insertNotificationSchema
+} from "@shared/schema";
 import { z } from "zod";
 
 if (!process.env.STRIPE_SECRET_KEY) {
@@ -756,6 +762,212 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating portal session:", error);
       res.status(500).json({ message: "Erreur lors de la création de la session portal" });
+    }
+  });
+
+  // ============================
+  // Notifications Routes
+  // ============================
+
+  // Validation schemas for notifications
+  const getNotificationsQuerySchema = z.object({
+    timeFilter: z.enum(['day', 'two_days', 'three_days', 'week', 'month']).optional(),
+    typeFilter: z.enum([
+      'daily_summary',
+      'failed_calls',
+      'active_call',
+      'password_changed',
+      'payment_updated',
+      'subscription_renewed',
+      'subscription_created',
+      'subscription_expired',
+      'subscription_expiring_soon'
+    ]).optional(),
+    isRead: z.enum(['true', 'false']).optional(),
+  });
+
+  const notificationIdParamSchema = z.object({
+    id: z.string().uuid("ID invalide"),
+  });
+
+  // Get all notifications with filters
+  app.get("/api/notifications", requireAuth, requireVerified, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      
+      // Validate query parameters
+      const queryValidation = getNotificationsQuerySchema.safeParse(req.query);
+      if (!queryValidation.success) {
+        return res.status(400).json({ 
+          message: queryValidation.error.errors[0].message 
+        });
+      }
+
+      const { timeFilter, typeFilter, isRead } = queryValidation.data;
+      const filters: any = {};
+      
+      if (timeFilter) {
+        filters.timeFilter = timeFilter;
+      }
+      
+      if (typeFilter) {
+        filters.typeFilter = typeFilter;
+      }
+      
+      if (isRead !== undefined) {
+        filters.isRead = isRead === 'true';
+      }
+
+      const notifications = await storage.getNotifications(userId, filters);
+      res.json(notifications);
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+      res.status(500).json({ message: "Erreur lors de la récupération des notifications" });
+    }
+  });
+
+  // Create notification
+  app.post("/api/notifications", requireAuth, requireVerified, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      
+      // Validate notification data
+      const validation = insertNotificationSchema.safeParse({
+        ...req.body,
+        userId,
+      });
+      
+      if (!validation.success) {
+        return res.status(400).json({ 
+          message: validation.error.errors[0].message 
+        });
+      }
+
+      const notification = await storage.createNotification(validation.data);
+      res.status(201).json(notification);
+    } catch (error) {
+      console.error("Error creating notification:", error);
+      res.status(500).json({ message: "Erreur lors de la création de la notification" });
+    }
+  });
+
+  // Get unread notifications count
+  app.get("/api/notifications/unread-count", requireAuth, requireVerified, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const count = await storage.getUnreadNotificationsCount(userId);
+      res.json({ count });
+    } catch (error) {
+      console.error("Error fetching unread count:", error);
+      res.status(500).json({ message: "Erreur lors de la récupération du compteur" });
+    }
+  });
+
+  // Mark notification as read
+  app.patch("/api/notifications/:id/read", requireAuth, requireVerified, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      
+      // Validate ID parameter
+      const paramValidation = notificationIdParamSchema.safeParse(req.params);
+      if (!paramValidation.success) {
+        return res.status(400).json({ 
+          message: paramValidation.error.errors[0].message 
+        });
+      }
+
+      const { id } = paramValidation.data;
+
+      // Verify notification belongs to user
+      const notification = await storage.getNotificationById(id, userId);
+      if (!notification) {
+        return res.status(404).json({ message: "Notification non trouvée" });
+      }
+
+      await storage.markNotificationAsRead(id, userId);
+      res.json({ message: "Notification marquée comme lue" });
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+      res.status(500).json({ message: "Erreur lors de la mise à jour de la notification" });
+    }
+  });
+
+  // Delete notification
+  app.delete("/api/notifications/:id", requireAuth, requireVerified, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      
+      // Validate ID parameter
+      const paramValidation = notificationIdParamSchema.safeParse(req.params);
+      if (!paramValidation.success) {
+        return res.status(400).json({ 
+          message: paramValidation.error.errors[0].message 
+        });
+      }
+
+      const { id } = paramValidation.data;
+
+      // Verify notification belongs to user
+      const notification = await storage.getNotificationById(id, userId);
+      if (!notification) {
+        return res.status(404).json({ message: "Notification non trouvée" });
+      }
+
+      await storage.deleteNotification(id, userId);
+      res.json({ message: "Notification supprimée" });
+    } catch (error) {
+      console.error("Error deleting notification:", error);
+      res.status(500).json({ message: "Erreur lors de la suppression de la notification" });
+    }
+  });
+
+  // Get notification preferences
+  app.get("/api/notifications/preferences", requireAuth, requireVerified, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      
+      let preferences = await storage.getNotificationPreferences(userId);
+      
+      // If no preferences exist, create default ones
+      if (!preferences) {
+        preferences = await storage.upsertNotificationPreferences(userId, {
+          dailySummaryEnabled: true,
+          failedCallsEnabled: true,
+          activeCallEnabled: true,
+          subscriptionAlertsEnabled: true,
+        });
+      }
+
+      res.json(preferences);
+    } catch (error) {
+      console.error("Error fetching notification preferences:", error);
+      res.status(500).json({ message: "Erreur lors de la récupération des préférences" });
+    }
+  });
+
+  // Update notification preferences
+  app.patch("/api/notifications/preferences", requireAuth, requireVerified, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      
+      // Validate input
+      const schema = z.object({
+        dailySummaryEnabled: z.boolean().optional(),
+        failedCallsEnabled: z.boolean().optional(),
+        activeCallEnabled: z.boolean().optional(),
+        subscriptionAlertsEnabled: z.boolean().optional(),
+      });
+      
+      const data = schema.parse(req.body);
+
+      const preferences = await storage.upsertNotificationPreferences(userId, data);
+      res.json(preferences);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors[0].message });
+      }
+      console.error("Error updating notification preferences:", error);
+      res.status(500).json({ message: "Erreur lors de la mise à jour des préférences" });
     }
   });
 

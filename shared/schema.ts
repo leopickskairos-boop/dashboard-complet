@@ -1,7 +1,20 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, boolean, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, boolean, integer, pgEnum } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+
+// Notification type enum
+export const notificationTypeEnum = pgEnum('notification_type', [
+  'daily_summary',
+  'failed_calls',
+  'active_call',
+  'password_changed',
+  'payment_updated',
+  'subscription_renewed',
+  'subscription_created',
+  'subscription_expired',
+  'subscription_expiring_soon'
+]);
 
 // Users table with authentication, email verification, and Stripe subscription
 export const users = pgTable("users", {
@@ -85,3 +98,60 @@ export const insertCallSchema = createInsertSchema(calls, {
 // Types for calls
 export type InsertCall = z.infer<typeof insertCallSchema>;
 export type Call = typeof calls.$inferSelect;
+
+// Notifications table for user notifications
+export const notifications = pgTable("notifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  type: notificationTypeEnum("type").notNull(),
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  isRead: boolean("is_read").notNull().default(false),
+  metadata: text("metadata"), // JSON string for additional data (e.g., call counts, dates)
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Insert schema for notifications
+export const insertNotificationSchema = createInsertSchema(notifications, {
+  type: z.enum([
+    'daily_summary',
+    'failed_calls',
+    'active_call',
+    'password_changed',
+    'payment_updated',
+    'subscription_renewed',
+    'subscription_created',
+    'subscription_expired',
+    'subscription_expiring_soon'
+  ]),
+  title: z.string().min(1, "Titre requis"),
+  message: z.string().min(1, "Message requis"),
+}).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Types for notifications
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type Notification = typeof notifications.$inferSelect;
+
+// Notification preferences table for user settings
+export const notificationPreferences = pgTable("notification_preferences", {
+  userId: varchar("user_id").primaryKey().references(() => users.id, { onDelete: 'cascade' }),
+  dailySummaryEnabled: boolean("daily_summary_enabled").notNull().default(true),
+  failedCallsEnabled: boolean("failed_calls_enabled").notNull().default(true),
+  activeCallEnabled: boolean("active_call_enabled").notNull().default(true),
+  subscriptionAlertsEnabled: boolean("subscription_alerts_enabled").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Insert schema for notification preferences
+export const insertNotificationPreferencesSchema = createInsertSchema(notificationPreferences).omit({
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Types for notification preferences
+export type InsertNotificationPreferences = z.infer<typeof insertNotificationPreferencesSchema>;
+export type NotificationPreferences = typeof notificationPreferences.$inferSelect;

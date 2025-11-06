@@ -1,5 +1,18 @@
 // Reference: javascript_database blueprint - DatabaseStorage implementation
-import { users, calls, type User, type InsertUser, type Call, type InsertCall } from "@shared/schema";
+import { 
+  users, 
+  calls, 
+  notifications,
+  notificationPreferences,
+  type User, 
+  type InsertUser, 
+  type Call, 
+  type InsertCall,
+  type Notification,
+  type InsertNotification,
+  type NotificationPreferences,
+  type InsertNotificationPreferences
+} from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, desc, sql, count } from "drizzle-orm";
 
@@ -53,6 +66,22 @@ export interface IStorage {
     completedCalls: number;
     averageDuration: number;
   }[]>;
+
+  // Notifications management
+  getNotifications(userId: string, filters?: {
+    timeFilter?: 'day' | 'two_days' | 'three_days' | 'week' | 'month';
+    typeFilter?: 'daily_summary' | 'failed_calls' | 'active_call' | 'password_changed' | 'payment_updated' | 'subscription_renewed' | 'subscription_created' | 'subscription_expired' | 'subscription_expiring_soon';
+    isRead?: boolean;
+  }): Promise<Notification[]>;
+  getNotificationById(id: string, userId: string): Promise<Notification | undefined>;
+  createNotification(notification: InsertNotification): Promise<Notification>;
+  markNotificationAsRead(id: string, userId: string): Promise<void>;
+  deleteNotification(id: string, userId: string): Promise<void>;
+  getUnreadNotificationsCount(userId: string): Promise<number>;
+  
+  // Notification preferences
+  getNotificationPreferences(userId: string): Promise<NotificationPreferences | undefined>;
+  upsertNotificationPreferences(userId: string, preferences: Partial<InsertNotificationPreferences>): Promise<NotificationPreferences>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -342,6 +371,140 @@ export class DatabaseStorage implements IStorage {
       completedCalls: Number(row.completedCalls),
       averageDuration: Math.round(Number(row.averageDuration)),
     }));
+  }
+
+  // Notifications management implementations
+  async getNotifications(userId: string, filters?: {
+    timeFilter?: 'day' | 'two_days' | 'three_days' | 'week' | 'month';
+    typeFilter?: 'daily_summary' | 'failed_calls' | 'active_call' | 'password_changed' | 'payment_updated' | 'subscription_renewed' | 'subscription_created' | 'subscription_expired' | 'subscription_expiring_soon';
+    isRead?: boolean;
+  }): Promise<Notification[]> {
+    const conditions = [eq(notifications.userId, userId)];
+    
+    // Apply time filter
+    if (filters?.timeFilter) {
+      const now = new Date();
+      let filterDate: Date | null = null;
+      
+      switch (filters.timeFilter) {
+        case 'day':
+          filterDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+          break;
+        case 'two_days':
+          filterDate = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000);
+          break;
+        case 'three_days':
+          filterDate = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
+          break;
+        case 'week':
+          filterDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case 'month':
+          filterDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          break;
+      }
+      
+      if (filterDate) {
+        conditions.push(gte(notifications.createdAt, filterDate));
+      }
+    }
+    
+    // Apply type filter
+    if (filters?.typeFilter) {
+      conditions.push(eq(notifications.type, filters.typeFilter));
+    }
+    
+    // Apply read/unread filter
+    if (filters?.isRead !== undefined) {
+      conditions.push(eq(notifications.isRead, filters.isRead));
+    }
+    
+    const result = await db
+      .select()
+      .from(notifications)
+      .where(and(...conditions))
+      .orderBy(desc(notifications.createdAt));
+    
+    return result;
+  }
+
+  async getNotificationById(id: string, userId: string): Promise<Notification | undefined> {
+    const [notification] = await db
+      .select()
+      .from(notifications)
+      .where(and(eq(notifications.id, id), eq(notifications.userId, userId)));
+    
+    return notification || undefined;
+  }
+
+  async createNotification(notification: InsertNotification): Promise<Notification> {
+    const [created] = await db
+      .insert(notifications)
+      .values(notification)
+      .returning();
+    
+    return created;
+  }
+
+  async markNotificationAsRead(id: string, userId: string): Promise<void> {
+    await db
+      .update(notifications)
+      .set({ isRead: true })
+      .where(and(eq(notifications.id, id), eq(notifications.userId, userId)));
+  }
+
+  async deleteNotification(id: string, userId: string): Promise<void> {
+    await db
+      .delete(notifications)
+      .where(and(eq(notifications.id, id), eq(notifications.userId, userId)));
+  }
+
+  async getUnreadNotificationsCount(userId: string): Promise<number> {
+    const result = await db
+      .select({ count: count() })
+      .from(notifications)
+      .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)));
+    
+    return Number(result[0]?.count || 0);
+  }
+
+  // Notification preferences implementations
+  async getNotificationPreferences(userId: string): Promise<NotificationPreferences | undefined> {
+    const [prefs] = await db
+      .select()
+      .from(notificationPreferences)
+      .where(eq(notificationPreferences.userId, userId));
+    
+    return prefs || undefined;
+  }
+
+  async upsertNotificationPreferences(userId: string, preferences: Partial<InsertNotificationPreferences>): Promise<NotificationPreferences> {
+    // Try to update first
+    const existing = await this.getNotificationPreferences(userId);
+    
+    if (existing) {
+      const [updated] = await db
+        .update(notificationPreferences)
+        .set({
+          ...preferences,
+          updatedAt: new Date(),
+        })
+        .where(eq(notificationPreferences.userId, userId))
+        .returning();
+      
+      return updated;
+    }
+    
+    // Create new if doesn't exist
+    const [created] = await db
+      .insert(notificationPreferences)
+      .values({
+        userId,
+        ...preferences,
+      })
+      .returning();
+    
+    return created;
   }
 }
 
