@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,6 +54,7 @@ const deleteAccountSchema = z.object({
 
 export default function Account() {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [showEmailForm, setShowEmailForm] = useState(false);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
 
@@ -151,7 +153,7 @@ export default function Account() {
         title: "Compte supprimé",
         description: "Votre compte a été supprimé avec succès.",
       });
-      window.location.href = "/login";
+      setLocation("/login");
     },
     onError: (error: Error) => {
       toast({
