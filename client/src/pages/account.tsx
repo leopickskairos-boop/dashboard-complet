@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Loader2, Mail, Lock, Trash2, CreditCard, ChevronRight, Home, Bell, FileText, Download } from "lucide-react";
+import { Loader2, Mail, Lock, Trash2, CreditCard, ChevronRight, Home, Bell, FileText, Download, Key, Copy, Eye, EyeOff, RefreshCw } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -108,6 +108,8 @@ export default function Account() {
   const [, setLocation] = useLocation();
   const [showEmailForm, setShowEmailForm] = useState(false);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [copySuccess, setCopySuccess] = useState(false);
 
   // Fetch current user
   const { data: user, isLoading: userLoading } = useQuery<User>({
@@ -133,6 +135,11 @@ export default function Account() {
   // Fetch monthly reports
   const { data: monthlyReports, isLoading: reportsLoading } = useQuery<MonthlyReport[]>({
     queryKey: ['/api/reports'],
+  });
+
+  // Fetch API key
+  const { data: apiKeyData, isLoading: apiKeyLoading } = useQuery<{ apiKey: string | null }>({
+    queryKey: ['/api/account/api-key'],
   });
 
   // Notification preferences form
@@ -303,6 +310,54 @@ export default function Account() {
       });
     },
   });
+
+  // Regenerate API key mutation
+  const regenerateApiKeyMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/account/api-key/regenerate");
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Erreur lors de la régénération de la clé API");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Clé API régénérée",
+        description: "Votre nouvelle clé API a été générée avec succès.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/account/api-key'] });
+      setShowApiKey(true);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erreur",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Copy API key to clipboard
+  const copyApiKey = async () => {
+    if (apiKeyData?.apiKey) {
+      try {
+        await navigator.clipboard.writeText(apiKeyData.apiKey);
+        setCopySuccess(true);
+        toast({
+          title: "Clé copiée",
+          description: "La clé API a été copiée dans le presse-papiers.",
+        });
+        setTimeout(() => setCopySuccess(false), 2000);
+      } catch (error) {
+        toast({
+          title: "Erreur",
+          description: "Impossible de copier la clé API.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
 
   if (userLoading) {
     return (
@@ -570,6 +625,131 @@ export default function Account() {
                   </div>
                 </form>
               </Form>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* API Key Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Key className="h-5 w-5" />
+            Clé API
+          </CardTitle>
+          <CardDescription>
+            Utilisez cette clé pour connecter SpeedAI à N8N ou d'autres services
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {apiKeyLoading ? (
+              <div className="flex items-center justify-center py-4">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : apiKeyData?.apiKey ? (
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <div className="relative flex-1">
+                    <Input
+                      type={showApiKey ? "text" : "password"}
+                      value={apiKeyData.apiKey}
+                      readOnly
+                      className="font-mono text-sm pr-10"
+                      data-testid="input-api-key"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                      onClick={() => setShowApiKey(!showApiKey)}
+                      data-testid="button-toggle-api-key"
+                    >
+                      {showApiKey ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={copyApiKey}
+                      disabled={copySuccess}
+                      data-testid="button-copy-api-key"
+                      className="flex-1 sm:flex-none"
+                    >
+                      {copySuccess ? (
+                        <>
+                          <Copy className="mr-2 h-4 w-4 text-green-500" />
+                          Copié !
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="mr-2 h-4 w-4" />
+                          Copier
+                        </>
+                      )}
+                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          data-testid="button-regenerate-api-key"
+                          className="flex-1 sm:flex-none"
+                        >
+                          <RefreshCw className="mr-2 h-4 w-4" />
+                          Régénérer
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Régénérer la clé API ?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            L'ancienne clé ne fonctionnera plus après régénération. Vous devrez mettre à jour vos intégrations N8N avec la nouvelle clé.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel data-testid="button-cancel-regenerate">Annuler</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => regenerateApiKeyMutation.mutate()}
+                            disabled={regenerateApiKeyMutation.isPending}
+                            data-testid="button-confirm-regenerate"
+                          >
+                            {regenerateApiKeyMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Régénérer
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                </div>
+                
+                <div className="rounded-lg bg-muted/50 p-4 space-y-2">
+                  <p className="text-sm font-medium">⚠️ Sécurité</p>
+                  <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
+                    <li>Ne partagez jamais cette clé publiquement</li>
+                    <li>Utilisez HTTPS uniquement dans vos intégrations</li>
+                    <li>Régénérez la clé si vous suspectez une compromission</li>
+                  </ul>
+                </div>
+
+                <div className="rounded-lg bg-muted/50 p-4 space-y-2">
+                  <p className="text-sm font-medium">📘 Utilisation avec N8N</p>
+                  <p className="text-xs text-muted-foreground">
+                    Pour envoyer des données vers SpeedAI depuis N8N, utilisez un nœud HTTP Request avec :
+                  </p>
+                  <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
+                    <li>URL : <code className="bg-background px-1 py-0.5 rounded">https://votre-app.replit.app/api/webhooks/n8n</code></li>
+                    <li>Méthode : POST</li>
+                    <li>Header : <code className="bg-background px-1 py-0.5 rounded">Authorization: Bearer VOTRE_CLE_API</code></li>
+                  </ul>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">Aucune clé API disponible.</p>
             )}
           </div>
         </CardContent>
