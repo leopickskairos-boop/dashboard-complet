@@ -1,4 +1,4 @@
-import { LayoutDashboard, Bell, User } from "lucide-react";
+import { LayoutDashboard, Bell, User, Shield } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -11,6 +11,7 @@ import {
 import { Link, useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
+import { useUser } from "@/hooks/use-user";
 
 const menuItems = [
   {
@@ -33,6 +34,7 @@ const menuItems = [
 
 export function AppSidebar() {
   const [location] = useLocation();
+  const { user } = useUser();
 
   const { data: unreadCount } = useQuery<number>({
     queryKey: ['/api/notifications/unread-count'],
@@ -64,6 +66,17 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+              
+              {user?.role === "admin" && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={location === "/admin"}>
+                    <Link href="/admin" data-testid="link-administration">
+                      <Shield />
+                      <span>Administration</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
