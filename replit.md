@@ -33,8 +33,21 @@ The project utilizes a modern web stack:
   - File storage service with MD5 integrity checksums
   - Secure API routes with authentication and ownership verification
 
-**Upcoming Features (Phase 2):**
+**Admin Dashboard (Phase 2 - Complete):**
+- **Secure Admin Interface**: Protected route `/admin` accessible only to administrators with dedicated middleware (`requireAdmin`).
+- **User Management Dashboard**: Comprehensive table showing all users with real-time statistics, subscription status, and account status.
+- **Health Monitoring System**: Automatic health indicator for each user's dashboard:
+  - 🟢 Green (Optimal): Normal operation, recent activity, failure rate < 20%
+  - 🟠 Orange (Attention): Failure rate between 20-50% in last 24h
+  - 🔴 Red (Critical): Failure rate > 50% OR no activity for 7+ days
+- **Advanced Filtering**: Filter users by account status (active/suspended), subscription plan (free/paid), and health status.
+- **Account Actions**: Suspend, activate, or delete user accounts with confirmation dialogs. Admins cannot delete their own account.
+- **Statistics Display**: Total calls, total minutes used, last activity date, and registration date for each user.
+- **N8N Webhook Integration**: Unique API keys for each client enabling automated call creation via external workflows.
+
+**Upcoming Features (Phase 3):**
 - **AI Voice Integration**: Connection with AI voice services (Retell.ai, VAPI, ElevenLabs) for real-time call display, AI-generated summaries, and detailed analytics.
+- **Security Enhancement**: Hash API keys with bcrypt/argon2 for maximum security (currently stored in plaintext).
 
 **Design Guidelines**: The project adheres to strict design guidelines using Inter font, a consistent spacing scale, Shadcn UI components with variants, a token-based color system supporting dark mode, and a mobile-first responsive approach.
 
