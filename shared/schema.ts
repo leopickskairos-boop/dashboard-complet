@@ -33,6 +33,7 @@ export const users = pgTable("users", {
   subscriptionStatus: text("subscription_status"), // 'active', 'canceled', 'past_due', 'incomplete', null
   subscriptionCurrentPeriodEnd: timestamp("subscription_current_period_end"),
   apiKey: text("api_key").unique(), // Unique API key for N8N webhooks
+  accountStatus: text("account_status").notNull().default("active"), // 'active', 'suspended'
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
