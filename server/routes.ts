@@ -15,6 +15,7 @@ import {
   requireVerified,
   requireSubscription
 } from "./auth";
+import { requireApiKey } from "./api-key-auth";
 import { sendVerificationEmail, sendPasswordResetEmail } from "./email";
 import { 
   insertUserSchema, 
@@ -1101,6 +1102,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error downloading report:", error);
       res.status(500).json({ message: "Erreur lors du téléchargement du rapport" });
+    }
+  });
+
+  // ===== WEBHOOK ROUTES (API Key Authentication) =====
+
+  // N8N Webhook - Create a call from external automation
+  app.post("/api/webhooks/n8n", requireApiKey, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      
+      // Validate incoming data
+      const webhookSchema = z.object({
+        phoneNumber: z.string().min(1, "Numéro de téléphone requis"),
+        status: z.enum(['active', 'completed', 'failed', 'missed']),
+        startTime: z.string().optional(),
+        endTime: z.string().optional(),
+        duration: z.number().optional(),
+        summary: z.string().optional(),
+        appointmentDate: z.string().optional(),
+      });
+      
+      const data = webhookSchema.parse(req.body);
+      
+      // Create call in database
+      const call = await storage.createCall({
+        userId,
+        phoneNumber: data.phoneNumber,
+        status: data.status,
+        startTime: data.startTime ? new Date(data.startTime) : new Date(),
+        endTime: data.endTime ? new Date(data.endTime) : undefined,
+        duration: data.duration,
+        summary: data.summary,
+        appointmentDate: data.appointmentDate ? new Date(data.appointmentDate) : undefined,
+      });
+      
+      res.status(201).json({
+        success: true,
+        message: "Appel créé avec succès",
+        call: {
+          id: call.id,
+          phoneNumber: call.phoneNumber,
+          status: call.status,
+          createdAt: call.createdAt,
+        },
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          success: false,
+          error: "Données invalides",
+          details: error.errors 
+        });
+      }
+      console.error("Webhook error:", error);
+      res.status(500).json({ 
+        success: false,
+        error: "Erreur lors de la création de l'appel" 
+      });
     }
   });
 
