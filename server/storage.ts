@@ -18,6 +18,7 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, desc, sql, count } from "drizzle-orm";
+import { generateApiKey } from "./api-key";
 
 export interface IStorage {
   // User management
@@ -49,6 +50,10 @@ export interface IStorage {
     subscriptionStatus?: string;
     subscriptionCurrentPeriodEnd?: Date;
   }): Promise<User | undefined>;
+  
+  // API Key management
+  getUserByApiKey(apiKey: string): Promise<User | undefined>;
+  regenerateApiKey(userId: string): Promise<string>;
   
   // Calls management
   getCalls(userId: string, filters?: {
@@ -203,6 +208,24 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, userId))
       .returning();
     return user || undefined;
+  }
+
+  async getUserByApiKey(apiKey: string): Promise<User | undefined> {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.apiKey, apiKey))
+      .limit(1);
+    return user || undefined;
+  }
+
+  async regenerateApiKey(userId: string): Promise<string> {
+    const newApiKey = generateApiKey();
+    await db
+      .update(users)
+      .set({ apiKey: newApiKey })
+      .where(eq(users.id, userId));
+    return newApiKey;
   }
 
   async getUserById(id: string): Promise<User | undefined> {
