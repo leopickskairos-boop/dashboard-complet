@@ -1163,6 +1163,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== ADMIN ROUTES (Require Admin Authentication) =====
+
+  // Import requireAdmin
+  const { requireAdmin } = await import("./admin-auth");
+
+  // Get all users with stats
+  app.get("/api/admin/users", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      
+      // Get stats for each user
+      const usersWithStats = await Promise.all(
+        users.map(async (user) => {
+          const stats = await storage.getUserStats(user.id);
+          return {
+            id: user.id,
+            email: user.email,
+            role: user.role,
+            subscriptionStatus: user.subscriptionStatus || 'none',
+            accountStatus: (user as any).accountStatus || 'active',
+            createdAt: user.createdAt,
+            ...stats,
+          };
+        })
+      );
+
+      res.json(usersWithStats);
+    } catch (error: any) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Erreur lors de la récupération des utilisateurs" });
+    }
+  });
+
+  // Suspend user account
+  app.post("/api/admin/users/:id/suspend", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const user = await storage.suspendUser(id);
+      
+      if (!user) {
+        return res.status(404).json({ message: "Utilisateur non trouvé" });
+      }
+
+      res.json({ message: "Compte suspendu", user: toPublicUser(user) });
+    } catch (error: any) {
+      console.error("Error suspending user:", error);
+      res.status(500).json({ message: "Erreur lors de la suspension du compte" });
+    }
+  });
+
+  // Activate user account
+  app.post("/api/admin/users/:id/activate", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const user = await storage.activateUser(id);
+      
+      if (!user) {
+        return res.status(404).json({ message: "Utilisateur non trouvé" });
+      }
+
+      res.json({ message: "Compte activé", user: toPublicUser(user) });
+    } catch (error: any) {
+      console.error("Error activating user:", error);
+      res.status(500).json({ message: "Erreur lors de l'activation du compte" });
+    }
+  });
+
+  // Delete user account (admin only)
+  app.delete("/api/admin/users/:id", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const currentUser = (req as any).user;
+
+      // Prevent admin from deleting themselves
+      if (id === currentUser.id) {
+        return res.status(400).json({ message: "Vous ne pouvez pas supprimer votre propre compte" });
+      }
+
+      await storage.deleteUser(id);
+      res.json({ message: "Compte supprimé avec succès" });
+    } catch (error: any) {
+      console.error("Error deleting user:", error);
+      res.status(500).json({ message: "Erreur lors de la suppression du compte" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

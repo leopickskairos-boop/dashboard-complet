@@ -1,0 +1,393 @@
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useUser } from "@/hooks/use-user";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useState } from "react";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
+import { Shield, UserX, UserCheck, Trash2, Calendar, Phone, Clock, Activity } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
+
+interface AdminUser {
+  id: string;
+  email: string;
+  role: string;
+  subscriptionStatus: string;
+  accountStatus: string;
+  createdAt: string;
+  totalCalls: number;
+  totalMinutes: number;
+  lastActivity: string | null;
+  healthStatus: 'green' | 'orange' | 'red';
+}
+
+export default function AdminPage() {
+  const { user } = useUser();
+  const { toast } = useToast();
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [planFilter, setPlanFilter] = useState<string>("all");
+  const [healthFilter, setHealthFilter] = useState<string>("all");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+
+  const { data: users, isLoading } = useQuery<AdminUser[]>({
+    queryKey: ["/api/admin/users"],
+  });
+
+  const suspendMutation = useMutation({
+    mutationFn: (userId: string) => apiRequest("POST", `/api/admin/users/${userId}/suspend`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({ title: "Compte suspendu avec succès" });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erreur",
+        description: error.message || "Impossible de suspendre le compte",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const activateMutation = useMutation({
+    mutationFn: (userId: string) => apiRequest("POST", `/api/admin/users/${userId}/activate`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({ title: "Compte activé avec succès" });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erreur",
+        description: error.message || "Impossible d'activer le compte",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (userId: string) => apiRequest("DELETE", `/api/admin/users/${userId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({ title: "Compte supprimé avec succès" });
+      setDeleteDialogOpen(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erreur",
+        description: error.message || "Impossible de supprimer le compte",
+        variant: "destructive",
+      });
+    },
+  });
+
+  if (!user || user.role !== "admin") {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Card className="w-96">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="w-5 h-5" />
+              Accès refusé
+            </CardTitle>
+            <CardDescription>
+              Cette section est réservée aux administrateurs.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
+
+  const filteredUsers = users?.filter((u) => {
+    if (statusFilter !== "all" && u.accountStatus !== statusFilter) return false;
+    if (planFilter !== "all" && u.subscriptionStatus !== planFilter) return false;
+    if (healthFilter !== "all" && u.healthStatus !== healthFilter) return false;
+    return true;
+  });
+
+  const getHealthBadge = (status: 'green' | 'orange' | 'red') => {
+    const colors = {
+      green: "bg-green-500",
+      orange: "bg-orange-500",
+      red: "bg-red-500",
+    };
+    return (
+      <div className="flex items-center gap-2">
+        <div className={`w-2 h-2 rounded-full ${colors[status]}`} />
+        <span className="text-xs capitalize">{status === 'green' ? 'Optimal' : status === 'orange' ? 'Attention' : 'Critique'}</span>
+      </div>
+    );
+  };
+
+  const getSubscriptionBadge = (status: string) => {
+    if (status === "active") {
+      return <Badge variant="default" className="bg-green-600">Actif</Badge>;
+    } else if (status === "none") {
+      return <Badge variant="secondary">Gratuit</Badge>;
+    } else {
+      return <Badge variant="destructive">Expiré</Badge>;
+    }
+  };
+
+  const getAccountStatusBadge = (status: string) => {
+    if (status === "active") {
+      return <Badge variant="outline" className="border-green-600 text-green-600">Actif</Badge>;
+    } else {
+      return <Badge variant="destructive">Suspendu</Badge>;
+    }
+  };
+
+  return (
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold flex items-center gap-2">
+            <Shield className="w-8 h-8" />
+            Panneau d'administration
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Gérez tous les utilisateurs de la plateforme
+          </p>
+        </div>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Utilisateurs ({filteredUsers?.length || 0})</CardTitle>
+              <CardDescription>
+                Liste complète des utilisateurs avec indicateurs de santé
+              </CardDescription>
+            </div>
+            <div className="flex gap-2">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-40" data-testid="select-status-filter">
+                  <SelectValue placeholder="Statut compte" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous les statuts</SelectItem>
+                  <SelectItem value="active">Actifs</SelectItem>
+                  <SelectItem value="suspended">Suspendus</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={planFilter} onValueChange={setPlanFilter}>
+                <SelectTrigger className="w-40" data-testid="select-plan-filter">
+                  <SelectValue placeholder="Plan" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous les plans</SelectItem>
+                  <SelectItem value="active">Payant</SelectItem>
+                  <SelectItem value="none">Gratuit</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={healthFilter} onValueChange={setHealthFilter}>
+                <SelectTrigger className="w-40" data-testid="select-health-filter">
+                  <SelectValue placeholder="Santé" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous</SelectItem>
+                  <SelectItem value="green">🟢 Optimal</SelectItem>
+                  <SelectItem value="orange">🟠 Attention</SelectItem>
+                  <SelectItem value="red">🔴 Critique</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="space-y-2">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Plan</TableHead>
+                    <TableHead>Statut</TableHead>
+                    <TableHead>Santé</TableHead>
+                    <TableHead className="text-center">Appels</TableHead>
+                    <TableHead className="text-center">Minutes</TableHead>
+                    <TableHead>Inscription</TableHead>
+                    <TableHead>Dernière activité</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredUsers?.map((u) => (
+                    <TableRow key={u.id} data-testid={`row-user-${u.id}`}>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          {u.role === "admin" && (
+                            <Shield className="w-4 h-4 text-primary" />
+                          )}
+                          {u.email}
+                        </div>
+                      </TableCell>
+                      <TableCell>{getSubscriptionBadge(u.subscriptionStatus)}</TableCell>
+                      <TableCell>{getAccountStatusBadge(u.accountStatus)}</TableCell>
+                      <TableCell>{getHealthBadge(u.healthStatus)}</TableCell>
+                      <TableCell className="text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <Phone className="w-3 h-3 text-muted-foreground" />
+                          {u.totalCalls}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <Clock className="w-3 h-3 text-muted-foreground" />
+                          {u.totalMinutes}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1 text-xs">
+                          <Calendar className="w-3 h-3 text-muted-foreground" />
+                          {format(new Date(u.createdAt), "dd/MM/yyyy", { locale: fr })}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {u.lastActivity ? (
+                          <div className="flex items-center gap-1 text-xs">
+                            <Activity className="w-3 h-3 text-muted-foreground" />
+                            {format(new Date(u.lastActivity), "dd/MM/yyyy HH:mm", { locale: fr })}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">Aucune</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex gap-1 justify-end">
+                          {u.accountStatus === "active" ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => suspendMutation.mutate(u.id)}
+                              disabled={suspendMutation.isPending || u.id === user?.id}
+                              data-testid={`button-suspend-${u.id}`}
+                            >
+                              <UserX className="w-3 h-3" />
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => activateMutation.mutate(u.id)}
+                              disabled={activateMutation.isPending}
+                              data-testid={`button-activate-${u.id}`}
+                            >
+                              <UserCheck className="w-3 h-3" />
+                            </Button>
+                          )}
+                          {u.id !== user?.id && (
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => {
+                                setSelectedUserId(u.id);
+                                setDeleteDialogOpen(true);
+                              }}
+                              disabled={deleteMutation.isPending}
+                              data-testid={`button-delete-${u.id}`}
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Légende des indicateurs de santé</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <div className="flex items-center gap-3">
+            <div className="w-3 h-3 rounded-full bg-green-500" />
+            <div>
+              <p className="font-medium">🟢 Optimal</p>
+              <p className="text-sm text-muted-foreground">Dashboard fonctionnel, activité récente, taux d'échec &lt; 20%</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="w-3 h-3 rounded-full bg-orange-500" />
+            <div>
+              <p className="font-medium">🟠 Attention</p>
+              <p className="text-sm text-muted-foreground">Taux d'échec entre 20% et 50% dans les dernières 24h</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="w-3 h-3 rounded-full bg-red-500" />
+            <div>
+              <p className="font-medium">🔴 Critique</p>
+              <p className="text-sm text-muted-foreground">Taux d'échec &gt; 50% ou aucune activité depuis 7 jours</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
+            <AlertDialogDescription>
+              Êtes-vous sûr de vouloir supprimer ce compte ? Cette action est irréversible
+              et supprimera toutes les données associées (appels, notifications, rapports).
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete">Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => selectedUserId && deleteMutation.mutate(selectedUserId)}
+              className="bg-destructive hover:bg-destructive/90"
+              data-testid="button-confirm-delete"
+            >
+              Supprimer définitivement
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}

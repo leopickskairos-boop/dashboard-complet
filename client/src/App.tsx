@@ -20,6 +20,7 @@ import PaymentSuccess from "@/pages/payment-success";
 import Dashboard from "@/pages/dashboard";
 import Notifications from "@/pages/notifications";
 import Account from "@/pages/account";
+import Admin from "@/pages/admin";
 import SubscriptionExpired from "@/pages/subscription-expired";
 import NotFound from "@/pages/not-found";
 
@@ -68,6 +69,15 @@ function Router() {
         <ProtectedRoute requireVerified={true} requireSubscription={true}>
           <DashboardLayout>
             <Account />
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+
+      {/* Admin: requires auth only (no email verification or subscription required for admins) */}
+      <Route path="/admin">
+        <ProtectedRoute requireVerified={false} requireSubscription={false}>
+          <DashboardLayout>
+            <Admin />
           </DashboardLayout>
         </ProtectedRoute>
       </Route>
