@@ -685,6 +685,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get API key
+  app.get("/api/account/api-key", requireAuth, requireVerified, requireSubscription, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const user = await storage.getUserById(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "Utilisateur non trouvé" });
+      }
+      
+      res.json({ apiKey: user.apiKey });
+    } catch (error) {
+      console.error("Error fetching API key:", error);
+      res.status(500).json({ message: "Erreur lors de la récupération de la clé API" });
+    }
+  });
+
+  // Regenerate API key
+  app.post("/api/account/api-key/regenerate", requireAuth, requireVerified, requireSubscription, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const newApiKey = await storage.regenerateApiKey(userId);
+      
+      res.json({ 
+        message: "Clé API régénérée avec succès",
+        apiKey: newApiKey 
+      });
+    } catch (error) {
+      console.error("Error regenerating API key:", error);
+      res.status(500).json({ message: "Erreur lors de la régénération de la clé API" });
+    }
+  });
+
   // Get payment history
   app.get("/api/account/payments", requireAuth, requireVerified, requireSubscription, async (req, res) => {
     try {
