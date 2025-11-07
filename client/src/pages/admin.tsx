@@ -32,9 +32,10 @@ import {
 import { useState } from "react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Shield, UserX, UserCheck, Trash2, Calendar, Phone, Clock, Activity } from "lucide-react";
+import { Shield, UserX, UserCheck, Trash2, Calendar, Phone, Clock, Activity, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
 
 interface AdminUser {
   id: string;
@@ -52,6 +53,7 @@ interface AdminUser {
 export default function AdminPage() {
   const { user } = useUser();
   const { toast } = useToast();
+  const [searchQuery, setSearchQuery] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [planFilter, setPlanFilter] = useState<string>("all");
   const [healthFilter, setHealthFilter] = useState<string>("all");
@@ -59,7 +61,14 @@ export default function AdminPage() {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
   const { data: users, isLoading } = useQuery<AdminUser[]>({
-    queryKey: ["/api/admin/users"],
+    queryKey: ["/api/admin/users", searchQuery],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (searchQuery) params.set('search', searchQuery);
+      const res = await fetch(`/api/admin/users?${params}`);
+      if (!res.ok) throw new Error('Failed to fetch users');
+      return res.json();
+    },
   });
 
   const suspendMutation = useMutation({
@@ -189,6 +198,17 @@ export default function AdminPage() {
               </CardDescription>
             </div>
             <div className="flex gap-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="text"
+                  placeholder="Rechercher un email..."
+                  className="pl-9 w-64"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  data-testid="input-search-email"
+                />
+              </div>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-40" data-testid="select-status-filter">
                   <SelectValue placeholder="Statut compte" />

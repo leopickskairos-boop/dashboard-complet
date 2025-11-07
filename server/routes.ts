@@ -1168,14 +1168,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Import requireAdmin
   const { requireAdmin } = await import("./admin-auth");
 
-  // Get all users with stats
+  // Get all users with stats (with optional email search)
   app.get("/api/admin/users", requireAuth, requireAdmin, async (req, res) => {
     try {
+      const { search } = req.query;
+      const searchQuery = typeof search === 'string' ? search.toLowerCase().trim() : '';
+      
       const users = await storage.getAllUsers();
+      
+      // Filter by email if search query provided
+      const filteredUsers = searchQuery 
+        ? users.filter(user => user.email.toLowerCase().includes(searchQuery))
+        : users;
       
       // Get stats for each user
       const usersWithStats = await Promise.all(
-        users.map(async (user) => {
+        filteredUsers.map(async (user) => {
           const stats = await storage.getUserStats(user.id);
           return {
             id: user.id,
