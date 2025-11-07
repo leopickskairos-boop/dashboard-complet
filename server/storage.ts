@@ -55,6 +55,17 @@ export interface IStorage {
   getUserByApiKey(apiKey: string): Promise<User | undefined>;
   regenerateApiKey(userId: string): Promise<string>;
   
+  // Admin functions
+  getAllUsers(): Promise<User[]>;
+  suspendUser(userId: string): Promise<User | undefined>;
+  activateUser(userId: string): Promise<User | undefined>;
+  getUserStats(userId: string): Promise<{
+    totalCalls: number;
+    totalMinutes: number;
+    lastActivity: Date | null;
+    healthStatus: 'green' | 'orange' | 'red';
+  }>;
+  
   // Calls management
   getCalls(userId: string, filters?: {
     timeFilter?: 'hour' | 'today' | 'two_days' | 'week';
@@ -611,6 +622,114 @@ export class DatabaseStorage implements IStorage {
       ));
     
     return eligibleUsers;
+  }
+
+  // ===== ADMIN FUNCTIONS =====
+
+  async getAllUsers(): Promise<User[]> {
+    return db.select().from(users).orderBy(desc(users.createdAt));
+  }
+
+  async suspendUser(userId: string): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set({ accountStatus: 'suspended' })
+      .where(eq(users.id, userId))
+      .returning();
+    return user || undefined;
+  }
+
+  async activateUser(userId: string): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set({ accountStatus: 'active' })
+      .where(eq(users.id, userId))
+      .returning();
+    return user || undefined;
+  }
+
+  async getUserStats(userId: string): Promise<{
+    totalCalls: number;
+    totalMinutes: number;
+    lastActivity: Date | null;
+    healthStatus: 'green' | 'orange' | 'red';
+  }> {
+    // Get total calls count
+    const totalCallsResult = await db
+      .select({ count: count() })
+      .from(calls)
+      .where(eq(calls.userId, userId));
+    const totalCalls = totalCallsResult[0]?.count || 0;
+
+    // Get total minutes (sum of all call durations)
+    const totalMinutesResult = await db
+      .select({ total: sql<number>`COALESCE(SUM(duration), 0)` })
+      .from(calls)
+      .where(eq(calls.userId, userId));
+    const totalSeconds = totalMinutesResult[0]?.total || 0;
+    const totalMinutes = Math.round(totalSeconds / 60);
+
+    // Get last activity (most recent call)
+    const lastActivityResult = await db
+      .select({ startTime: calls.startTime })
+      .from(calls)
+      .where(eq(calls.userId, userId))
+      .orderBy(desc(calls.startTime))
+      .limit(1);
+    const lastActivity = lastActivityResult[0]?.startTime || null;
+
+    // Calculate health status based on recent activity and failed calls
+    const now = new Date();
+    const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    
+    // Get failed calls in last 24 hours
+    const failedCallsResult = await db
+      .select({ count: count() })
+      .from(calls)
+      .where(
+        and(
+          eq(calls.userId, userId),
+          eq(calls.status, 'failed'),
+          gte(calls.startTime, twentyFourHoursAgo)
+        )
+      );
+    const failedCalls = failedCallsResult[0]?.count || 0;
+
+    // Get total calls in last 24 hours
+    const recentCallsResult = await db
+      .select({ count: count() })
+      .from(calls)
+      .where(
+        and(
+          eq(calls.userId, userId),
+          gte(calls.startTime, twentyFourHoursAgo)
+        )
+      );
+    const recentCalls = recentCallsResult[0]?.count || 0;
+
+    // Determine health status
+    let healthStatus: 'green' | 'orange' | 'red' = 'green';
+    
+    if (recentCalls === 0 && lastActivity && (now.getTime() - lastActivity.getTime() > 7 * 24 * 60 * 60 * 1000)) {
+      // No recent calls and last activity > 7 days ago = red
+      healthStatus = 'red';
+    } else if (failedCalls > 0) {
+      const failureRate = failedCalls / Math.max(recentCalls, 1);
+      if (failureRate > 0.5) {
+        // More than 50% failed = red
+        healthStatus = 'red';
+      } else if (failureRate > 0.2) {
+        // More than 20% failed = orange
+        healthStatus = 'orange';
+      }
+    }
+
+    return {
+      totalCalls,
+      totalMinutes,
+      lastActivity,
+      healthStatus,
+    };
   }
 }
 
