@@ -32,6 +32,7 @@ export const users = pgTable("users", {
   stripeSubscriptionId: text("stripe_subscription_id"),
   subscriptionStatus: text("subscription_status"), // 'active', 'canceled', 'past_due', 'incomplete', null
   subscriptionCurrentPeriodEnd: timestamp("subscription_current_period_end"),
+  apiKey: text("api_key").unique(), // Unique API key for N8N webhooks
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
