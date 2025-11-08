@@ -4,7 +4,7 @@ import { storage } from './storage';
 import { ReportDataService } from './report-data.service';
 import { pdfGenerator } from './pdf-generator.service';
 import { fileStorage } from './file-storage.service';
-import { sendEmail } from './resend-email';
+import { sendEmail } from './gmail-email';
 import { generateReportEmailHTML, generateReportEmailText } from './templates/monthly-report-email.template';
 import type { MonthlyReportMetrics } from './report-data.service';
 
