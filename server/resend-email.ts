@@ -6,7 +6,7 @@ if (!process.env.RESEND_API_KEY) {
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-const FROM_EMAIL = 'SpeedAI <noreply@speedai.com>';
+const FROM_EMAIL = 'SpeedAI <onboarding@resend.dev>';
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5000';
 
 export async function sendVerificationEmail(email: string, token: string) {
