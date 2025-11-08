@@ -1,23 +1,20 @@
-import nodemailer from "nodemailer";
+import { Resend } from 'resend';
 
-// Create email transporter
-// In production, configure with a real SMTP service (SendGrid, Mailgun, etc.)
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || "smtp.ethereal.email",
-  port: parseInt(process.env.SMTP_PORT || "587"),
-  secure: false,
-  auth: {
-    user: process.env.SMTP_USER || "ethereal.user@ethereal.email",
-    pass: process.env.SMTP_PASS || "ethereal.pass",
-  },
-});
+if (!process.env.RESEND_API_KEY) {
+  throw new Error('RESEND_API_KEY environment variable is required');
+}
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+const FROM_EMAIL = 'SpeedAI <noreply@speedai.com>';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5000';
 
 export async function sendVerificationEmail(email: string, token: string) {
-  const verificationUrl = `${process.env.FRONTEND_URL || 'http://localhost:5000'}/verify-email?token=${token}`;
+  const verificationUrl = `${FRONTEND_URL}/verify-email?token=${token}`;
 
   try {
-    const info = await transporter.sendMail({
-      from: '"SpeedAI" <noreply@speedai.com>',
+    const { data, error } = await resend.emails.send({
+      from: FROM_EMAIL,
       to: email,
       subject: "Vérifiez votre adresse email - SpeedAI",
       html: `
@@ -38,7 +35,7 @@ export async function sendVerificationEmail(email: string, token: string) {
         <body>
           <div class="container">
             <div class="header">
-              <h1 style="margin: 0; font-size: 28px;">Bienvenue sur SpeedAI ! 🎉</h1>
+              <h1 style="margin: 0; font-size: 28px;">Bienvenue sur SpeedAI</h1>
             </div>
             <div class="content">
               <p>Bonjour,</p>
@@ -60,23 +57,25 @@ export async function sendVerificationEmail(email: string, token: string) {
       `,
     });
 
-    console.log("Verification email sent:", info.messageId);
-    // For development with Ethereal, log the preview URL
-    if (process.env.NODE_ENV !== 'production') {
-      console.log("Preview URL:", nodemailer.getTestMessageUrl(info));
+    if (error) {
+      console.error('[Resend] Error sending verification email:', error);
+      throw new Error("Impossible d'envoyer l'email de vérification");
     }
+
+    console.log('[Resend] Verification email sent:', data?.id);
+    return data;
   } catch (error) {
-    console.error("Error sending verification email:", error);
+    console.error('[Resend] Error sending verification email:', error);
     throw new Error("Impossible d'envoyer l'email de vérification");
   }
 }
 
 export async function sendPasswordResetEmail(email: string, token: string) {
-  const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5000'}/reset-password?token=${token}`;
+  const resetUrl = `${FRONTEND_URL}/reset-password?token=${token}`;
 
   try {
-    const info = await transporter.sendMail({
-      from: '"SpeedAI" <noreply@speedai.com>',
+    const { data, error } = await resend.emails.send({
+      from: FROM_EMAIL,
       to: email,
       subject: "Réinitialisation de votre mot de passe - SpeedAI",
       html: `
@@ -98,7 +97,7 @@ export async function sendPasswordResetEmail(email: string, token: string) {
         <body>
           <div class="container">
             <div class="header">
-              <h1 style="margin: 0; font-size: 28px;">Réinitialisation de mot de passe 🔐</h1>
+              <h1 style="margin: 0; font-size: 28px;">Réinitialisation de mot de passe</h1>
             </div>
             <div class="content">
               <p>Bonjour,</p>
@@ -109,7 +108,7 @@ export async function sendPasswordResetEmail(email: string, token: string) {
               <p style="color: #6b7280; font-size: 14px;">Ou copiez ce lien dans votre navigateur :</p>
               <p style="word-break: break-all; background: #f3f4f6; padding: 12px; border-radius: 4px; font-size: 13px;">${resetUrl}</p>
               <div class="warning">
-                <p style="margin: 0; color: #92400e; font-size: 14px;"><strong>⚠️ Important :</strong> Ce lien expirera dans 1 heure pour des raisons de sécurité.</p>
+                <p style="margin: 0; color: #92400e; font-size: 14px;"><strong>Important :</strong> Ce lien expirera dans 1 heure pour des raisons de sécurité.</p>
               </div>
               <p style="margin-top: 30px; color: #6b7280; font-size: 14px;">Si vous n'avez pas demandé cette réinitialisation, vous pouvez ignorer cet email en toute sécurité.</p>
             </div>
@@ -123,20 +122,19 @@ export async function sendPasswordResetEmail(email: string, token: string) {
       `,
     });
 
-    console.log("Password reset email sent:", info.messageId);
-    // For development with Ethereal, log the preview URL
-    if (process.env.NODE_ENV !== 'production') {
-      console.log("Preview URL:", nodemailer.getTestMessageUrl(info));
+    if (error) {
+      console.error('[Resend] Error sending password reset email:', error);
+      throw new Error("Impossible d'envoyer l'email de réinitialisation");
     }
+
+    console.log('[Resend] Password reset email sent:', data?.id);
+    return data;
   } catch (error) {
-    console.error("Error sending password reset email:", error);
+    console.error('[Resend] Error sending password reset email:', error);
     throw new Error("Impossible d'envoyer l'email de réinitialisation");
   }
 }
 
-/**
- * Generic email sending function with attachment support
- */
 export async function sendEmail(options: {
   to: string;
   subject: string;
@@ -145,29 +143,40 @@ export async function sendEmail(options: {
   attachments?: Array<{
     filename: string;
     content: Buffer;
-    contentType: string;
+    contentType?: string;
   }>;
 }) {
   try {
-    const info = await transporter.sendMail({
-      from: '"SpeedAI" <noreply@speedai.com>',
-      to: options.to,
-      subject: options.subject,
-      text: options.text,
-      html: options.html,
-      attachments: options.attachments,
+    const attachments = options.attachments?.map(att => {
+      const base64Content = att.content.toString('base64');
+      
+      return {
+        filename: att.filename,
+        content: base64Content,
+      };
     });
 
-    console.log("Email sent:", info.messageId);
-    
-    // For development with Ethereal, log the preview URL
-    if (process.env.NODE_ENV !== 'production') {
-      console.log("Preview URL:", nodemailer.getTestMessageUrl(info));
+    const { data, error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: options.to,
+      subject: options.subject,
+      html: options.html,
+      text: options.text,
+      attachments,
+    });
+
+    if (error) {
+      console.error('[Resend] Error sending email:', error);
+      throw new Error("Impossible d'envoyer l'email");
     }
-    
-    return info;
+
+    console.log('[Resend] Email sent successfully:', data?.id);
+    if (options.attachments) {
+      console.log(`[Resend] Sent with ${options.attachments.length} attachment(s)`);
+    }
+    return data;
   } catch (error) {
-    console.error("Error sending email:", error);
+    console.error('[Resend] Error sending email:', error);
     throw new Error("Impossible d'envoyer l'email");
   }
 }

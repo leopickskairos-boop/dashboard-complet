@@ -16,7 +16,7 @@ import {
   requireSubscription
 } from "./auth";
 import { requireApiKey } from "./api-key-auth";
-import { sendVerificationEmail, sendPasswordResetEmail } from "./email";
+import { sendVerificationEmail, sendPasswordResetEmail, sendEmail } from "./resend-email";
 import { 
   insertUserSchema, 
   loginSchema, 
