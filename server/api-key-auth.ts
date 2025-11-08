@@ -1,10 +1,13 @@
 import { Request, Response, NextFunction } from "express";
 import { storage } from "./storage";
-import { isValidApiKeyFormat } from "./api-key";
+import { isValidApiKeyFormat, verifyApiKey } from "./api-key";
 
 /**
  * Middleware to authenticate requests using API key from Authorization header
  * Expected format: Authorization: Bearer speedai_live_xxxxx
+ * 
+ * Security: API keys are hashed with bcrypt before storage.
+ * This middleware compares the provided key against all stored hashes.
  */
 export async function requireApiKey(req: Request, res: Response, next: NextFunction) {
   try {
@@ -36,10 +39,18 @@ export async function requireApiKey(req: Request, res: Response, next: NextFunct
       });
     }
 
-    // Find user by API key
-    const user = await storage.getUserByApiKey(apiKey);
+    // Get all users with API keys and compare hashes
+    const usersWithApiKeys = await storage.getAllUsersWithApiKey();
     
-    if (!user) {
+    let matchedUser = null;
+    for (const user of usersWithApiKeys) {
+      if (user.apiKeyHash && await verifyApiKey(apiKey, user.apiKeyHash)) {
+        matchedUser = user;
+        break;
+      }
+    }
+    
+    if (!matchedUser) {
       return res.status(401).json({ 
         error: "Invalid API key",
         message: "Clé API invalide ou révoquée" 
@@ -47,7 +58,7 @@ export async function requireApiKey(req: Request, res: Response, next: NextFunct
     }
 
     // Check if user is verified
-    if (!user.isVerified) {
+    if (!matchedUser.isVerified) {
       return res.status(403).json({ 
         error: "Email not verified",
         message: "Veuillez vérifier votre email avant d'utiliser l'API" 
@@ -55,7 +66,7 @@ export async function requireApiKey(req: Request, res: Response, next: NextFunct
     }
 
     // Check if user has active subscription
-    if (user.subscriptionStatus !== 'active') {
+    if (matchedUser.subscriptionStatus !== 'active') {
       return res.status(403).json({ 
         error: "No active subscription",
         message: "Un abonnement actif est requis pour utiliser l'API" 
@@ -63,7 +74,7 @@ export async function requireApiKey(req: Request, res: Response, next: NextFunct
     }
 
     // Attach user to request
-    (req as any).user = user;
+    (req as any).user = matchedUser;
     next();
   } catch (error) {
     console.error("API key authentication error:", error);

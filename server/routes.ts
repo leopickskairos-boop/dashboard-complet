@@ -686,7 +686,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get API key
+  // Get API key status (never return the actual key)
   app.get("/api/account/api-key", requireAuth, requireVerified, requireSubscription, async (req, res) => {
     try {
       const userId = req.user!.id;
@@ -696,22 +696,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Utilisateur non trouvé" });
       }
       
-      res.json({ apiKey: user.apiKey });
+      // SECURITY: Never return the actual API key - only return if it exists
+      res.json({ 
+        hasApiKey: !!user.apiKeyHash,
+        message: user.apiKeyHash 
+          ? "Clé API configurée. Pour des raisons de sécurité, elle ne peut pas être affichée à nouveau." 
+          : "Aucune clé API configurée"
+      });
     } catch (error) {
-      console.error("Error fetching API key:", error);
-      res.status(500).json({ message: "Erreur lors de la récupération de la clé API" });
+      console.error("Error fetching API key status:", error);
+      res.status(500).json({ message: "Erreur lors de la récupération du statut de la clé API" });
     }
   });
 
-  // Regenerate API key
+  // Regenerate API key (returns plain text key ONCE)
   app.post("/api/account/api-key/regenerate", requireAuth, requireVerified, requireSubscription, async (req, res) => {
     try {
       const userId = req.user!.id;
-      const newApiKey = await storage.regenerateApiKey(userId);
+      const { apiKey, apiKeyHash } = await storage.regenerateApiKey(userId);
       
+      // SECURITY: Return the plain text key ONCE - it will never be shown again
       res.json({ 
-        message: "Clé API régénérée avec succès",
-        apiKey: newApiKey 
+        message: "Clé API régénérée avec succès. Copiez-la maintenant, elle ne sera plus affichée.",
+        apiKey, // Plain text - shown ONLY this one time
+        warning: "⚠️ Conservez cette clé en sécurité. Elle ne sera plus jamais affichée."
       });
     } catch (error) {
       console.error("Error regenerating API key:", error);

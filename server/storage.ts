@@ -52,8 +52,8 @@ export interface IStorage {
   }): Promise<User | undefined>;
   
   // API Key management
-  getUserByApiKey(apiKey: string): Promise<User | undefined>;
-  regenerateApiKey(userId: string): Promise<string>;
+  getAllUsersWithApiKey(): Promise<User[]>;
+  regenerateApiKey(userId: string): Promise<{ apiKey: string; apiKeyHash: string }>;
   
   // Admin functions
   getAllUsers(): Promise<User[]>;
@@ -221,22 +221,22 @@ export class DatabaseStorage implements IStorage {
     return user || undefined;
   }
 
-  async getUserByApiKey(apiKey: string): Promise<User | undefined> {
-    const [user] = await db
+  async getAllUsersWithApiKey(): Promise<User[]> {
+    // Return all users that have an API key hash
+    // This is needed because bcrypt requires comparing each hash individually
+    return db
       .select()
       .from(users)
-      .where(eq(users.apiKey, apiKey))
-      .limit(1);
-    return user || undefined;
+      .where(sql`${users.apiKeyHash} IS NOT NULL`);
   }
 
-  async regenerateApiKey(userId: string): Promise<string> {
-    const newApiKey = generateApiKey();
+  async regenerateApiKey(userId: string): Promise<{ apiKey: string; apiKeyHash: string }> {
+    const { apiKey, apiKeyHash } = await generateApiKey();
     await db
       .update(users)
-      .set({ apiKey: newApiKey })
+      .set({ apiKeyHash })
       .where(eq(users.id, userId));
-    return newApiKey;
+    return { apiKey, apiKeyHash };
   }
 
   async getUserById(id: string): Promise<User | undefined> {

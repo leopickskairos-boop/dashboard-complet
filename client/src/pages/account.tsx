@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Loader2, Mail, Lock, Trash2, CreditCard, ChevronRight, Home, Bell, FileText, Download, Key, Copy, Eye, EyeOff, RefreshCw } from "lucide-react";
+import { Loader2, Mail, Lock, Trash2, CreditCard, ChevronRight, Home, Bell, FileText, Download, Key, Copy, Eye, EyeOff, RefreshCw, AlertCircle, CheckCircle, X } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -137,10 +137,13 @@ export default function Account() {
     queryKey: ['/api/reports'],
   });
 
-  // Fetch API key
-  const { data: apiKeyData, isLoading: apiKeyLoading } = useQuery<{ apiKey: string | null }>({
+  // Fetch API key status (NOT the actual key)
+  const { data: apiKeyData, isLoading: apiKeyLoading } = useQuery<{ hasApiKey: boolean; message: string }>({
     queryKey: ['/api/account/api-key'],
   });
+
+  // Store the generated API key temporarily (shown ONCE after regeneration)
+  const [generatedApiKey, setGeneratedApiKey] = useState<string | null>(null);
 
   // Notification preferences form
   const notificationPreferencesForm = useForm({
@@ -321,13 +324,18 @@ export default function Account() {
       }
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data: { apiKey: string; message: string; warning: string }) => {
+      // Store the generated key temporarily (will be shown ONCE)
+      setGeneratedApiKey(data.apiKey);
+      setShowApiKey(true);
+      
       toast({
         title: "Clé API régénérée",
-        description: "Votre nouvelle clé API a été générée avec succès.",
+        description: data.warning,
+        duration: 8000,
       });
+      
       queryClient.invalidateQueries({ queryKey: ['/api/account/api-key'] });
-      setShowApiKey(true);
     },
     onError: (error: Error) => {
       toast({
@@ -340,9 +348,9 @@ export default function Account() {
 
   // Copy API key to clipboard
   const copyApiKey = async () => {
-    if (apiKeyData?.apiKey) {
+    if (generatedApiKey) {
       try {
-        await navigator.clipboard.writeText(apiKeyData.apiKey);
+        await navigator.clipboard.writeText(generatedApiKey);
         setCopySuccess(true);
         toast({
           title: "Clé copiée",
@@ -647,15 +655,30 @@ export default function Account() {
               <div className="flex items-center justify-center py-4">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
-            ) : apiKeyData?.apiKey ? (
+            ) : generatedApiKey ? (
               <div className="space-y-4">
+                {/* WARNING BANNER */}
+                <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-4">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
+                    <div className="space-y-1">
+                      <p className="text-sm font-semibold text-destructive">⚠️ Attention : Cette clé ne sera affichée qu'une seule fois</p>
+                      <p className="text-xs text-destructive/90">
+                        Copiez-la immédiatement et conservez-la en lieu sûr. Une fois cette page fermée, 
+                        vous ne pourrez plus la récupérer.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* API KEY DISPLAY */}
                 <div className="flex flex-col sm:flex-row gap-2">
                   <div className="relative flex-1">
                     <Input
                       type={showApiKey ? "text" : "password"}
-                      value={apiKeyData.apiKey}
+                      value={generatedApiKey}
                       readOnly
-                      className="font-mono text-sm pr-10"
+                      className="font-mono text-sm pr-10 bg-muted/50"
                       data-testid="input-api-key"
                     />
                     <Button
@@ -693,37 +716,18 @@ export default function Account() {
                         </>
                       )}
                     </Button>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          variant="outline"
-                          data-testid="button-regenerate-api-key"
-                          className="flex-1 sm:flex-none"
-                        >
-                          <RefreshCw className="mr-2 h-4 w-4" />
-                          Régénérer
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Régénérer la clé API ?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            L'ancienne clé ne fonctionnera plus après régénération. Vous devrez mettre à jour vos intégrations N8N avec la nouvelle clé.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel data-testid="button-cancel-regenerate">Annuler</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => regenerateApiKeyMutation.mutate()}
-                            disabled={regenerateApiKeyMutation.isPending}
-                            data-testid="button-confirm-regenerate"
-                          >
-                            {regenerateApiKeyMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Régénérer
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setGeneratedApiKey(null);
+                        setShowApiKey(false);
+                      }}
+                      data-testid="button-dismiss-api-key"
+                      className="flex-1 sm:flex-none"
+                    >
+                      <X className="mr-2 h-4 w-4" />
+                      Masquer
+                    </Button>
                   </div>
                 </div>
                 
@@ -748,8 +752,101 @@ export default function Account() {
                   </ul>
                 </div>
               </div>
+            ) : apiKeyData?.hasApiKey ? (
+              <div className="space-y-4">
+                {/* API KEY EXISTS (but not shown) */}
+                <div className="rounded-lg bg-muted/50 border p-4">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+                    <div className="space-y-1 flex-1">
+                      <p className="text-sm font-medium">Clé API configurée</p>
+                      <p className="text-xs text-muted-foreground">{apiKeyData.message}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* REGENERATE BUTTON */}
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      data-testid="button-regenerate-api-key"
+                      className="w-full sm:w-auto"
+                    >
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      Régénérer la clé API
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Régénérer la clé API ?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        L'ancienne clé ne fonctionnera plus après régénération. Vous devrez mettre à jour vos intégrations N8N avec la nouvelle clé.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel data-testid="button-cancel-regenerate">Annuler</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => regenerateApiKeyMutation.mutate()}
+                        disabled={regenerateApiKeyMutation.isPending}
+                        data-testid="button-confirm-regenerate"
+                      >
+                        {regenerateApiKeyMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Régénérer
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+
+                {/* Usage instructions */}
+                <div className="rounded-lg bg-muted/50 p-4 space-y-2">
+                  <p className="text-sm font-medium">📘 Utilisation avec N8N</p>
+                  <p className="text-xs text-muted-foreground">
+                    Pour envoyer des données vers SpeedAI depuis N8N, utilisez un nœud HTTP Request avec :
+                  </p>
+                  <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
+                    <li>URL : <code className="bg-background px-1 py-0.5 rounded">https://votre-app.replit.app/api/webhooks/n8n</code></li>
+                    <li>Méthode : POST</li>
+                    <li>Header : <code className="bg-background px-1 py-0.5 rounded">Authorization: Bearer VOTRE_CLE_API</code></li>
+                  </ul>
+                </div>
+              </div>
             ) : (
-              <p className="text-sm text-muted-foreground">Aucune clé API disponible.</p>
+              <div className="space-y-4">
+                {/* NO API KEY YET */}
+                <p className="text-sm text-muted-foreground">Aucune clé API configurée. Générez-en une pour commencer.</p>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="default"
+                      data-testid="button-generate-api-key"
+                      className="w-full sm:w-auto"
+                    >
+                      <Key className="mr-2 h-4 w-4" />
+                      Générer une clé API
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Générer votre première clé API ?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Cette clé vous permettra de connecter SpeedAI à N8N et autres services. Elle ne sera affichée qu'une seule fois.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel data-testid="button-cancel-generate">Annuler</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => regenerateApiKeyMutation.mutate()}
+                        disabled={regenerateApiKeyMutation.isPending}
+                        data-testid="button-confirm-generate"
+                      >
+                        {regenerateApiKeyMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Générer
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
             )}
           </div>
         </CardContent>

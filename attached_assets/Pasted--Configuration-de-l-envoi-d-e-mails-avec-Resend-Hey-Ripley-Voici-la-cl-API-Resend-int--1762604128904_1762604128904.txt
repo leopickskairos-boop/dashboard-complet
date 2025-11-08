@@ -1,0 +1,84 @@
+## 🔐 Configuration de l'envoi d’e-mails avec Resend
+
+Hey Ripley 👋  
+Voici la clé API Resend à intégrer dans l’application pour gérer l’envoi automatique d’e-mails (confirmation d’inscription, notifications, etc.).
+
+---
+
+### 1️⃣ Ajout de la clé dans Replit
+- Ouvre le projet sur **Replit**  
+- Clique sur l’icône **🔒 “Secrets”** à gauche  
+- Ajoute une nouvelle variable :
+  ```
+  RESEND_API_KEY=sk_live_xxxxxxxxxxxxxxxxxxxxxx
+  ```
+
+⚠️ Ne jamais mettre la clé directement dans le code — uniquement dans les *Secrets*.
+
+---
+
+### 2️⃣ Installation du package Resend
+Dans le shell Replit :
+```
+npm install resend
+```
+
+---
+
+### 3️⃣ Intégration dans le code
+Dans ton fichier principal (par ex. `server.js`, `index.js` ou `api/email.js`), ajoute ceci :
+
+```js
+import { Resend } from "resend";
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+// Fonction d'envoi d'e-mail
+export async function sendEmail(to, subject, html) {
+  try {
+    const data = await resend.emails.send({
+      from: "SpeedAI <onboarding@resend.dev>",
+      to,
+      subject,
+      html,
+    });
+    console.log("✅ Email envoyé :", data);
+  } catch (error) {
+    console.error("❌ Erreur d'envoi :", error);
+  }
+}
+```
+
+---
+
+### 4️⃣ Exemple d’utilisation :
+Tu peux appeler la fonction depuis n’importe quelle partie du code :
+
+```js
+await sendEmail(
+  "client@gmail.com",
+  "Bienvenue sur SpeedAI 🚀",
+  "<h2>Ton compte est bien créé !</h2><p>Merci de ton inscription.</p>"
+);
+```
+
+---
+
+### 5️⃣ Test rapide (optionnel)
+Lance cette commande dans la console pour tester un envoi :
+```bash
+node -e "import('./api/email.js').then(m => m.sendEmail('tonemail@gmail.com', 'Test SpeedAI', '<b>Mail test réussi ✅</b>'))"
+```
+
+---
+
+### ✅ Résultat attendu :
+Tu reçois un e-mail depuis `onboarding@resend.dev` → preuve que l’intégration est fonctionnelle.
+
+---
+
+💡 **Résumé rapide :**
+- 🔑 Clé API → dans les Secrets
+- 📦 `npm install resend`
+- 🧩 Fonction `sendEmail()` → utilise `resend.emails.send()`
+- 📬 Appeler cette fonction pour chaque type d’e-mail
