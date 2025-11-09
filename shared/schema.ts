@@ -46,6 +46,15 @@ export const insertUserSchema = createInsertSchema(users, {
   password: true,
 });
 
+export const signupSchema = z.object({
+  email: z.string().email("Email invalide"),
+  password: z.string().min(8, "Le mot de passe doit contenir au moins 8 caractères"),
+  confirmPassword: z.string().min(1, "Confirmation requise"),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Les mots de passe ne correspondent pas",
+  path: ["confirmPassword"],
+});
+
 export const loginSchema = z.object({
   email: z.string().email("Email invalide"),
   password: z.string().min(1, "Le mot de passe est requis"),
@@ -66,6 +75,7 @@ export const resetPasswordSchema = z.object({
 
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
+export type SignupData = z.infer<typeof signupSchema>;
 export type LoginCredentials = z.infer<typeof loginSchema>;
 export type ForgotPasswordData = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordData = z.infer<typeof resetPasswordSchema>;
