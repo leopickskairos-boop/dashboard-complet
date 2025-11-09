@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useLocation, useSearch } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +11,7 @@ export default function VerifyEmail() {
   const search = useSearch();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('');
+  const hasRequestedRef = useRef(false);
 
   useEffect(() => {
     const params = new URLSearchParams(search);
@@ -21,6 +22,12 @@ export default function VerifyEmail() {
       setMessage('Lien de vérification invalide');
       return;
     }
+
+    // Prevent multiple calls (React StrictMode or double-click)
+    if (hasRequestedRef.current) {
+      return;
+    }
+    hasRequestedRef.current = true;
 
     verifyEmail(token);
   }, [search]);
