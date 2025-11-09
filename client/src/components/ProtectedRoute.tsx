@@ -40,18 +40,37 @@ export function ProtectedRoute({
     }
 
     if (requireSubscription) {
-      if (!user.subscriptionStatus || user.subscriptionStatus !== 'active') {
-        // Check if subscription expired
-        if (user.subscriptionCurrentPeriodEnd) {
-          const expiryDate = new Date(user.subscriptionCurrentPeriodEnd);
-          const now = new Date();
-          if (now > expiryDate) {
-            setLocation('/subscription-expired');
-            return;
-          }
-        }
-        setLocation('/subscribe');
+      // Check account status first (takes priority over subscription status)
+      if (user.accountStatus === 'expired') {
+        setLocation('/trial-expired');
         return;
+      }
+
+      if (user.accountStatus === 'suspended') {
+        setLocation('/account-suspended');
+        return;
+      }
+
+      // Allow access for users in trial period
+      if (user.accountStatus === 'trial') {
+        return; // Trial users have full access
+      }
+
+      // For active accounts, check subscription status
+      if (user.accountStatus === 'active') {
+        if (!user.subscriptionStatus || user.subscriptionStatus !== 'active') {
+          // Check if subscription expired
+          if (user.subscriptionCurrentPeriodEnd) {
+            const expiryDate = new Date(user.subscriptionCurrentPeriodEnd);
+            const now = new Date();
+            if (now > expiryDate) {
+              setLocation('/subscription-expired');
+              return;
+            }
+          }
+          setLocation('/subscribe');
+          return;
+        }
       }
     }
   }, [user, isLoading, error, requireVerified, requireSubscription, setLocation]);

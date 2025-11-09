@@ -22,7 +22,8 @@ import {
   Eye
 } from "lucide-react";
 import { Line, LineChart, XAxis, YAxis, Tooltip, ResponsiveContainer, Bar, BarChart } from "recharts";
-import type { Call } from "@shared/schema";
+import type { Call, PublicUser } from "@shared/schema";
+import { TrialCountdown } from "@/components/TrialCountdown";
 
 // Status badge variants with icons
 const statusConfig = {
@@ -58,6 +59,11 @@ export default function Dashboard() {
   const [selectedCall, setSelectedCall] = useState<Call | null>(null);
   const [chartDialog, setChartDialog] = useState<'total' | 'conversion' | 'duration' | null>(null);
   const [isMobile, setIsMobile] = useState<boolean>(false);
+
+  // Fetch current user for trial countdown
+  const { data: user } = useQuery<PublicUser>({
+    queryKey: ['/api/auth/me'],
+  });
 
   // Detect mobile screen size
   useEffect(() => {
@@ -155,6 +161,9 @@ export default function Dashboard() {
             Vue d'ensemble de votre activité
           </p>
         </div>
+
+        {/* Trial Countdown Banner */}
+        {user && <div className="mb-6"><TrialCountdown user={user} /></div>}
 
         {/* Global Time Filter */}
         <div className="mb-6 flex items-center gap-4">

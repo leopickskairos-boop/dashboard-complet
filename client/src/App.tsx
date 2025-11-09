@@ -22,6 +22,7 @@ import Notifications from "@/pages/notifications";
 import Account from "@/pages/account";
 import Admin from "@/pages/admin";
 import SubscriptionExpired from "@/pages/subscription-expired";
+import TrialExpired from "@/pages/trial-expired";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -83,6 +84,7 @@ function Router() {
       </Route>
 
       <Route path="/subscription-expired" component={SubscriptionExpired} />
+      <Route path="/trial-expired" component={TrialExpired} />
 
       <Route component={NotFound} />
     </Switch>
