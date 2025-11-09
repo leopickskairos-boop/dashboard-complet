@@ -1,0 +1,230 @@
+# 🎯 Objectif global
+Créer un système complet de **gestion d’abonnements Stripe mensuels** relié à chaque utilisateur,
+sans paiement à l’inscription, mais avec une **activation et un suivi par plan précis**.
+
+---
+
+## 🧩 Fonctionnement général
+
+1️⃣ **Inscription** → L’utilisateur crée un compte sur l’application (email + mot de passe).  
+   - Aucun paiement Stripe à cette étape.  
+   - On stocke son `userId`, `email`, et on crée un `stripeCustomerId` automatiquement.  
+   - Le champ `plan` est vide ou “pending”.
+
+2️⃣ **Activation de l’abonnement (par admin ou utilisateur)**  
+   - L’admin choisit le plan (Ex : “Pro”, “Business”, “Premium”).  
+   - Chaque plan est relié à un **price_id Stripe** (ex: `price_400MONTHLY`, `price_800MONTHLY`, `price_1000MONTHLY`).  
+   - Le backend crée une session Stripe Checkout uniquement pour ce plan.  
+   - Une fois payé, Stripe déclenche un abonnement mensuel automatique.
+
+3️⃣ **Renouvellement**  
+   - Stripe gère les prélèvements automatiques.  
+   - Chaque paiement mensuel envoie un webhook à ton backend.  
+   - Le backend met à jour le statut de l’abonnement dans la base (`paid`, `cancelled`, etc.).
+
+4️⃣ **Administration**  
+   - L’interface admin permet de :
+     - voir tous les utilisateurs et leurs abonnements actifs
+     - modifier le plan ou le statut d’un utilisateur
+     - déclencher manuellement une session Stripe Checkout
+     - suspendre ou résilier un abonnement
+
+---
+
+## ⚙️ Ce qu’il faut installer sur Replit
+
+### 📦 Dépendances (dans package.json)
+```bash
+npm install stripe express body-parser cors bcryptjs prisma
+```
+
+---
+
+## ⚙️ Clés et variables à ajouter dans Replit → Secrets
+
+```
+STRIPE_SECRET_KEY=sk_live_xxxxxxxxxxxxx
+STRIPE_WEBHOOK_SECRET=whsec_xxxxxxxxxxxxx
+APP_URL=https://tonapp.repl.co
+DATABASE_URL=postgresql://...
+```
+
+---
+
+## 🧱 Structure de la base de données (Prisma)
+
+### Table `users`
+```prisma
+model User {
+  id                    Int      @id @default(autoincrement())
+  email                 String   @unique
+  password              String
+  plan                  String?
+  stripeCustomerId      String?
+  stripeSubscriptionId  String?
+  createdAt             DateTime @default(now())
+  payments              Payment[]
+}
+```
+
+### Table `payments`
+```prisma
+model Payment {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  amount     Float
+  plan       String
+  status     String
+  date       DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id])
+}
+```
+
+---
+
+## 💳 Étape 1 — Création automatique du client Stripe à l’inscription
+
+```js
+import Stripe from "stripe";
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+app.post("/api/register", async (req, res) => {
+  const { email, password } = req.body;
+
+  const hashedPassword = await bcrypt.hash(password, 10);
+  const user = await prisma.user.create({ data: { email, password: hashedPassword } });
+
+  // Création du client Stripe
+  const customer = await stripe.customers.create({
+    email,
+    metadata: { userId: user.id },
+  });
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { stripeCustomerId: customer.id },
+  });
+
+  res.status(200).json({ message: "Utilisateur créé avec succès", user });
+});
+```
+
+---
+
+## 💳 Étape 2 — Création d’une session Stripe Checkout (par admin ou utilisateur)
+
+```js
+app.post("/api/create-checkout-session", async (req, res) => {
+  const { userId, plan, planPriceId } = req.body;
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+
+  const session = await stripe.checkout.sessions.create({
+    customer: user.stripeCustomerId,
+    mode: "subscription",
+    line_items: [{ price: planPriceId, quantity: 1 }],
+    success_url: `${process.env.APP_URL}/dashboard?success=true`,
+    cancel_url: `${process.env.APP_URL}/plans?cancelled=true`,
+    metadata: { userId: user.id, plan },
+  });
+
+  res.json({ url: session.url });
+});
+```
+
+---
+
+## 🔁 Étape 3 — Webhook Stripe (suivi des paiements)
+
+```js
+import bodyParser from "body-parser";
+app.post("/api/stripe/webhook", bodyParser.raw({ type: "application/json" }), async (req, res) => {
+  const sig = req.headers["stripe-signature"];
+
+  let event;
+  try {
+    event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+  } catch (err) {
+    return res.status(400).send(`Webhook error: ${err.message}`);
+  }
+
+  if (event.type === "checkout.session.completed") {
+    const session = event.data.object;
+    const userId = parseInt(session.metadata.userId);
+    const plan = session.metadata.plan;
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        plan,
+        stripeSubscriptionId: session.subscription,
+      },
+    });
+
+    await prisma.payment.create({
+      data: {
+        userId,
+        plan,
+        amount: session.amount_total / 100,
+        status: "paid",
+      },
+    });
+  }
+
+  if (event.type === "customer.subscription.deleted") {
+    const subscription = event.data.object;
+    await prisma.user.updateMany({
+      where: { stripeSubscriptionId: subscription.id },
+      data: { plan: "cancelled" },
+    });
+  }
+
+  res.sendStatus(200);
+});
+```
+
+---
+
+## 🧭 Étape 4 — Interface Admin à prévoir
+
+### Dans le dashboard admin :
+- Une table “Utilisateurs” avec :
+  - Nom, email, plan actuel, statut abonnement, date de paiement
+- Boutons :
+  - “Assigner un plan” → Ouvre une modale pour choisir un plan et créer la session Stripe
+  - “Résilier l’abonnement” → Envoie une requête à Stripe pour stopper la facturation
+  - “Voir paiements” → Affiche la table `payments` de l’utilisateur
+
+---
+
+## ✅ Résultat attendu
+
+| Étape | Résultat |
+|--------|----------|
+| Inscription | Crée un utilisateur sans paiement |
+| Activation plan | L’admin ou l’utilisateur déclenche un paiement Stripe |
+| Paiement | L’utilisateur est relié à son abonnement |
+| Renouvellement | Stripe gère automatiquement |
+| Résiliation | Admin peut couper depuis dashboard |
+| Historique | Traçabilité complète dans la base |
+
+---
+
+## 📋 À ne pas oublier
+- 🔐 Toujours sécuriser les routes admin avec `requireAdmin`
+- 🧾 Tester les webhooks Stripe avec `stripe listen`
+- ⚙️ Configurer les IDs produits (`price_xxxxx`) dans un fichier `plans.js`
+- 📦 Ajouter une route `GET /api/payments/:userId` pour afficher l’historique
+
+---
+
+## 💡 En résumé
+
+| Élément | Rôle |
+|----------|------|
+| Stripe Customer | Créé automatiquement à l’inscription |
+| Plan | Assigné manuellement ou par admin |
+| Session Checkout | Déclenchée à l’activation |
+| Webhook | Synchronise paiements et statuts |
+| Base de données | Lie `userId` ↔ `stripeSubscriptionId` |
+| Dashboard Admin | Gestion et suivi complet |
+
