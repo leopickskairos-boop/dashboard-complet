@@ -32,6 +32,7 @@ export interface IStorage {
   updateUserEmail(userId: string, email: string): Promise<void>;
   updateUserPassword(userId: string, hashedPassword: string): Promise<void>;
   deleteUser(userId: string): Promise<void>;
+  assignPlan(userId: string, plan: string | null): Promise<User | undefined>;
   
   // Email verification
   setVerificationToken(userId: string, token: string, expiry: Date): Promise<void>;
@@ -109,6 +110,7 @@ export interface IStorage {
   getMonthlyReportByPeriod(userId: string, periodStart: Date, periodEnd: Date): Promise<MonthlyReport | undefined>;
   createMonthlyReport(report: InsertMonthlyReport): Promise<MonthlyReport>;
   getUsersForMonthlyReportGeneration(): Promise<User[]>;
+  getUsersWithExpiringTrials(): Promise<User[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -624,6 +626,22 @@ export class DatabaseStorage implements IStorage {
     return eligibleUsers;
   }
 
+  async getUsersWithExpiringTrials(): Promise<User[]> {
+    // Get users whose trial ends today or has already ended
+    const now = new Date();
+    
+    const expiringUsers = await db
+      .select()
+      .from(users)
+      .where(and(
+        eq(users.accountStatus, 'trial'),
+        sql`${users.countdownEnd} <= ${now}`,
+        eq(users.role, 'user') // Exclude admins
+      ));
+    
+    return expiringUsers;
+  }
+
   // ===== ADMIN FUNCTIONS =====
 
   async getAllUsers(): Promise<User[]> {
@@ -643,6 +661,15 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db
       .update(users)
       .set({ accountStatus: 'active' })
+      .where(eq(users.id, userId))
+      .returning();
+    return user || undefined;
+  }
+
+  async assignPlan(userId: string, plan: string | null): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set({ plan })
       .where(eq(users.id, userId))
       .returning();
     return user || undefined;

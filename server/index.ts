@@ -3,6 +3,7 @@ import cookieParser from "cookie-parser";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { monthlyReportCron } from "./monthly-report.cron";
+import { trialExpirationCron } from "./trial-expiration.cron";
 
 const app = express();
 
@@ -60,6 +61,10 @@ app.use((req, res, next) => {
   // Start monthly report cron job
   monthlyReportCron.start();
   console.log('[Server] Monthly report cron job initialized');
+
+  // Start trial expiration cron job
+  trialExpirationCron.start();
+  console.log('[Server] Trial expiration cron job initialized');
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

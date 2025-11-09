@@ -1270,6 +1270,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Assign plan to user (admin only)
+  app.post("/api/admin/users/:id/assign-plan", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { plan } = req.body;
+
+      // Validate plan value
+      const validPlans = [null, 'basic', 'standard', 'premium'];
+      if (!validPlans.includes(plan)) {
+        return res.status(400).json({ message: "Plan invalide" });
+      }
+
+      const user = await storage.assignPlan(id, plan);
+      
+      if (!user) {
+        return res.status(404).json({ message: "Utilisateur non trouvé" });
+      }
+
+      res.json({ message: "Plan assigné avec succès", user: toPublicUser(user) });
+    } catch (error: any) {
+      console.error("Error assigning plan:", error);
+      res.status(500).json({ message: "Erreur lors de l'assignation du plan" });
+    }
+  });
+
   // Delete user account (admin only)
   app.delete("/api/admin/users/:id", requireAuth, requireAdmin, async (req, res) => {
     try {

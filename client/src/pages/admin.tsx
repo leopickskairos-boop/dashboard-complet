@@ -43,6 +43,8 @@ interface AdminUser {
   role: string;
   subscriptionStatus: string;
   accountStatus: string;
+  plan: string | null;
+  countdownEnd: string | null;
   createdAt: string;
   totalCalls: number;
   totalMinutes: number;
@@ -117,6 +119,22 @@ export default function AdminPage() {
     },
   });
 
+  const assignPlanMutation = useMutation({
+    mutationFn: ({ userId, plan }: { userId: string; plan: string | null }) => 
+      apiRequest("POST", `/api/admin/users/${userId}/assign-plan`, { plan }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({ title: "Plan assigné avec succès" });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erreur",
+        description: error.message || "Impossible d'assigner le plan",
+        variant: "destructive",
+      });
+    },
+  });
+
   if (!user || user.role !== "admin") {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -164,6 +182,14 @@ export default function AdminPage() {
     } else {
       return <Badge variant="destructive">Expiré</Badge>;
     }
+  };
+
+  const getPlanName = (plan: string | null) => {
+    if (!plan) return "Aucun";
+    if (plan === "basic") return "Basic (400€)";
+    if (plan === "standard") return "Standard (800€)";
+    if (plan === "premium") return "Premium (1000€)";
+    return plan;
   };
 
   const getAccountStatusBadge = (status: string) => {
@@ -279,7 +305,30 @@ export default function AdminPage() {
                           {u.email}
                         </div>
                       </TableCell>
-                      <TableCell>{getSubscriptionBadge(u.subscriptionStatus)}</TableCell>
+                      <TableCell>
+                        {u.accountStatus === 'trial' || u.accountStatus === 'expired' ? (
+                          <Select
+                            value={u.plan || "none"}
+                            onValueChange={(plan) => {
+                              const planValue = plan === "none" ? null : plan;
+                              assignPlanMutation.mutate({ userId: u.id, plan: planValue });
+                            }}
+                            disabled={assignPlanMutation.isPending}
+                          >
+                            <SelectTrigger className="w-40" data-testid={`select-plan-${u.id}`}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">Aucun</SelectItem>
+                              <SelectItem value="basic">Basic (400€)</SelectItem>
+                              <SelectItem value="standard">Standard (800€)</SelectItem>
+                              <SelectItem value="premium">Premium (1000€)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <span className="text-sm">{getPlanName(u.plan)}</span>
+                        )}
+                      </TableCell>
                       <TableCell>{getAccountStatusBadge(u.accountStatus)}</TableCell>
                       <TableCell>{getHealthBadge(u.healthStatus)}</TableCell>
                       <TableCell className="text-center">

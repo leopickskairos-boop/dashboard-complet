@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { AlertCircle, Mail, RefreshCw } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import type { PublicUser } from "@shared/schema";
-import Logo from "@/components/Logo";
+import { Logo } from "@/components/Logo";
 import { useLocation } from "wouter";
 
 export default function TrialExpired() {
