@@ -67,10 +67,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Hash password
       const hashedPassword = await hashPassword(data.password);
 
-      // Create user
+      // Create Stripe Customer immediately (before user creation)
+      let stripeCustomerId: string | undefined;
+      try {
+        const customer = await stripe.customers.create({
+          email: data.email,
+          metadata: {
+            source: 'speedai_signup'
+          }
+        });
+        stripeCustomerId = customer.id;
+      } catch (stripeError) {
+        console.error("Failed to create Stripe customer:", stripeError);
+        // Continue anyway - can be created later if needed
+      }
+
+      // Calculate trial period (30 days from now)
+      const countdownStart = new Date();
+      const countdownEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // +30 days
+
+      // Create user with trial period
       const user = await storage.createUser({
         email: data.email,
         password: hashedPassword,
+        stripeCustomerId,
+        countdownStart,
+        countdownEnd,
+        accountStatus: 'trial'
       });
 
       // Generate verification token
@@ -87,8 +110,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       res.status(201).json({ 
-        message: "Inscription réussie. Veuillez vérifier votre email.",
-        userId: user.id 
+        message: "Inscription réussie. Veuillez vérifier votre email. Vous bénéficiez de 30 jours d'essai gratuit.",
+        userId: user.id,
+        trialDays: 30
       });
     } catch (error) {
       if (error instanceof z.ZodError) {

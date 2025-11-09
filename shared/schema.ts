@@ -32,8 +32,11 @@ export const users = pgTable("users", {
   stripeSubscriptionId: text("stripe_subscription_id"),
   subscriptionStatus: text("subscription_status"), // 'active', 'canceled', 'past_due', 'incomplete', null
   subscriptionCurrentPeriodEnd: timestamp("subscription_current_period_end"),
+  plan: text("plan"), // 'basic', 'standard', 'premium', null
+  countdownStart: timestamp("countdown_start"),
+  countdownEnd: timestamp("countdown_end"),
   apiKeyHash: text("api_key_hash").unique(), // Hashed API key for N8N webhooks (bcrypt)
-  accountStatus: text("account_status").notNull().default("active"), // 'active', 'suspended'
+  accountStatus: text("account_status").notNull().default("trial"), // 'trial', 'active', 'expired', 'suspended'
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -44,6 +47,11 @@ export const insertUserSchema = createInsertSchema(users, {
 }).pick({
   email: true,
   password: true,
+}).extend({
+  stripeCustomerId: z.string().optional(),
+  countdownStart: z.date().optional(),
+  countdownEnd: z.date().optional(),
+  accountStatus: z.enum(['trial', 'active', 'expired', 'suspended']).optional(),
 });
 
 export const signupSchema = z.object({

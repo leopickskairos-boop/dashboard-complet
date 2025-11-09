@@ -1,0 +1,200 @@
+# 🎯 Objectif
+Modifier le système d’inscription et de paiement pour qu’il n’y ait **plus de paiement direct à l’inscription**.  
+À la place, un **compte à rebours de 30 jours** est lancé dès la création du compte, et **l’administrateur** rattache ensuite manuellement chaque utilisateur à un plan Stripe spécifique.
+
+---
+
+## ⚙️ Fonctionnement global à implémenter
+
+### 1️⃣ **Inscription**
+- Lorsqu’un utilisateur s’inscrit :
+  - Aucun paiement Stripe n’est déclenché.
+  - Un `Stripe Customer` est **créé immédiatement** et relié à son `userId`.
+  - Les champs suivants doivent être ajoutés à la table `users` :
+    ```js
+    {
+      id: Int,
+      email: String,
+      password: String,
+      plan: String? (null par défaut),
+      stripeCustomerId: String?,
+      stripeSubscriptionId: String?,
+      countdownStart: DateTime,
+      countdownEnd: DateTime,
+      accountStatus: "trial" | "active" | "expired"
+    }
+    ```
+  - `countdownStart = now()`
+  - `countdownEnd = now() + 30 days`
+  - `accountStatus = "trial"`
+  - `plan = null`
+
+Exemple :
+```js
+await prisma.user.create({
+  data: {
+    email,
+    password: hashedPassword,
+    countdownStart: new Date(),
+    countdownEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    accountStatus: "trial",
+  },
+});
+```
+
+---
+
+### 2️⃣ **Plans disponibles sur Stripe**
+
+| Plan | Montant (€) | Price ID |
+|------|--------------|----------|
+| 🟩 Basic | 400 | `price_1SRfP3442ACh1eI8PFt5z2b4` |
+| 🟨 Standard | 800 | *(déjà existant)* |
+| 🟥 Premium | 1000 | `price_1SRfPE442ACh1eI8pzFhIJLH` |
+
+➡️ Ces trois plans doivent être déclarés dans un fichier `plans.js` :
+```js
+export const PLANS = {
+  basic: "price_1SRfP3442ACh1eI8PFt5z2b4",
+  standard: "price_XXXX800",
+  premium: "price_1SRfPE442ACh1eI8pzFhIJLH",
+};
+```
+
+---
+
+### 3️⃣ **Rôle de l’Administrateur**
+Depuis le **panneau d’administration**, l’admin doit pouvoir :
+- Voir tous les utilisateurs ayant `accountStatus = "trial"`.
+- Choisir un plan Stripe (400, 800, ou 1000).
+- Rattacher ce plan à l’utilisateur manuellement.
+
+Exemple :
+```js
+await prisma.user.update({
+  where: { id: userId },
+  data: { plan: "premium" },
+});
+```
+
+⚠️ Ce rattachement ne déclenche **pas encore de paiement immédiat.**
+Il prépare simplement la future mensualisation.
+
+---
+
+### 4️⃣ **Gestion automatique à la fin du compte à rebours**
+
+- Tous les jours, un script (ou cron job) doit :
+  - Vérifier les utilisateurs dont `countdownEnd <= now()`.
+  - Si un utilisateur **a un plan attaché** (`plan != null`) :
+    - Créer une **session Stripe Checkout** basée sur le `price_id` correspondant.
+    - Envoyer automatiquement un **email de paiement** à cet utilisateur (avec le lien de session).
+  - Si un utilisateur **n’a pas de plan attaché** :
+    - Son statut passe à `expired`.
+    - L’accès au dashboard est bloqué (redirection vers une page “Abonnement requis”).
+
+Exemple logique :
+```js
+if (user.countdownEnd <= new Date()) {
+  if (user.plan) {
+    const session = await stripe.checkout.sessions.create({
+      customer: user.stripeCustomerId,
+      mode: "subscription",
+      line_items: [{ price: PLANS[user.plan], quantity: 1 }],
+      success_url: `${process.env.APP_URL}/dashboard?success=true`,
+      cancel_url: `${process.env.APP_URL}/plans?cancelled=true`,
+      metadata: { userId: user.id, plan: user.plan },
+    });
+    sendEmail(user.email, "Votre abonnement commence", session.url);
+  } else {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { accountStatus: "expired" },
+    });
+  }
+}
+```
+
+---
+
+### 5️⃣ **Après paiement (Stripe webhook standard)**
+
+Quand Stripe envoie `checkout.session.completed` :
+```js
+if (event.type === "checkout.session.completed") {
+  const session = event.data.object;
+  const userId = parseInt(session.metadata.userId);
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      stripeSubscriptionId: session.subscription,
+      accountStatus: "active",
+    },
+  });
+}
+```
+
+➡️ Si l’utilisateur paye → `accountStatus = active`  
+➡️ Sinon, il reste `expired`.
+
+---
+
+### 6️⃣ **Ce qu’il faut ignorer / nettoyer**
+- Tous les anciens utilisateurs actuellement “abonnés” sont à **ignorer ou supprimer** :
+  > Ce sont des faux utilisateurs créés pour les tests, donc non pertinents.  
+  > On repart de zéro avec cette nouvelle logique d’inscription + countdown.
+
+---
+
+### 7️⃣ **Résumé du nouveau flux utilisateur**
+
+```
+[INSCRIPTION] (Création compte + Stripe Customer + countdownStart)
+      ↓
+[VÉRIFICATION EMAIL]
+      ↓
+[ACCÈS DASHBOARD - période d’essai 30 jours]
+      ↓
+[ADMIN ASSOCIE PLAN STRIPE À USERID]
+      ↓
+[FIN DU COUNTDOWN → lien Stripe envoyé]
+      ↓
+[PAIEMENT]
+      ↓
+[ACCOUNT STATUS = ACTIVE → accès complet]
+```
+
+---
+
+### ✅ Résumé opérationnel
+
+| Étape | Action | Paiement ? | Statut |
+|--------|---------|-------------|---------|
+| 1. Inscription | Création compte + Stripe Customer | ❌ Non | trial |
+| 2. Admin associe plan | Plan lié (400, 800, 1000) | ❌ Non | trial |
+| 3. Countdown fini | Stripe Checkout généré | ⚠️ Oui | pending |
+| 4. Paiement effectué | Webhook Stripe | ✅ Oui | active |
+| 5. Non-paiement | Accès bloqué | ❌ Non | expired |
+
+---
+
+## 🔐 Environnement à configurer dans Replit → Secrets
+
+```
+STRIPE_SECRET_KEY=sk_live_xxxxx
+STRIPE_WEBHOOK_SECRET=whsec_xxxxx
+APP_URL=https://tonapp.repl.co
+DATABASE_URL=postgresql://...
+```
+
+---
+
+## 🧠 En résumé
+- Suppression du paiement à l’inscription ✅  
+- Compte à rebours de 30 jours après création ✅  
+- Rattachement manuel du plan par admin ✅  
+- Paiement automatique à la fin du délai ✅  
+- Blocage des comptes non payés ✅  
+- Réactivation automatique après paiement Stripe ✅  
+- Nettoyage des anciens “faux comptes abonnés” ✅
