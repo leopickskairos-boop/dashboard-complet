@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation, Link } from "wouter";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { SubscriptionExpirationBanner } from "@/components/SubscriptionExpirationBanner";
 
 interface DashboardLayoutProps {
@@ -19,6 +19,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const handleLogout = async () => {
     try {
       await apiRequest("POST", "/api/auth/logout");
+      
+      // CRITICAL FIX: Invalidate cached user data to prevent cross-user data leak
+      queryClient.removeQueries({ queryKey: ['/api/auth/me'] });
+      
       setLocation("/login");
     } catch (error) {
       toast({

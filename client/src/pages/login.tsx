@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { Logo } from "@/components/Logo";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 
 export default function Login() {
@@ -37,6 +37,19 @@ export default function Login() {
       }
 
       const result = await response.json();
+
+      // DEBUG LOG: Track userId after successful login (development only)
+      if (import.meta.env.DEV) {
+        console.log('[LOGIN] User authenticated:', { 
+          userId: result.user.id, 
+          email: result.user.email,
+          role: result.user.role,
+          accountStatus: result.user.accountStatus
+        });
+      }
+
+      // CRITICAL FIX: Invalidate cached user data to prevent cross-user data leak
+      queryClient.removeQueries({ queryKey: ['/api/auth/me'] });
 
       // Admins go directly to dashboard, bypassing verification and subscription checks
       if (result.user.role === 'admin') {

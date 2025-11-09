@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { Logo } from "@/components/Logo";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 
 export default function Signup() {
@@ -39,6 +39,9 @@ export default function Signup() {
         const error = await response.json();
         throw new Error(error.message || "Erreur lors de l'inscription");
       }
+
+      // CRITICAL FIX: Invalidate cached user data to prevent cross-user data leak
+      queryClient.removeQueries({ queryKey: ['/api/auth/me'] });
 
       toast({
         title: "Inscription réussie !",

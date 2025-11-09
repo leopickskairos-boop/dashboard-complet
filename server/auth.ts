@@ -73,6 +73,15 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     return res.status(401).json({ message: "Utilisateur non trouvé" });
   }
 
+  // DEBUG LOG: Track user resolution in middleware (development only)
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[MIDDLEWARE requireAuth] User resolved from token:', {
+      userId: user.id,
+      email: user.email,
+      role: user.role
+    });
+  }
+
   // Attach user to request
   (req as any).user = user;
   next();

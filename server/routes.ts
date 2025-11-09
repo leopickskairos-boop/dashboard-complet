@@ -167,6 +167,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
 
+      // DEBUG LOG: Track successful login (development only)
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[BACKEND LOGIN] User authenticated:', {
+          userId: user.id,
+          email: user.email,
+          role: user.role,
+          accountStatus: (user as any).accountStatus
+        });
+      }
+
       res.json({ 
         message: "Connexion réussie",
         user: toPublicUser(user)
@@ -183,6 +193,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get current user
   app.get("/api/auth/me", requireAuth, async (req, res) => {
     const user = (req as any).user;
+    
+    // DEBUG LOG: Track /api/auth/me response (development only)
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[BACKEND /api/auth/me] Returning user:', {
+        userId: user.id,
+        email: user.email,
+        role: user.role
+      });
+    }
+    
     res.json(toPublicUser(user));
   });
 
