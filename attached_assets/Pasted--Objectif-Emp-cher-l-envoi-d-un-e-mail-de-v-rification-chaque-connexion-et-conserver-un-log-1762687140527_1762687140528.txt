@@ -1,0 +1,127 @@
+# 🎯 Objectif
+Empêcher l’envoi d’un e-mail de vérification à chaque connexion,  
+et conserver un login classique avec “email + mot de passe”.
+
+---
+
+## ⚙️ Étapes à suivre
+
+### 1️⃣ Ouvre le fichier d’authentification
+Ouvre ton fichier :
+```
+/pages/api/auth/[...nextauth].js
+```
+ou
+```
+/api/auth/[...nextauth].js
+```
+
+---
+
+### 2️⃣ Supprime le bloc EmailProvider (celui qui envoie les mails à chaque login)
+Cherche un bloc ressemblant à ceci :
+
+```js
+import EmailProvider from "next-auth/providers/email";
+
+providers: [
+  EmailProvider({
+    sendVerificationRequest({ identifier, url, provider }) {
+      // Envoi du mail de vérification automatique
+      await sendEmail(identifier, url);
+    },
+  }),
+];
+```
+
+➡️ **Supprime complètement ce bloc.**  
+C’est lui qui provoque l’envoi de mail à chaque connexion.
+
+---
+
+### 3️⃣ Remplace-le par un CredentialsProvider classique
+
+Ajoute ce code à la place :
+
+```js
+import CredentialsProvider from "next-auth/providers/credentials";
+import { prisma } from "@/lib/prisma"; // adapte selon ton projet
+
+export const authOptions = {
+  providers: [
+    CredentialsProvider({
+      name: "Connexion standard",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Mot de passe", type: "password" },
+      },
+      async authorize(credentials) {
+        // Vérifie si l'utilisateur existe
+        const user = await prisma.user.findUnique({
+          where: { email: credentials.email },
+        });
+
+        if (!user) {
+          throw new Error("Utilisateur non trouvé.");
+        }
+
+        // Vérifie le mot de passe (si tu hashes les mots de passe avec bcrypt)
+        const bcrypt = await import("bcryptjs");
+        const isValid = await bcrypt.compare(credentials.password, user.password);
+
+        if (!isValid) {
+          throw new Error("Mot de passe incorrect.");
+        }
+
+        return user;
+      },
+    }),
+  ],
+  session: {
+    strategy: "jwt",
+  },
+  pages: {
+    signIn: "/login", // page de connexion
+    newUser: "/register", // page d'inscription
+  },
+};
+```
+
+---
+
+### 4️⃣ Sauvegarde et relance ton projet
+
+Dans la console Replit :
+```
+npm install next-auth bcryptjs
+```
+puis clique sur ▶️ **Run**
+
+---
+
+### 5️⃣ Test
+
+- Essaie de te **connecter** avec ton email et ton mot de passe.  
+  → Aucun mail de vérification ne sera envoyé.  
+- Essaie de **changer ton mot de passe**.  
+  → Le changement se fera sans qu’un mail “magique” parte automatiquement.  
+- Si tu veux garder **un e-mail de vérification uniquement à l’inscription**,  
+  gère-le manuellement dans ton code d’inscription (ex: `register.js`).
+
+---
+
+## ✅ Résumé
+
+| Situation | Action |
+|------------|---------|
+| Un mail part à chaque connexion | ❌ Supprimer EmailProvider |
+| Connexion classique | ✅ Ajouter CredentialsProvider |
+| Vérification uniquement à l’inscription | ✅ Gérée manuellement (ou via Resend) |
+| Mot de passe vérifié avec bcrypt | ✅ Sécurisé |
+
+---
+
+## 🧠 Résultat attendu
+- ✅ Login par **email + mot de passe** (classique, rapide)  
+- 🚫 Plus de mail “de vérification” à chaque login  
+- ✉️ Mail de vérification uniquement lors de l’inscription (optionnel)
