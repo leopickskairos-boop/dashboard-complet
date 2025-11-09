@@ -110,16 +110,16 @@ export default function Login() {
                         <Input
                           type={showPassword ? "text" : "password"}
                           placeholder="••••••••"
-                          className="h-12 pr-12"
+                          className="h-12 pr-11"
                           data-testid="input-password"
                           {...field}
                         />
                         <button
                           type="button"
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus:text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 rounded transition-colors"
                           onClick={() => setShowPassword(!showPassword)}
-                          data-testid="button-toggle-password"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                           aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                          data-testid="button-toggle-password"
                         >
                           {showPassword ? (
                             <EyeOff className="h-5 w-5" />

@@ -104,25 +104,23 @@ export default function Signup() {
                         <Input
                           type={showPassword ? "text" : "password"}
                           placeholder="••••••••"
-                          className="h-12 pr-12"
+                          className="h-12 pr-11"
                           data-testid="input-password"
                           {...field}
                         />
-                        <Button
+                        <button
                           type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="absolute right-1 top-1/2 -translate-y-1/2 h-10 w-10 hover:bg-transparent"
                           onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                           aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
                           data-testid="button-toggle-password"
                         >
                           {showPassword ? (
-                            <EyeOff className="h-4 w-4 text-muted-foreground" />
+                            <EyeOff className="h-5 w-5" />
                           ) : (
-                            <Eye className="h-4 w-4 text-muted-foreground" />
+                            <Eye className="h-5 w-5" />
                           )}
-                        </Button>
+                        </button>
                       </div>
                     </FormControl>
                     <FormMessage />
@@ -140,25 +138,23 @@ export default function Signup() {
                         <Input
                           type={showConfirmPassword ? "text" : "password"}
                           placeholder="••••••••"
-                          className="h-12 pr-12"
+                          className="h-12 pr-11"
                           data-testid="input-confirm-password"
                           {...field}
                         />
-                        <Button
+                        <button
                           type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="absolute right-1 top-1/2 -translate-y-1/2 h-10 w-10 hover:bg-transparent"
                           onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                           aria-label={showConfirmPassword ? "Masquer la confirmation" : "Afficher la confirmation"}
                           data-testid="button-toggle-confirm-password"
                         >
                           {showConfirmPassword ? (
-                            <EyeOff className="h-4 w-4 text-muted-foreground" />
+                            <EyeOff className="h-5 w-5" />
                           ) : (
-                            <Eye className="h-4 w-4 text-muted-foreground" />
+                            <Eye className="h-5 w-5" />
                           )}
-                        </Button>
+                        </button>
                       </div>
                     </FormControl>
                     <FormMessage />

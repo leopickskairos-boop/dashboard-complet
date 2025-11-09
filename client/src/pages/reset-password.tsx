@@ -172,25 +172,23 @@ export default function ResetPassword() {
                           type={showPassword ? "text" : "password"}
                           placeholder="Minimum 8 caractères"
                           disabled={resetPasswordMutation.isPending}
-                          className="pr-10"
+                          className="pr-11"
                           data-testid="input-password"
                         />
-                        <Button
+                        <button
                           type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="absolute right-0 top-0 h-full w-10 hover:bg-transparent"
                           onClick={() => setShowPassword(!showPassword)}
                           disabled={resetPasswordMutation.isPending}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
                           aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
                           data-testid="button-toggle-password"
                         >
                           {showPassword ? (
-                            <EyeOff className="h-4 w-4 text-muted-foreground" />
+                            <EyeOff className="h-5 w-5" />
                           ) : (
-                            <Eye className="h-4 w-4 text-muted-foreground" />
+                            <Eye className="h-5 w-5" />
                           )}
-                        </Button>
+                        </button>
                       </div>
                     </FormControl>
                     <FormMessage />
@@ -211,25 +209,23 @@ export default function ResetPassword() {
                           type={showConfirmPassword ? "text" : "password"}
                           placeholder="Retapez votre mot de passe"
                           disabled={resetPasswordMutation.isPending}
-                          className="pr-10"
+                          className="pr-11"
                           data-testid="input-confirm-password"
                         />
-                        <Button
+                        <button
                           type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="absolute right-0 top-0 h-full w-10 hover:bg-transparent"
                           onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                           disabled={resetPasswordMutation.isPending}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
                           aria-label={showConfirmPassword ? "Masquer la confirmation" : "Afficher la confirmation"}
                           data-testid="button-toggle-confirm-password"
                         >
                           {showConfirmPassword ? (
-                            <EyeOff className="h-4 w-4 text-muted-foreground" />
+                            <EyeOff className="h-5 w-5" />
                           ) : (
-                            <Eye className="h-4 w-4 text-muted-foreground" />
+                            <Eye className="h-5 w-5" />
                           )}
-                        </Button>
+                        </button>
                       </div>
                     </FormControl>
                     <FormMessage />
