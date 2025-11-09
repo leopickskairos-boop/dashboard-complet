@@ -1,0 +1,136 @@
+# ⚙️ Nouvelle logique d’inscription et de facturation
+
+Ce document explique le **nouveau fonctionnement du parcours utilisateur et du paiement mensuel** sur l’application.  
+L’objectif est de supprimer le paiement direct à l’inscription et d’introduire une période d’essai de 30 jours gérée par un **compte à rebours automatique**.
+
+---
+
+## 🔁 Schéma général du processus
+
+### 1️⃣ **Inscription**
+- L’utilisateur crée un compte avec son email et son mot de passe.
+- Aucun paiement Stripe n’est lancé à cette étape.
+- Lors de la création du compte :
+  - un **Stripe Customer** est automatiquement créé (lié à `userId`)
+  - le compte utilisateur est ajouté dans la base de données avec les champs suivants :
+    - `stripeCustomerId`
+    - `plan` = `null`
+    - `countdownStart` = date du jour
+    - `countdownEnd` = `date du jour + 30 jours`
+    - `accountStatus` = `trial` (essai)
+
+---
+
+### 2️⃣ **Vérification de l’e-mail**
+- L’utilisateur reçoit un e-mail de vérification classique.
+- Une fois vérifié, il accède immédiatement au **dashboard**.
+- Aucun paiement n’est encore demandé.
+
+---
+
+### 3️⃣ **Période d’essai (compte à rebours de 30 jours)**
+- Dès la vérification, un **compte à rebours de 30 jours** démarre automatiquement.
+- Ce délai est affiché dans le dashboard utilisateur (ex: “28 jours restants sur votre période d’essai”).
+- L’utilisateur peut utiliser toutes les fonctionnalités comme un utilisateur normal.
+- **Pendant ce temps**, aucune facturation n’est déclenchée côté Stripe.
+
+---
+
+### 4️⃣ **Intervention de l’ADMIN pendant la période d’essai**
+- Depuis le **panneau d’administration**, l’ADMIN peut :
+  - Voir tous les utilisateurs en période d’essai et leur date d’expiration.
+  - Choisir un plan pour chaque utilisateur :
+    - 🟩 Plan 400€ → `price_400MONTHLY`
+    - 🟨 Plan 800€ → `price_800MONTHLY`
+    - 🟥 Plan 1000€ → `price_1000MONTHLY`
+  - **Associer manuellement le `userId` au produit Stripe** correspondant.
+- Cette association ne déclenche **pas encore de paiement immédiat.**
+- Elle sert à **préparer la mensualisation future.**
+
+---
+
+### 5️⃣ **Fin du compte à rebours (début de la mensualisation)**
+- Une fois le compte à rebours terminé :
+  - Le backend détecte que `countdownEnd < now()`.
+  - Si l’utilisateur a été associé à un plan Stripe :
+    - Une **session de paiement Stripe Checkout** est automatiquement générée.
+    - L’utilisateur reçoit un **lien de paiement par e-mail**.
+    - Dès qu’il paye, son statut passe à :
+      - `accountStatus` = `active`
+      - `plan` = plan choisi
+      - `stripeSubscriptionId` = abonnement créé
+  - Si l’utilisateur **n’a pas encore payé**, son accès au dashboard est bloqué :
+    - `accountStatus` = `expired`
+    - Redirection vers une page “Abonnement requis”
+
+---
+
+### 6️⃣ **Après paiement**
+- Une fois le premier paiement effectué :
+  - Stripe gère automatiquement les **renouvellements mensuels**.
+  - Le webhook Stripe met à jour le statut de l’utilisateur (`active`, `cancelled`, etc.)
+  - L’utilisateur garde l’accès complet au dashboard.
+
+---
+
+## 🧾 En résumé logique
+
+| Étape | Action | Paiement ? | Statut compte |
+|--------|--------|-------------|---------------|
+| 1. Inscription | Création compte + Stripe Customer | ❌ Non | trial (essai) |
+| 2. Vérif email | Validation compte | ❌ Non | trial |
+| 3. Compte à rebours | Utilisation libre 30 jours | ❌ Non | trial |
+| 4. Admin choisit plan | Lien `userId` ↔ `price_id` | ❌ Non | trial |
+| 5. Fin du délai | Stripe Checkout déclenché | ✅ Oui | active / expired |
+| 6. Paiement réussi | Abonnement actif mensuel | ✅ Oui | active |
+| 7. Non-paiement | Accès bloqué | ❌ Oui | expired |
+
+---
+
+## ⚡️ Points techniques à prévoir plus tard
+
+- Un **cron job quotidien** (ou un script planifié) pour :
+  - vérifier tous les `countdownEnd`
+  - déclencher les paiements automatiques pour ceux qui ont un plan lié
+  - désactiver les comptes dont le délai est expiré sans paiement
+
+- Une **table “trialCountdown”** ou champs intégrés à `users` :
+  ```js
+  {
+    id: 12,
+    email: "client@exemple.com",
+    plan: null,
+    countdownStart: "2025-11-09",
+    countdownEnd: "2025-12-09",
+    accountStatus: "trial"
+  }
+  ```
+
+- Un **champ “isLinkedToPlan”** booléen pour savoir si l’admin a relié un plan Stripe au compte.
+
+---
+
+## 🎯 Objectif de cette nouvelle logique
+- Supprimer toute friction à l’inscription : aucun paiement immédiat.  
+- Laisser une **période d’essai claire de 30 jours** pour tester.  
+- Permettre à l’admin de gérer finement le moment du paiement.  
+- Assurer une transition fluide vers la mensualisation Stripe.  
+- Bloquer proprement les comptes expirés sans paiement.
+
+---
+
+## ✅ Ce qui ne change pas
+- Authentification via email + mot de passe.  
+- Vérification email unique à l’inscription.  
+- Connexion directe après validation.  
+- Dashboard et statistiques identiques après paiement.  
+- Webhook Stripe pour gérer le renouvellement mensuel automatique.
+
+---
+
+### 🧩 Exemple visuel du flux utilisateur :
+
+```
+[INSCRIPTION] → [VÉRIF EMAIL] → [TRIAL 30J] → [ADMIN ASSOCIE PLAN] 
+→ [ÉCHÉANCE] → [PAIEMENT STRIPE CHECKOUT] → [ABONNEMENT ACTIF] → [DASHBOARD]
+```
