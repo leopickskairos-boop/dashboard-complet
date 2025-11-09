@@ -1,5 +1,5 @@
 // Reference: javascript_stripe blueprint for Stripe integration
-import type { Express } from "express";
+import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import Stripe from "stripe";
 import { storage } from "./storage";
@@ -30,6 +30,22 @@ import {
   notifyPasswordChanged,
 } from "./notifications";
 
+// Extend Express Request type to include user property
+declare global {
+  namespace Express {
+    interface Request {
+      user?: {
+        id: string;
+        email: string;
+        role: string;
+        isVerified: boolean;
+        accountStatus: string;
+      };
+      logout?: (callback: (err: any) => void) => void;
+    }
+  }
+}
+
 if (!process.env.STRIPE_SECRET_KEY) {
   throw new Error('Missing required Stripe secret: STRIPE_SECRET_KEY');
 }
@@ -43,7 +59,7 @@ if (!process.env.STRIPE_PRICE_ID) {
 }
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: "2024-11-20.acacia",
+  apiVersion: "2025-10-29.clover",
 });
 
 const STRIPE_PRICE_ID = process.env.STRIPE_PRICE_ID;
@@ -322,7 +338,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
         
         if (subscription.latest_invoice && typeof subscription.latest_invoice !== 'string') {
-          const paymentIntent = subscription.latest_invoice.payment_intent;
+          const paymentIntent = (subscription.latest_invoice as any).payment_intent;
           if (paymentIntent && typeof paymentIntent !== 'string') {
             return res.json({
               subscriptionId: subscription.id,
@@ -359,7 +375,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const invoice = subscription.latest_invoice;
       if (invoice && typeof invoice !== 'string') {
-        const paymentIntent = invoice.payment_intent;
+        const paymentIntent = (invoice as any).payment_intent;
         if (paymentIntent && typeof paymentIntent !== 'string') {
           return res.json({
             subscriptionId: subscription.id,
@@ -408,10 +424,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Find user by customer ID
           const user = await storage.getUserByStripeCustomerId(customerId);
           if (user) {
-            await storage.updateStripeInfo(user.id, {
+            const updateData: any = {
               subscriptionStatus: subscription.status,
-              subscriptionCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
-            });
+            };
+            
+            if ((subscription as any).current_period_end) {
+              updateData.subscriptionCurrentPeriodEnd = new Date((subscription as any).current_period_end * 1000);
+            }
+            
+            await storage.updateStripeInfo(user.id, updateData);
 
             // Update account status to 'active' when subscription is created
             await storage.updateUser(user.id, { accountStatus: 'active' });
@@ -434,10 +455,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Find user by customer ID
           const user = await storage.getUserByStripeCustomerId(customerId);
           if (user) {
-            await storage.updateStripeInfo(user.id, {
+            const updateData: any = {
               subscriptionStatus: subscription.status,
-              subscriptionCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
-            });
+            };
+            
+            if ((subscription as any).current_period_end) {
+              updateData.subscriptionCurrentPeriodEnd = new Date((subscription as any).current_period_end * 1000);
+            }
+            
+            await storage.updateStripeInfo(user.id, updateData);
             
             // Notify user if subscription was renewed
             if (subscription.status === 'active') {
@@ -475,16 +501,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         case 'invoice.payment_succeeded': {
           const invoice = event.data.object as Stripe.Invoice;
-          if (invoice.subscription) {
-            const subscription = await stripe.subscriptions.retrieve(invoice.subscription as string);
+          const invoiceSubscription = (invoice as any).subscription;
+          if (invoiceSubscription) {
+            const subscription = await stripe.subscriptions.retrieve(invoiceSubscription as string);
             const customerId = subscription.customer as string;
             
             const user = await storage.getUserByStripeCustomerId(customerId);
             if (user) {
-              await storage.updateStripeInfo(user.id, {
+              const updateData: any = {
                 subscriptionStatus: 'active',
-                subscriptionCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
-              });
+              };
+              
+              if ((subscription as any).current_period_end) {
+                updateData.subscriptionCurrentPeriodEnd = new Date((subscription as any).current_period_end * 1000);
+              }
+              
+              await storage.updateStripeInfo(user.id, updateData);
               
               // Update account status to 'active' when payment succeeds
               await storage.updateUser(user.id, { accountStatus: 'active' });
@@ -495,7 +527,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         case 'invoice.payment_failed': {
           const invoice = event.data.object as Stripe.Invoice;
-          if (invoice.subscription && invoice.customer) {
+          const invoiceSubscription = (invoice as any).subscription;
+          if (invoiceSubscription && invoice.customer) {
             const customerId = invoice.customer as string;
             const user = await storage.getUserByStripeCustomerId(customerId);
             if (user) {
@@ -704,9 +737,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.deleteUser(userId);
 
       // Clear session
-      req.logout(() => {
+      if (req.logout) {
+        req.logout(() => {
+          res.json({ message: "Compte supprimé avec succès" });
+        });
+      } else {
         res.json({ message: "Compte supprimé avec succès" });
-      });
+      }
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: error.errors[0].message });
@@ -1153,7 +1190,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate incoming data
       const webhookSchema = z.object({
         phoneNumber: z.string().min(1, "Numéro de téléphone requis"),
-        status: z.enum(['active', 'completed', 'failed', 'missed']),
+        status: z.enum(['active', 'completed', 'failed', 'no_answer', 'canceled']),
         startTime: z.string().optional(),
         endTime: z.string().optional(),
         duration: z.number().optional(),
