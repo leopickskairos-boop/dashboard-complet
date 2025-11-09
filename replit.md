@@ -19,7 +19,7 @@ The project utilizes a modern web stack:
 - **Email**: Dedicated service for sending verification and transactional emails.
 
 **Key Features Implemented (MVP Phase 1 - Complete):**
-- **Comprehensive Authentication System**: User registration, email verification, secure login, password reset, and account management. Passwords are hashed with bcrypt, and secure tokens are used for verification and resets.
+- **Comprehensive Authentication System**: User registration with double password confirmation, email verification, secure login, password reset, and account management. Passwords are hashed with bcrypt, and secure tokens are used for verification and resets. All password input fields feature eye icons for toggling visibility, improving user experience and reducing input errors.
 - **Stripe Subscription Integration**: Single plan subscription model (29€/month) with secure payment via Stripe Elements and webhook-validated subscriptions. Includes features for managing payment methods and viewing payment history via Stripe Customer Portal.
 - **User Dashboard**: Protected dashboard accessible only to verified and subscribed users, featuring real-time statistics (total calls, active calls, conversion rate, average call duration), temporal filters, and dynamic charts (Recharts).
 - **Notification System**: A robust notification center with filtering options (time, type, read/unread status), user preferences for notification types (daily summaries, failed calls, active calls, subscription alerts), and an alert banner for expiring subscriptions. Automatic notification generation for key events (e.g., subscription changes, password changes).
