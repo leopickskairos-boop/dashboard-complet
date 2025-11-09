@@ -67,11 +67,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Hash password
       const hashedPassword = await hashPassword(data.password);
 
-      // Create user with automatic verification
+      // Create user
       const user = await storage.createUser({
         email: data.email,
         password: hashedPassword,
-        isVerified: true, // Auto-verify new accounts for immediate access
       });
 
       // Generate verification token
