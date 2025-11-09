@@ -2,7 +2,14 @@ import nodemailer from 'nodemailer';
 
 const SMTP_USER = process.env.SMTP_USER;
 const SMTP_PASSWORD = process.env.SMTP_PASSWORD;
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5000';
+
+// Environment variable priority:
+// 1. FRONTEND_URL (explicit configuration, e.g., custom domain)
+// 2. REPLIT_DEV_DOMAIN (automatic Replit public URL)
+// 3. localhost:5000 (local development fallback)
+const FRONTEND_URL = process.env.FRONTEND_URL 
+  || (process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : null)
+  || 'http://localhost:5000';
 
 if (!SMTP_USER || !SMTP_PASSWORD) {
   console.warn('[Gmail] SMTP credentials not configured. Emails will not be sent.');
