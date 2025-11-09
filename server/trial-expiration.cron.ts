@@ -2,7 +2,9 @@ import * as cron from 'node-cron';
 import { storage } from './storage';
 import { sendEmail } from './gmail-email';
 import { STRIPE_PLANS } from './stripe-plans';
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+import Stripe from 'stripe';
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 /**
  * Trial Expiration Cron Job Service
@@ -132,6 +134,10 @@ export class TrialExpirationCronService {
       console.log(`[TrialExpirationCron] Created Stripe Checkout Session for user ${user.id}: ${session.id}`);
 
       // Send email with payment link
+      if (!session.url) {
+        console.error(`[TrialExpirationCron] No checkout URL generated for user ${user.id}`);
+        return;
+      }
       await this.sendPaymentLinkEmail(user, session.url, user.plan);
 
       // Update user account status to 'expired'

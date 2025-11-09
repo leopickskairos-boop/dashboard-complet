@@ -412,6 +412,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               subscriptionStatus: subscription.status,
               subscriptionCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
             });
+
+            // Update account status to 'active' when subscription is created
+            await storage.updateUser(user.id, { accountStatus: 'active' });
             
             // Notify user about subscription creation
             await notifySubscriptionAlert(
@@ -482,6 +485,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 subscriptionStatus: 'active',
                 subscriptionCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
               });
+              
+              // Update account status to 'active' when payment succeeds
+              await storage.updateUser(user.id, { accountStatus: 'active' });
             }
           }
           break;
@@ -1223,6 +1229,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             role: user.role,
             subscriptionStatus: user.subscriptionStatus || 'none',
             accountStatus: (user as any).accountStatus || 'active',
+            plan: (user as any).plan || null,
+            countdownEnd: (user as any).countdownEnd || null,
             createdAt: user.createdAt,
             ...stats,
           };
