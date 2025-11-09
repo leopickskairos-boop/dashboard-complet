@@ -16,7 +16,10 @@ The project utilizes a modern web stack:
 - **Database**: PostgreSQL (Neon) managed with Drizzle ORM.
 - **Authentication**: Secure JWT sessions with httpOnly cookies.
 - **Payments**: Stripe Subscriptions with webhook integration for automated payment processing.
-- **Email**: Dedicated service for sending verification and transactional emails.
+- **Email**: Gmail SMTP integration (speedaivoiceai@gmail.com) for sending verification emails, password reset links, and monthly PDF reports. Email links automatically use the application's public URL via intelligent environment variable cascade:
+  1. `FRONTEND_URL` (custom domain/production override)
+  2. `REPLIT_DEV_DOMAIN` (automatic Replit public URL)
+  3. `localhost:5000` (local development fallback)
 
 **Key Features Implemented (MVP Phase 1 - Complete):**
 - **Comprehensive Authentication System**: User registration with double password confirmation, email verification, secure login, password reset, and account management. Passwords are hashed with bcrypt, and secure tokens are used for verification and resets. All password input fields feature eye icons for toggling visibility, improving user experience and reducing input errors.
