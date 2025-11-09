@@ -38,16 +38,14 @@ export default function Login() {
 
       const result = await response.json();
 
-      // Admins go directly to dashboard, bypassing verification and subscription checks
+      // Admins go directly to dashboard, bypassing subscription checks
       if (result.user.role === 'admin') {
         setLocation("/dashboard");
         return;
       }
 
-      // Redirect based on user status
-      if (!result.user.isVerified) {
-        setLocation("/verify-email-sent");
-      } else if (!result.user.subscriptionStatus || result.user.subscriptionStatus !== 'active') {
+      // Redirect based on user subscription status (no email verification required)
+      if (!result.user.subscriptionStatus || result.user.subscriptionStatus !== 'active') {
         setLocation("/subscribe");
       } else {
         setLocation("/dashboard");
