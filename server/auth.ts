@@ -94,7 +94,7 @@ export async function requireVerified(req: Request, res: Response, next: NextFun
   next();
 }
 
-// Require active subscription middleware
+// Require active subscription or trial middleware
 export async function requireSubscription(req: Request, res: Response, next: NextFunction) {
   const user = (req as any).user as User;
   
@@ -103,18 +103,41 @@ export async function requireSubscription(req: Request, res: Response, next: Nex
     return next();
   }
   
-  if (!user.subscriptionStatus || user.subscriptionStatus !== 'active') {
-    return res.status(403).json({ message: "Abonnement requis" });
+  // Get accountStatus (default to 'expired' for legacy records or null values)
+  const accountStatus = (user as any).accountStatus || 'expired';
+  
+  // Allow trial and active users
+  if (accountStatus === 'trial') {
+    return next();
   }
-
-  // Check if subscription is still valid
-  if (user.subscriptionCurrentPeriodEnd) {
-    const now = new Date();
-    const expiry = new Date(user.subscriptionCurrentPeriodEnd);
-    if (now > expiry) {
-      return res.status(403).json({ message: "Abonnement expiré" });
+  
+  if (accountStatus === 'active') {
+    // For active users, perform Stripe sanity check to detect billing regressions
+    if (!user.subscriptionStatus || user.subscriptionStatus !== 'active') {
+      return res.status(403).json({ message: "Abonnement requis" });
     }
+    
+    // Check if subscription period is still valid
+    if (user.subscriptionCurrentPeriodEnd) {
+      const now = new Date();
+      const expiry = new Date(user.subscriptionCurrentPeriodEnd);
+      if (now > expiry) {
+        return res.status(403).json({ message: "Abonnement expiré" });
+      }
+    }
+    
+    return next();
   }
-
-  next();
+  
+  // Block expired, suspended, or any other status
+  if (accountStatus === 'expired') {
+    return res.status(403).json({ message: "Période d'essai expirée" });
+  }
+  
+  if (accountStatus === 'suspended') {
+    return res.status(403).json({ message: "Compte suspendu" });
+  }
+  
+  // Fallback for any unexpected status
+  return res.status(403).json({ message: "Abonnement requis" });
 }

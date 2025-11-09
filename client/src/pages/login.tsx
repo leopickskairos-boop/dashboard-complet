@@ -47,11 +47,32 @@ export default function Login() {
       // Redirect based on user status
       if (!result.user.isVerified) {
         setLocation("/verify-email-sent");
-      } else if (!result.user.subscriptionStatus || result.user.subscriptionStatus !== 'active') {
-        setLocation("/subscribe");
-      } else {
-        setLocation("/dashboard");
+        return;
       }
+
+      // Check account status (new trial-based system)
+      const accountStatus = result.user.accountStatus;
+
+      // Trial and active users can access dashboard
+      if (accountStatus === 'trial' || accountStatus === 'active') {
+        setLocation("/dashboard");
+        return;
+      }
+
+      // Handle expired trial
+      if (accountStatus === 'expired') {
+        setLocation("/trial-expired");
+        return;
+      }
+
+      // Handle suspended accounts
+      if (accountStatus === 'suspended') {
+        setLocation("/subscription-expired"); // Or create a specific suspended page
+        return;
+      }
+
+      // Fallback for legacy users or undefined accountStatus
+      setLocation("/subscribe");
     } catch (error: any) {
       toast({
         title: "Erreur de connexion",
