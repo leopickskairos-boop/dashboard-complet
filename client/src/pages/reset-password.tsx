@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { resetPasswordSchema, type ResetPasswordData } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
-import { Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { Loader2, CheckCircle2, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { Logo } from "@/components/Logo";
 
 export default function ResetPassword() {
@@ -18,6 +18,8 @@ export default function ResetPassword() {
   const [, setLocation] = useLocation();
   const [token, setToken] = useState<string>("");
   const [resetSuccess, setResetSuccess] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Extract token from URL query params
   useEffect(() => {
@@ -164,13 +166,32 @@ export default function ResetPassword() {
                   <FormItem>
                     <FormLabel>Nouveau mot de passe</FormLabel>
                     <FormControl>
-                      <Input
-                        {...field}
-                        type="password"
-                        placeholder="Minimum 8 caractères"
-                        disabled={resetPasswordMutation.isPending}
-                        data-testid="input-password"
-                      />
+                      <div className="relative">
+                        <Input
+                          {...field}
+                          type={showPassword ? "text" : "password"}
+                          placeholder="Minimum 8 caractères"
+                          disabled={resetPasswordMutation.isPending}
+                          className="pr-10"
+                          data-testid="input-password"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="absolute right-0 top-0 h-full w-10 hover:bg-transparent"
+                          onClick={() => setShowPassword(!showPassword)}
+                          disabled={resetPasswordMutation.isPending}
+                          aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                          data-testid="button-toggle-password"
+                        >
+                          {showPassword ? (
+                            <EyeOff className="h-4 w-4 text-muted-foreground" />
+                          ) : (
+                            <Eye className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </Button>
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -184,13 +205,32 @@ export default function ResetPassword() {
                   <FormItem>
                     <FormLabel>Confirmer le mot de passe</FormLabel>
                     <FormControl>
-                      <Input
-                        {...field}
-                        type="password"
-                        placeholder="Retapez votre mot de passe"
-                        disabled={resetPasswordMutation.isPending}
-                        data-testid="input-confirm-password"
-                      />
+                      <div className="relative">
+                        <Input
+                          {...field}
+                          type={showConfirmPassword ? "text" : "password"}
+                          placeholder="Retapez votre mot de passe"
+                          disabled={resetPasswordMutation.isPending}
+                          className="pr-10"
+                          data-testid="input-confirm-password"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="absolute right-0 top-0 h-full w-10 hover:bg-transparent"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          disabled={resetPasswordMutation.isPending}
+                          aria-label={showConfirmPassword ? "Masquer la confirmation" : "Afficher la confirmation"}
+                          data-testid="button-toggle-confirm-password"
+                        >
+                          {showConfirmPassword ? (
+                            <EyeOff className="h-4 w-4 text-muted-foreground" />
+                          ) : (
+                            <Eye className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </Button>
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>

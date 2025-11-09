@@ -114,6 +114,7 @@ export default function Signup() {
                           size="icon"
                           className="absolute right-0 top-0 h-12 w-12 hover:bg-transparent"
                           onClick={() => setShowPassword(!showPassword)}
+                          aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
                           data-testid="button-toggle-password"
                         >
                           {showPassword ? (
@@ -149,6 +150,7 @@ export default function Signup() {
                           size="icon"
                           className="absolute right-0 top-0 h-12 w-12 hover:bg-transparent"
                           onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          aria-label={showConfirmPassword ? "Masquer la confirmation" : "Afficher la confirmation"}
                           data-testid="button-toggle-confirm-password"
                         >
                           {showConfirmPassword ? (
