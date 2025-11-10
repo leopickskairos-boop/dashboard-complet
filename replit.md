@@ -26,7 +26,7 @@ The project utilizes a modern web stack:
 - **30-Day Free Trial System**: New users receive immediate dashboard access with a 30-day free trial. No payment required at signup - Stripe Customer is created automatically for seamless conversion.
 - **Multi-Tier Subscription Model**: Three subscription plans available:
   - **Basic**: €400/month (Stripe Price ID: price_1SRfP3442ACh1eI8PFt5z2b4)
-  - **Standard**: €800/month (Stripe Price ID: price_1QvKJl442ACh1eI85LGNRt9O)
+  - **Standard**: €800/month (Stripe Price ID: price_1SQDvA442ACh1eI8X8ym3WC5)
   - **Premium**: €1000/month (Stripe Price ID: price_1SRfPE442ACh1eI8pzFhIJLH)
 - **Automated Trial-to-Paid Conversion**: Daily cron service (3:00 AM) checks trial expirations, generates Stripe Checkout Sessions per assigned plan, sends payment links via email, and updates account status. Stripe webhooks (subscription.created, invoice.payment_succeeded) automatically activate accounts on successful payment.
 - **Admin Plan Assignment**: Admins can assign subscription plans to trial users via dropdown interface, enabling targeted tier management during trial period.
