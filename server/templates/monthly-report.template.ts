@@ -25,6 +25,34 @@ export function generateReportHTML(
     const color = change > 0 ? "#10b981" : change < 0 ? "#ef4444" : "#6b7280";
     return `<span style="color: ${color}">${arrow} ${Math.abs(Math.round(change))}%</span>`;
   };
+  
+  const formatCurrency = (value: number): string => {
+    return `${Math.round(value)}€`;
+  };
+  
+  const formatHours = (hours: number): string => {
+    if (hours < 1) {
+      return `${Math.round(hours * 60)} min`;
+    }
+    return `${hours.toFixed(1)}h`;
+  };
+  
+  const getScoreColor = (score: number): string => {
+    if (score >= 80) return "#10b981"; // Green
+    if (score >= 60) return "#f59e0b"; // Orange
+    return "#ef4444"; // Red
+  };
+  
+  const getRecommendationStyle = (type: string): { bgColor: string; borderColor: string; iconColor: string } => {
+    switch (type) {
+      case 'success':
+        return { bgColor: '#ecfdf5', borderColor: '#10b981', iconColor: '#059669' };
+      case 'alert':
+        return { bgColor: '#fef2f2', borderColor: '#ef4444', iconColor: '#dc2626' };
+      default:
+        return { bgColor: '#eff6ff', borderColor: '#3b82f6', iconColor: '#2563eb' };
+    }
+  };
 
   // Generate chart data for Chart.js
   const peakHoursLabels = metrics.peakHours.slice(0, 10).map(h => `${h.hour}h`);
@@ -286,6 +314,78 @@ export function generateReportHTML(
       </div>
     </div>
   </div>
+  
+  <!-- Business Metrics -->
+  <div class="section">
+    <h2 class="section-title">Métriques Business</h2>
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">Rendez-vous pris</div>
+        <div class="kpi-value">${metrics.appointmentsTaken}</div>
+        <div class="kpi-change">vs mois dernier: ${formatChange(metrics.appointmentsTaken, metrics.previousMonthAppointments)}</div>
+      </div>
+      
+      <div class="kpi-card">
+        <div class="kpi-label">Taux de conversion RDV</div>
+        <div class="kpi-value">${formatPercent(metrics.appointmentConversionRate)}</div>
+        <div class="kpi-change">vs mois dernier: ${formatChange(metrics.appointmentConversionRate, metrics.previousMonthAppointmentConversionRate)}</div>
+      </div>
+      
+      <div class="kpi-card">
+        <div class="kpi-label">Appels hors horaires</div>
+        <div class="kpi-value">${metrics.afterHoursCalls}</div>
+        <div class="kpi-change">vs mois dernier: ${formatChange(metrics.afterHoursCalls, metrics.previousMonthAfterHoursCalls)}</div>
+      </div>
+      
+      <div class="kpi-card">
+        <div class="kpi-label">Temps économisé</div>
+        <div class="kpi-value">${formatHours(metrics.timeSavedHours)}</div>
+        <div class="kpi-change">vs mois dernier: ${formatChange(metrics.timeSavedHours, metrics.previousMonthTimeSaved)}</div>
+      </div>
+      
+      <div class="kpi-card">
+        <div class="kpi-label">Revenus estimés</div>
+        <div class="kpi-value">${formatCurrency(metrics.estimatedRevenue)}</div>
+        <div class="kpi-change">vs mois dernier: ${formatChange(metrics.estimatedRevenue, metrics.previousMonthRevenue)}</div>
+      </div>
+      
+      <div class="kpi-card">
+        <div class="kpi-label">ROI estimé</div>
+        <div class="kpi-value">${formatPercent(metrics.roi)}</div>
+        <div class="kpi-change">vs mois dernier: ${formatChange(metrics.roi, metrics.previousMonthROI)}</div>
+      </div>
+    </div>
+    
+    <!-- Performance Score -->
+    <div style="margin-top: 24px; text-align: center; padding: 24px; background: #f9fafb; border-radius: 12px;">
+      <div style="font-size: 14px; color: #6b7280; margin-bottom: 12px; font-weight: 600;">Score de Performance Global</div>
+      <div style="font-size: 48px; font-weight: 700; color: ${getScoreColor(metrics.performanceScore)}; margin-bottom: 8px;">${metrics.performanceScore}/100</div>
+      <div style="font-size: 13px; color: #9ca3af;">
+        ${metrics.performanceScore >= 80 ? 'Excellent - Continuez ainsi !' : 
+          metrics.performanceScore >= 60 ? 'Bien - Quelques améliorations possibles' : 
+          'À améliorer - Consultez les recommandations'}
+      </div>
+      <div style="font-size: 13px; color: #6b7280; margin-top: 8px;">
+        vs mois dernier: ${formatChange(metrics.performanceScore, metrics.previousMonthPerformanceScore)}
+      </div>
+    </div>
+  </div>
+  
+  <!-- AI Recommendations -->
+  ${metrics.aiRecommendations.length > 0 ? `
+  <div class="section">
+    <h2 class="section-title">Recommandations IA</h2>
+    ${metrics.aiRecommendations.map(rec => {
+      const style = getRecommendationStyle(rec.type);
+      return `
+        <div style="background: ${style.bgColor}; border-left: 4px solid ${style.borderColor}; border-radius: 4px; padding: 16px; margin-bottom: 16px;">
+          <div style="font-size: 14px; font-weight: 600; color: ${style.iconColor}; margin-bottom: 8px;">${rec.title}</div>
+          <div style="font-size: 14px; color: #1f2937; line-height: 1.5;">${rec.message}</div>
+        </div>
+      `;
+    }).join('')}
+  </div>
+  ` : ''}
 
   <!-- Peak Hours Chart -->
   ${metrics.peakHours.length > 0 && metrics.totalCalls > 0 ? `

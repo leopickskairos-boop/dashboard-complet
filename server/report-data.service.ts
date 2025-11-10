@@ -30,8 +30,13 @@ export interface MonthlyReportMetrics {
   previousMonthConversionRate: number;
   previousMonthAverageDuration: number;
   previousMonthAppointments: number;
+  previousMonthAppointmentConversionRate: number;
+  previousMonthAfterHoursCalls: number;
+  previousMonthAfterHoursPercentage: number;
   previousMonthRevenue: number;
   previousMonthTimeSaved: number;
+  previousMonthROI: number;
+  previousMonthPerformanceScore: number;
   
   // Peak hours analysis (array of hours with call counts)
   peakHours: Array<{ hour: number; callCount: number }>;
@@ -157,9 +162,32 @@ export class ReportDataService {
       : 0;
     
     const previousMonthAppointments = previousCalls.filter((c) => c.appointmentDate !== null).length;
+    const previousMonthAppointmentConversionRate = previousMonthTotalCalls > 0 
+      ? (previousMonthAppointments / previousMonthTotalCalls) * 100 
+      : 0;
+    
+    const previousMonthAfterHoursCalls = previousCalls.filter((c) => {
+      const hour = new Date(c.startTime).getHours();
+      return hour < BUSINESS_HOURS_START || hour >= BUSINESS_HOURS_END;
+    }).length;
+    const previousMonthAfterHoursPercentage = previousMonthTotalCalls > 0 
+      ? (previousMonthAfterHoursCalls / previousMonthTotalCalls) * 100 
+      : 0;
+    
     const previousMonthRevenue = previousMonthAppointments * AVERAGE_CLIENT_VALUE;
     const previousTotalDuration = previousCallsWithDuration.reduce((sum, c) => sum + (c.duration || 0), 0);
     const previousMonthTimeSaved = previousTotalDuration / 3600;
+    
+    const previousMonthROI = AI_COST_PER_MONTH > 0 
+      ? ((previousMonthRevenue - AI_COST_PER_MONTH) / AI_COST_PER_MONTH) * 100 
+      : 0;
+    
+    const previousMonthPerformanceScore = this.calculatePerformanceScore({
+      conversionRate: previousMonthConversionRate,
+      appointmentConversionRate: previousMonthAppointmentConversionRate,
+      afterHoursPercentage: previousMonthAfterHoursPercentage,
+      averageCallDuration: previousMonthAverageDuration,
+    });
 
     // Analyze peak hours
     const peakHours = this.calculatePeakHours(currentCalls);
@@ -217,8 +245,13 @@ export class ReportDataService {
       previousMonthConversionRate,
       previousMonthAverageDuration,
       previousMonthAppointments,
+      previousMonthAppointmentConversionRate,
+      previousMonthAfterHoursCalls,
+      previousMonthAfterHoursPercentage,
       previousMonthRevenue,
       previousMonthTimeSaved,
+      previousMonthROI,
+      previousMonthPerformanceScore,
       peakHours,
       callsByStatus,
       insights,
