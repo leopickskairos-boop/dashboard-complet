@@ -14,11 +14,24 @@ export interface MonthlyReportMetrics {
   conversionRate: number; // Percentage of completed calls
   averageCallDuration: number; // In seconds
   
+  // Advanced KPIs
+  appointmentsTaken: number; // Calls with appointmentDate set
+  appointmentConversionRate: number; // Percentage of calls that led to appointments
+  afterHoursCalls: number; // Calls outside 8h-19h
+  afterHoursPercentage: number;
+  timeSavedHours: number; // Total time saved by AI (based on call duration)
+  estimatedRevenue: number; // Appointments × average client value
+  roi: number; // ROI percentage (revenue / AI cost)
+  performanceScore: number; // Overall performance score (0-100)
+  
   // Previous month comparison
   previousMonthTotalCalls: number;
   previousMonthActiveCalls: number;
   previousMonthConversionRate: number;
   previousMonthAverageDuration: number;
+  previousMonthAppointments: number;
+  previousMonthRevenue: number;
+  previousMonthTimeSaved: number;
   
   // Peak hours analysis (array of hours with call counts)
   peakHours: Array<{ hour: number; callCount: number }>;
@@ -32,6 +45,13 @@ export interface MonthlyReportMetrics {
     statusDistribution: string; // e.g., "65% de vos appels se terminent avec succès"
     monthComparison: string; // e.g., "Hausse de 15% par rapport au mois dernier"
   };
+  
+  // Smart AI recommendations
+  aiRecommendations: Array<{
+    type: 'insight' | 'alert' | 'success';
+    title: string;
+    message: string;
+  }>;
 }
 
 export class ReportDataService {
@@ -81,6 +101,12 @@ export class ReportDataService {
         )
       );
 
+    // Configuration constants
+    const AVERAGE_CLIENT_VALUE = 150; // Average revenue per appointment (€)
+    const AI_COST_PER_MONTH = 50; // Estimated AI service cost (€)
+    const BUSINESS_HOURS_START = 8;
+    const BUSINESS_HOURS_END = 19;
+    
     // Calculate current period KPIs
     const totalCalls = currentCalls.length;
     const activeCalls = currentCalls.filter((c) => c.status === "completed").length;
@@ -90,6 +116,33 @@ export class ReportDataService {
     const averageCallDuration = callsWithDuration.length > 0
       ? callsWithDuration.reduce((sum, c) => sum + (c.duration || 0), 0) / callsWithDuration.length
       : 0;
+    
+    // Advanced KPIs
+    const appointmentsTaken = currentCalls.filter((c) => c.appointmentDate !== null).length;
+    const appointmentConversionRate = totalCalls > 0 ? (appointmentsTaken / totalCalls) * 100 : 0;
+    
+    // After-hours calls (outside 8h-19h)
+    const afterHoursCalls = currentCalls.filter((c) => {
+      const hour = new Date(c.startTime).getHours();
+      return hour < BUSINESS_HOURS_START || hour >= BUSINESS_HOURS_END;
+    }).length;
+    const afterHoursPercentage = totalCalls > 0 ? (afterHoursCalls / totalCalls) * 100 : 0;
+    
+    // Time saved (total call duration converted to hours)
+    const totalDurationSeconds = callsWithDuration.reduce((sum, c) => sum + (c.duration || 0), 0);
+    const timeSavedHours = totalDurationSeconds / 3600; // Convert to hours
+    
+    // Financial metrics
+    const estimatedRevenue = appointmentsTaken * AVERAGE_CLIENT_VALUE;
+    const roi = AI_COST_PER_MONTH > 0 ? ((estimatedRevenue - AI_COST_PER_MONTH) / AI_COST_PER_MONTH) * 100 : 0;
+    
+    // Performance score (weighted average of key metrics)
+    const performanceScore = this.calculatePerformanceScore({
+      conversionRate,
+      appointmentConversionRate,
+      afterHoursPercentage,
+      averageCallDuration,
+    });
 
     // Calculate previous period KPIs
     const previousMonthTotalCalls = previousCalls.length;
@@ -102,6 +155,11 @@ export class ReportDataService {
     const previousMonthAverageDuration = previousCallsWithDuration.length > 0
       ? previousCallsWithDuration.reduce((sum, c) => sum + (c.duration || 0), 0) / previousCallsWithDuration.length
       : 0;
+    
+    const previousMonthAppointments = previousCalls.filter((c) => c.appointmentDate !== null).length;
+    const previousMonthRevenue = previousMonthAppointments * AVERAGE_CLIENT_VALUE;
+    const previousTotalDuration = previousCallsWithDuration.reduce((sum, c) => sum + (c.duration || 0), 0);
+    const previousMonthTimeSaved = previousTotalDuration / 3600;
 
     // Analyze peak hours
     const peakHours = this.calculatePeakHours(currentCalls);
@@ -120,6 +178,19 @@ export class ReportDataService {
       peakHours,
       callsByStatus,
     });
+    
+    // Generate AI recommendations and alerts
+    const aiRecommendations = this.generateAIRecommendations({
+      currentCalls,
+      previousCalls,
+      appointmentsTaken,
+      previousMonthAppointments,
+      conversionRate,
+      previousMonthConversionRate,
+      afterHoursPercentage,
+      peakHours,
+      callsByStatus,
+    });
 
     // Format month name
     const month = periodStart.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
@@ -133,13 +204,25 @@ export class ReportDataService {
       activeCalls,
       conversionRate,
       averageCallDuration,
+      appointmentsTaken,
+      appointmentConversionRate,
+      afterHoursCalls,
+      afterHoursPercentage,
+      timeSavedHours,
+      estimatedRevenue,
+      roi,
+      performanceScore,
       previousMonthTotalCalls,
       previousMonthActiveCalls,
       previousMonthConversionRate,
       previousMonthAverageDuration,
+      previousMonthAppointments,
+      previousMonthRevenue,
+      previousMonthTimeSaved,
       peakHours,
       callsByStatus,
       insights,
+      aiRecommendations,
     };
   }
 
@@ -266,5 +349,165 @@ export class ReportDataService {
       statusDistribution,
       monthComparison,
     };
+  }
+  
+  /**
+   * Calculate overall performance score (0-100)
+   */
+  private static calculatePerformanceScore(data: {
+    conversionRate: number;
+    appointmentConversionRate: number;
+    afterHoursPercentage: number;
+    averageCallDuration: number;
+  }): number {
+    // Weighted scoring system
+    const weights = {
+      conversion: 0.35, // 35% - Most important metric
+      appointments: 0.30, // 30% - Direct business value
+      afterHours: 0.20, // 20% - Service availability
+      duration: 0.15, // 15% - Efficiency
+    };
+    
+    // Normalize each metric to 0-100 scale
+    const conversionScore = Math.min(data.conversionRate, 100);
+    const appointmentScore = Math.min(data.appointmentConversionRate * 2, 100); // Scale up (50% = 100 points)
+    const afterHoursScore = Math.min(data.afterHoursPercentage * 3, 100); // More after-hours = better
+    
+    // Duration score (optimal is 3-5 mins, penalties for too short/long)
+    let durationScore = 100;
+    if (data.averageCallDuration < 180) { // < 3 mins
+      durationScore = (data.averageCallDuration / 180) * 100;
+    } else if (data.averageCallDuration > 300) { // > 5 mins
+      durationScore = Math.max(50, 100 - ((data.averageCallDuration - 300) / 60) * 10);
+    }
+    
+    // Calculate weighted score
+    const totalScore = 
+      conversionScore * weights.conversion +
+      appointmentScore * weights.appointments +
+      afterHoursScore * weights.afterHours +
+      durationScore * weights.duration;
+    
+    return Math.round(totalScore);
+  }
+  
+  /**
+   * Generate smart AI recommendations and alerts
+   */
+  private static generateAIRecommendations(data: {
+    currentCalls: any[];
+    previousCalls: any[];
+    appointmentsTaken: number;
+    previousMonthAppointments: number;
+    conversionRate: number;
+    previousMonthConversionRate: number;
+    afterHoursPercentage: number;
+    peakHours: Array<{ hour: number; callCount: number }>;
+    callsByStatus: Array<{ status: string; count: number; percentage: number }>;
+  }): Array<{ type: 'insight' | 'alert' | 'success'; title: string; message: string }> {
+    const recommendations: Array<{ type: 'insight' | 'alert' | 'success'; title: string; message: string }> = [];
+    
+    // 1. Check for appointment decline
+    if (data.previousMonthAppointments > 0) {
+      const appointmentChange = ((data.appointmentsTaken - data.previousMonthAppointments) / data.previousMonthAppointments) * 100;
+      if (appointmentChange < -15) {
+        recommendations.push({
+          type: 'alert',
+          title: '⚠️ Baisse des rendez-vous pris',
+          message: `Baisse de ${Math.abs(Math.round(appointmentChange))}% ce mois-ci. Vérifiez la qualité des interactions IA ou les horaires de disponibilité.`
+        });
+      } else if (appointmentChange > 20) {
+        recommendations.push({
+          type: 'success',
+          title: '✨ Excellente performance',
+          message: `Hausse de ${Math.round(appointmentChange)}% des rendez-vous pris ! Continuez sur cette lancée.`
+        });
+      }
+    }
+    
+    // 2. Check for high failed call rate
+    const failedStatus = data.callsByStatus.find(s => s.status === 'failed' || s.status === 'no_answer');
+    if (failedStatus && failedStatus.percentage > 25) {
+      recommendations.push({
+        type: 'alert',
+        title: '📞 Taux d\'appels manqués élevé',
+        message: `${Math.round(failedStatus.percentage)}% de vos appels échouent. Vérifiez la configuration de votre système téléphonique.`
+      });
+    }
+    
+    // 3. Identify best performing time slots
+    if (data.peakHours.length > 0 && data.currentCalls.length > 0) {
+      const topHours = data.peakHours.filter(h => h.callCount > 0).slice(0, 3);
+      if (topHours.length > 0) {
+        // Calculate appointment conversion by hour
+        const hourlyAppointments = new Map<number, number>();
+        data.currentCalls.forEach((call) => {
+          if (call.appointmentDate) {
+            const hour = new Date(call.startTime).getHours();
+            hourlyAppointments.set(hour, (hourlyAppointments.get(hour) || 0) + 1);
+          }
+        });
+        
+        // Find hour with best appointment conversion
+        let bestHour = -1;
+        let bestConversion = 0;
+        topHours.forEach((hourData) => {
+          const appointments = hourlyAppointments.get(hourData.hour) || 0;
+          const conversion = hourData.callCount > 0 ? (appointments / hourData.callCount) * 100 : 0;
+          if (conversion > bestConversion) {
+            bestConversion = conversion;
+            bestHour = hourData.hour;
+          }
+        });
+        
+        if (bestHour >= 0 && bestConversion > data.conversionRate) {
+          const improvementPercent = Math.round(((bestConversion - data.conversionRate) / data.conversionRate) * 100);
+          recommendations.push({
+            type: 'insight',
+            title: '💡 Recommandation IA',
+            message: `Les appels à ${bestHour}h convertissent ${improvementPercent}% mieux que la moyenne. Optimisez votre disponibilité à cette heure.`
+          });
+        }
+      }
+    }
+    
+    // 4. After-hours opportunity
+    if (data.afterHoursPercentage > 30) {
+      recommendations.push({
+        type: 'insight',
+        title: '🌙 Service 24/7 valorisé',
+        message: `${Math.round(data.afterHoursPercentage)}% de vos appels arrivent hors horaires (19h-8h). Votre IA génère une vraie valeur ajoutée en dehors des heures de bureau.`
+      });
+    } else if (data.afterHoursPercentage < 10 && data.currentCalls.length > 50) {
+      recommendations.push({
+        type: 'insight',
+        title: '📈 Opportunité de croissance',
+        message: 'Peu d\'appels en dehors des horaires de bureau. Communiquez davantage sur votre disponibilité 24/7 pour capter plus de clients.'
+      });
+    }
+    
+    // 5. Conversion rate trend
+    if (data.previousMonthConversionRate > 0) {
+      const conversionChange = data.conversionRate - data.previousMonthConversionRate;
+      if (conversionChange < -10) {
+        recommendations.push({
+          type: 'alert',
+          title: '📉 Baisse du taux de conversion',
+          message: `Baisse de ${Math.abs(Math.round(conversionChange))} points ce mois-ci. Analysez les transcriptions récentes pour identifier les points de friction.`
+        });
+      }
+    }
+    
+    // 6. If no recommendations yet, add a generic positive one
+    if (recommendations.length === 0 && data.currentCalls.length > 0) {
+      recommendations.push({
+        type: 'success',
+        title: '✅ Performance stable',
+        message: 'Votre agent IA fonctionne correctement et maintient des performances constantes.'
+      });
+    }
+    
+    // Limit to top 4 most important recommendations
+    return recommendations.slice(0, 4);
   }
 }
