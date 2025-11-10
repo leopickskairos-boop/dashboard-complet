@@ -17,7 +17,7 @@ import {
   type InsertMonthlyReport
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, gte, desc, sql, count } from "drizzle-orm";
+import { eq, and, gte, desc, sql, count, isNotNull } from "drizzle-orm";
 import { generateApiKey } from "./api-key";
 
 export interface IStorage {
@@ -71,6 +71,7 @@ export interface IStorage {
   getCalls(userId: string, filters?: {
     timeFilter?: 'hour' | 'today' | 'two_days' | 'week';
     statusFilter?: string;
+    appointmentsOnly?: boolean;
   }): Promise<Call[]>;
   getCallById(id: string, userId: string): Promise<Call | undefined>;
   createCall(call: InsertCall): Promise<Call>;
@@ -291,6 +292,7 @@ export class DatabaseStorage implements IStorage {
   async getCalls(userId: string, filters?: {
     timeFilter?: 'hour' | 'today' | 'two_days' | 'week';
     statusFilter?: string;
+    appointmentsOnly?: boolean;
   }): Promise<Call[]> {
     let query = db.select().from(calls).where(eq(calls.userId, userId));
     
@@ -305,6 +307,11 @@ export class DatabaseStorage implements IStorage {
     
     if (filters?.statusFilter) {
       conditions.push(eq(calls.status, filters.statusFilter));
+    }
+    
+    // Filter for calls with appointment dates only
+    if (filters?.appointmentsOnly) {
+      conditions.push(isNotNull(calls.appointmentDate));
     }
     
     const result = await db

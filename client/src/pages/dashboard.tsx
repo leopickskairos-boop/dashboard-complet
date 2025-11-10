@@ -19,7 +19,8 @@ import {
   PhoneOff,
   TrendingDown,
   Loader2,
-  Eye
+  Eye,
+  Calendar
 } from "lucide-react";
 import { Line, LineChart, XAxis, YAxis, Tooltip, ResponsiveContainer, Bar, BarChart } from "recharts";
 import type { Call, PublicUser } from "@shared/schema";
@@ -56,6 +57,7 @@ export default function Dashboard() {
   const [globalTimeFilter, setGlobalTimeFilter] = useState<string>("all");
   const [callsTimeFilter, setCallsTimeFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [appointmentsOnly, setAppointmentsOnly] = useState<boolean>(false);
   const [selectedCall, setSelectedCall] = useState<Call | null>(null);
   const [chartDialog, setChartDialog] = useState<'total' | 'conversion' | 'duration' | null>(null);
   const [isMobile, setIsMobile] = useState<boolean>(false);
@@ -96,11 +98,12 @@ export default function Dashboard() {
 
   // Fetch calls with filters
   const { data: calls = [], isLoading: callsLoading } = useQuery<Call[]>({
-    queryKey: ['/api/calls', callsTimeFilter, statusFilter],
+    queryKey: ['/api/calls', callsTimeFilter, statusFilter, appointmentsOnly],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (callsTimeFilter && callsTimeFilter !== 'all') params.set('timeFilter', callsTimeFilter);
       if (statusFilter && statusFilter !== 'all') params.set('statusFilter', statusFilter);
+      if (appointmentsOnly) params.set('appointmentsOnly', 'true');
       const res = await fetch(`/api/calls?${params}`);
       if (!res.ok) throw new Error('Failed to fetch calls');
       return res.json();
@@ -315,6 +318,15 @@ export default function Dashboard() {
                     ))}
                   </SelectContent>
                 </Select>
+                <Button
+                  variant={appointmentsOnly ? "default" : "outline"}
+                  onClick={() => setAppointmentsOnly(!appointmentsOnly)}
+                  className="w-full sm:w-auto"
+                  data-testid="button-appointments-only"
+                >
+                  <Calendar className="w-4 h-4 mr-2" />
+                  {appointmentsOnly ? "Tous les appels" : "RDV uniquement"}
+                </Button>
               </div>
             </div>
           </CardHeader>

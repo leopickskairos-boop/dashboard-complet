@@ -1,0 +1,122 @@
+# 🎯 Objectif
+Modifier la logique d’affichage des appels pour que, dans le détail des appels affichés sur le dashboard,  
+**seuls les appels avec rendez-vous pris** apparaissent.
+
+---
+
+## 🔍 Contexte actuel
+Actuellement, la section “Détails des appels” affiche **tous les appels**, sans distinction.  
+Je veux qu’elle affiche uniquement les appels dont le statut est **“rendez-vous pris”** (ou `appointment: true`).
+
+---
+
+## ⚙️ Ce qu’il faut faire
+
+### 1️⃣ Côté base de données / modèle
+Vérifie que la table (ou collection) des appels contient bien un champ indiquant le statut du rendez-vous :
+```js
+{
+  id: Int,
+  userId: Int,
+  caller: String,
+  date: DateTime,
+  duration: Int,
+  hasAppointment: Boolean, // ✅ ce champ sert de filtre
+  appointmentDate: DateTime? // optionnel
+}
+```
+
+---
+
+### 2️⃣ Côté requête backend
+Dans la route qui renvoie les appels (souvent `/api/calls` ou `/api/get-calls`),  
+il faut filtrer uniquement ceux avec un rendez-vous confirmé.
+
+Exemple Prisma :
+```js
+app.get("/api/calls", requireAuth, async (req, res) => {
+  const userId = req.user.id;
+
+  const calls = await prisma.call.findMany({
+    where: {
+      userId,
+      hasAppointment: true, // ✅ filtre ajouté ici
+    },
+    orderBy: {
+      date: "desc",
+    },
+  });
+
+  res.json(calls);
+});
+```
+
+Si tu utilises une autre base :
+```js
+db.collection("calls").find({ userId, hasAppointment: true });
+```
+
+---
+
+### 3️⃣ Côté front (React / Dashboard)
+Quand tu charges les appels dans le composant du dashboard :
+```js
+useEffect(() => {
+  fetch("/api/calls")
+    .then(res => res.json())
+    .then(data => setCalls(data.filter(call => call.hasAppointment)));
+}, []);
+```
+
+Et dans la partie affichage “Détails des appels” :
+```jsx
+{calls.map(call => (
+  <CallDetailCard
+    key={call.id}
+    caller={call.caller}
+    date={call.date}
+    appointmentDate={call.appointmentDate}
+  />
+))}
+```
+
+---
+
+### 4️⃣ Option supplémentaire (à ton choix)
+Si tu veux garder tous les appels, mais **pouvoir filtrer via un bouton “Rendez-vous pris”** :
+
+```jsx
+<Button onClick={() => setCalls(calls.filter(c => c.hasAppointment))}>
+  Rendez-vous pris ✅
+</Button>
+```
+
+---
+
+### ✅ Résultat attendu
+
+| Section | Contenu affiché |
+|----------|-----------------|
+| 📞 Détails des appels | ✅ Seulement les appels où un rendez-vous est pris |
+| ❌ Appels sans rendez-vous | Non affichés |
+| 🗓️ Données affichées | Nom, date, heure, durée, date du rendez-vous |
+| 🔁 Actualisation | Dynamique via le fetch backend filtré |
+
+---
+
+## 📋 En résumé
+- Ajoute ou vérifie le champ `hasAppointment` dans le modèle `call`.  
+- Filtre `where: { hasAppointment: true }` dans la requête backend.  
+- Le dashboard affiche uniquement ces appels dans la section “Détails”.
+
+---
+
+## 🧩 Résultat final visuel
+```
+[ Détails des Appels ]
+-----------------------------------------
+📅 09/11/2025 — Jean Dupont — Rendez-vous 14h00 ✅
+📅 08/11/2025 — Sarah Lemoine — Rendez-vous 10h30 ✅
+-----------------------------------------
+(Tous les autres appels non concernés sont masqués)
+```

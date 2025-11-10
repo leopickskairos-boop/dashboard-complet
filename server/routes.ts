@@ -590,8 +590,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user!.id;
       const timeFilter = req.query.timeFilter as 'hour' | 'today' | 'two_days' | 'week' | undefined;
       const statusFilter = req.query.statusFilter as string | undefined;
+      const appointmentsOnly = req.query.appointmentsOnly === 'true';
       
-      const calls = await storage.getCalls(userId, { timeFilter, statusFilter });
+      const calls = await storage.getCalls(userId, { timeFilter, statusFilter, appointmentsOnly });
       res.json(calls);
     } catch (error) {
       console.error("Error fetching calls:", error);
