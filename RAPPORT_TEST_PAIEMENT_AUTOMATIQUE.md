@@ -265,39 +265,32 @@ stripe trigger invoice.payment_failed --customer cus_TOmv9oIMCUiIdl
 
 ---
 
-## 🚨 PROBLÈMES IDENTIFIÉS
+## ✅ RÉSOLUTION DES ALERTES
 
-### ⚠️ 1. Price ID du plan Standard
+### ✅ Alerte Price ID Standard - RÉSOLUE (10/11/2025)
 
-**Problème** : Le plan Standard utilise `process.env.STRIPE_PRICE_ID` au lieu d'un Price ID fixe.
+**Statut** : ✅ **RÉSOLU - Documentation obsolète**
 
-**Price ID actuel** : `price_1SQDvA442ACh1eI8X8ym3WC5`  
-**Price ID attendu** : `price_1SRfP8442ACh1eI8N9VwLD93` (selon votre document)
+**Clarification officielle** : Les Price IDs actuels sont corrects et confirmés :
+- Basic (400€) → `price_1SRfP3442ACh1eI8PFt5z2b4` ✅
+- Standard (800€) → `price_1SQDvA442ACh1eI8X8ym3WC5` ✅
+- Premium (1000€) → `price_1SRfPE442ACh1eI8pzFhIJLH` ✅
 
-**Impact** : Si la variable d'environnement ne pointe pas vers le bon produit Stripe, le plan Standard ne fonctionnera pas correctement.
+**Origine de l'alerte** : L'ancien Price ID `price_1SRfP8442ACh1eI8N9VwLD93` provenait d'une documentation interne obsolète. Le système utilise déjà les **bons Price IDs** en production.
 
-**Solution recommandée** :
+**Actions correctives effectuées** :
+1. ✅ Mise à jour de `replit.md` avec les Price IDs officiels
+2. ✅ Centralisation du mapping dans `server/stripe-plans.ts` :
+   ```typescript
+   export const PLANS = {
+     basic: "price_1SRfP3442ACh1eI8PFt5z2b4",
+     standard: "price_1SQDvA442ACh1eI8X8ym3WC5",
+     premium: "price_1SRfPE442ACh1eI8pzFhIJLH",
+   } as const;
+   ```
+3. ✅ Suppression de la dépendance `process.env.STRIPE_PRICE_ID` - les Price IDs sont maintenant en dur et centralisés
 
-**Option 1** : Modifier la variable d'environnement `STRIPE_PRICE_ID`
-```bash
-# Dans les secrets Replit, mettre à jour :
-STRIPE_PRICE_ID=price_1SRfP8442ACh1eI8N9VwLD93
-```
-
-**Option 2** : Utiliser un Price ID fixe dans le code
-```typescript
-// Dans server/stripe-plans.ts, ligne 27
-standard: {
-  id: 'standard',
-  name: 'Plan Standard',
-  price: 800,
-  currency: 'EUR',
-  priceId: 'price_1SRfP8442ACh1eI8N9VwLD93', // ← Remplacer par un Price ID fixe
-  // ...
-}
-```
-
-**Recommandation** : Vérifiez d'abord dans votre Stripe Dashboard quel Price ID correspond réellement au plan Standard 800€/mois avant de modifier quoi que ce soit.
+**Conclusion** : Aucune correction de Price ID n'était nécessaire. Le système fonctionne correctement avec les Price IDs actuels.
 
 ---
 
