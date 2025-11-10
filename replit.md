@@ -33,14 +33,23 @@ The project utilizes a modern web stack:
 - **User Dashboard**: Protected dashboard accessible to verified users (trial or active subscription), featuring real-time statistics (total calls, active calls, conversion rate, average call duration), temporal filters, dynamic charts (Recharts), and trial countdown banner showing days remaining.
 - **Notification System**: A robust notification center with filtering options (time, type, read/unread status), user preferences for notification types (daily summaries, failed calls, active calls, subscription alerts), and an alert banner for expiring subscriptions. Automatic notification generation for key events (e.g., subscription changes, password changes).
 - **Monthly PDF Reports**: Automated system generating professional monthly activity reports sent 2 days before subscription renewal. Reports include:
-  - 4 key metrics (total calls, completed calls, conversion rate, avg duration) with month-over-month comparisons
-  - 3 interactive charts (call volume timeline, status distribution pie chart, hourly activity heatmap)
-  - 3 automatic insights sections (peak hours, status distribution, monthly comparison)
+  - **Core Metrics (4 KPIs)**: Total calls, completed calls, conversion rate, average duration - all with month-over-month comparisons
+  - **Business Metrics (6 KPIs)**: Appointments taken, appointment conversion rate, after-hours calls (19h-8h), time saved, estimated revenue (appointments × €150), ROI - all with N/N-1 comparisons
+  - **Performance Score**: AI-calculated global score (0-100) based on weighted multi-criteria algorithm (conversion 35%, appointments 30%, after-hours 20%, efficiency 15%)
+  - **Smart AI Recommendations**: Up to 4 intelligent insights/alerts per report:
+    - Appointment decline detection (>15% drop triggers alert)
+    - High failed call rate warnings (>25%)
+    - Best performing time slots identification
+    - After-hours opportunity analysis
+    - Conversion rate trend alerts
+  - **Interactive Charts**: Call volume timeline, status distribution pie chart, hourly activity heatmap
+  - **Automatic Insights**: Peak hours, status distribution, monthly comparison
   - Email delivery with PDF attachment and dashboard notification
   - Downloadable reports accessible in Account page
   - Production-ready cron service (runs daily at 2:00 AM) with idempotency guard preventing duplicates
   - File storage service with MD5 integrity checksums
   - Secure API routes with authentication and ownership verification
+  - **Business Assumptions**: Average client value €150, AI cost €50/month, business hours 8h-19h
 
 **Admin Dashboard (Phase 2 - Complete):**
 - **Secure Admin Interface**: Protected route `/admin` accessible only to administrators with dedicated middleware (`requireAdmin`).
