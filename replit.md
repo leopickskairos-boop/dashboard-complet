@@ -30,7 +30,13 @@ The project utilizes a modern web stack:
   - **Premium**: €1000/month (Stripe Price ID: price_1SRfPE442ACh1eI8pzFhIJLH)
 - **Automated Trial-to-Paid Conversion**: Daily cron service (3:00 AM) checks trial expirations, generates Stripe Checkout Sessions per assigned plan, sends payment links via email, and updates account status. Stripe webhooks (subscription.created, invoice.payment_succeeded) automatically activate accounts on successful payment.
 - **Admin Plan Assignment**: Admins can assign subscription plans to trial users via dropdown interface, enabling targeted tier management during trial period.
-- **User Dashboard**: Protected dashboard accessible to verified users (trial or active subscription), featuring real-time statistics (total calls, active calls, conversion rate, average call duration), temporal filters, dynamic charts (Recharts), and trial countdown banner showing days remaining.
+- **User Dashboard**: Protected dashboard accessible to verified users (trial or active subscription), featuring:
+  - **6 KPI Cards**: Total calls, active calls, conversion rate, average duration, hours saved (calls × 5min / 60), and estimated revenue (appointments × €80)
+  - **AI Insights & Trends**: Interactive section displaying 3 randomized positive recommendations from a pool of 12 professional insights (5 performance + 7 business recommendations)
+  - **Temporal Filters**: Real-time filtering across all statistics
+  - **Dynamic Charts**: Recharts integration for visual analytics
+  - **Trial Countdown Banner**: Shows days remaining for trial users
+  - **Business Intelligence**: Automated calculation of time savings and revenue estimates based on call activity
 - **Notification System**: A robust notification center with filtering options (time, type, read/unread status), user preferences for notification types (daily summaries, failed calls, active calls, subscription alerts), and an alert banner for expiring subscriptions. Automatic notification generation for key events (e.g., subscription changes, password changes).
 - **Monthly PDF Reports**: Automated system generating professional monthly activity reports sent 2 days before subscription renewal. Reports include:
   - **Core Metrics (4 KPIs)**: Total calls, completed calls, conversion rate, average duration - all with month-over-month comparisons
