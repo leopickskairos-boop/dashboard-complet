@@ -1,0 +1,18 @@
+{
+  "event": "webhook_received",
+  "timestamp": "2025-11-11T23:15:00Z",
+  "source": "n8n_api",
+  "user": "leosedilleau41@gmail.com",
+  "data": {
+    "webhookId": "wh_abc123",
+    "payload": {
+      "event": "customer.created",
+      "customerId": "cus_xyz789"
+    },
+    "message": "Webhook reçu depuis l'API externe"
+  },
+  "metadata": {
+    "ipAddress": "192.168.1.1",
+    "userAgent": "N8N-Webhook/1.0"
+  }
+}

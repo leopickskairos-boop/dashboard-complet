@@ -1,0 +1,12 @@
+{
+  "event": "call_ended",
+  "timestamp": "2025-11-11T23:10:00Z",
+  "source": "n8n_workflow",
+  "user": "leosedilleau41@gmail.com",
+  "data": {
+    "callId": "call_12345",
+    "duration": 180,
+    "status": "completed",
+    "message": "Appel terminé avec succès"
+  }
+}

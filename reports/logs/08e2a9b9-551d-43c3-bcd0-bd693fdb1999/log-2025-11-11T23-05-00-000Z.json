@@ -1,0 +1,11 @@
+{
+  "event": "call_started",
+  "timestamp": "2025-11-11T23:05:00Z",
+  "source": "n8n_workflow",
+  "user": "leosedilleau41@gmail.com",
+  "data": {
+    "callId": "call_12345",
+    "phoneNumber": "+33612345678",
+    "message": "Appel entrant démarré"
+  }
+}

@@ -86,6 +86,25 @@ The project utilizes a modern web stack:
 - **Example N8N Call**: `POST /api/logs/router/speedai_001` with JSON body containing event data
 - **TODO**: Implement per-client API token authentication, optional PostgreSQL storage for analytics
 
+**N8N Logs Visualization (Phase 2.6 - Complete):**
+- **Dashboard Integration**: New "Logs N8N" section in client dashboard displaying all N8N workflow events
+- **Comprehensive Filtering**: Dual filtering system with temporal and event type filters
+  - **Temporal Filters**: "Toutes les périodes", "Il y a 1h", "Aujourd'hui", "Il y a 2 jours", "Cette semaine" (consistent with other dashboard sections)
+  - **Event Filters**: "Tous les événements", "Test de connexion", "Appel démarré", "Appel terminé", "Webhook reçu"
+- **API Endpoint**: `GET /api/logs/client/:id` with authentication, pagination (limit=50), and query parameters (event, startDate)
+- **Interactive Table**: Displays timestamp (formatted French locale), event type (badge), source, and user email
+- **Detail Dialog**: Click any log row to view complete log data including:
+  - Full timestamp with seconds
+  - Event type and source
+  - User information
+  - JSON data payload (pretty-printed)
+  - Optional metadata (if present)
+  - File name reference
+- **Type Safety**: Complete TypeScript types (N8NLog, N8NLogWithMetadata, N8NLogFilters) with Zod validation
+- **Real-time Updates**: Query cache invalidation on filter changes ensures fresh data
+- **Empty States**: Clear messaging when no logs match filter criteria
+- **Security**: Requires authentication, clients can only view their own logs (isolation by user ID)
+
 **Trial System Details:**
 - **Account States**: Users progress through states: `trial` (30-day access) → `expired` (trial ended, awaiting payment) → `active` (paid subscription) or `suspended` (admin action)
 - **Trial Expiration Flow**: When trial ends, account status becomes `expired`, user redirected to trial-expired page, Stripe Checkout Session generated and sent via email
