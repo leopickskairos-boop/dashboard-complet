@@ -1,0 +1,9 @@
+{
+  "event": "test_connection",
+  "timestamp": "2025-11-11T21:45:00Z",
+  "source": "n8n_workflow",
+  "data": {
+    "message": "Test de connexion pour speedai_live",
+    "client": "speedai_live_ab79f68465e31a04cb05e3528c1b4cc7f8d61e9a5e59b6e726095b7a7dbb6a4c"
+  }
+}
