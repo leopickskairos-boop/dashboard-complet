@@ -1515,6 +1515,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all clients data (admin only) - Comprehensive overview for N8N integration
+  app.get("/api/admin/clients-data", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const currentUser = (req as any).user;
+      const { client_id } = req.query;
+      
+      // Security logging
+      console.log(`[ADMIN ACCESS] Client Data viewed by: ${currentUser.email} at ${new Date().toISOString()}`);
+      
+      // Get all users from database
+      let users = await storage.getAllUsers();
+      
+      // Filter by client_id if provided
+      if (client_id && typeof client_id === 'string') {
+        users = users.filter(u => u.id === client_id);
+      }
+      
+      // Sort by createdAt descending (most recent first)
+      users.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      
+      // Build comprehensive client data
+      const baseLogsDir = path.join(process.cwd(), "reports", "logs");
+      const frontendUrl = process.env.FRONTEND_URL || process.env.REPLIT_DEV_DOMAIN || 'http://localhost:5000';
+      
+      const clientsData = await Promise.all(users.map(async (user) => {
+        let latestLog = null;
+        let latestLogDate = null;
+        
+        // Check if user has log directory
+        const clientLogDir = path.join(baseLogsDir, user.id);
+        
+        if (fs.existsSync(clientLogDir)) {
+          try {
+            const files = fs.readdirSync(clientLogDir);
+            const logFiles = files.filter(f => f.endsWith('.json'));
+            
+            if (logFiles.length > 0) {
+              // Find the most recent log file by modification time
+              let mostRecentFile = null;
+              let mostRecentTime = 0;
+              
+              for (const file of logFiles) {
+                const filePath = path.join(clientLogDir, file);
+                const stats = fs.statSync(filePath);
+                if (stats.mtimeMs > mostRecentTime) {
+                  mostRecentTime = stats.mtimeMs;
+                  mostRecentFile = file;
+                }
+              }
+              
+              if (mostRecentFile) {
+                latestLog = mostRecentFile;
+                latestLogDate = new Date(mostRecentTime).toISOString();
+              }
+            }
+          } catch (err) {
+            console.error(`Error reading logs for client ${user.id}:`, err);
+          }
+        }
+        
+        return {
+          client_id: user.id,
+          email: user.email,
+          router_url: `${frontendUrl}/api/logs/router/${user.id}`,
+          api_key_hash: user.apiKeyHash || null,
+          latest_log: latestLog,
+          latest_log_date: latestLogDate,
+          accountStatus: user.accountStatus,
+          subscriptionStatus: user.subscriptionStatus || null,
+          createdAt: user.createdAt
+        };
+      }));
+      
+      res.json(clientsData);
+    } catch (error: any) {
+      console.error("Error fetching clients data:", error);
+      res.status(500).json({ message: "Erreur lors de la récupération des données clients" });
+    }
+  });
+
   // ===== N8N LOGS ROUTER - MULTI-CLIENT INFRASTRUCTURE =====
   
   /**
