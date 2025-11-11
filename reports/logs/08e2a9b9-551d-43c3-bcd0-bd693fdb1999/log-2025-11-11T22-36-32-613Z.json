@@ -1,0 +1,9 @@
+{
+  "event": "test_connection",
+  "timestamp": "2025-11-11T22:36:32Z",
+  "source": "n8n_workflow",
+  "user": "leosedilleau41@gmail.com",
+  "data": {
+    "message": "Test de connexion pour Leo Sedilleau"
+  }
+}
