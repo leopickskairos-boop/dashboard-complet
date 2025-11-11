@@ -25,7 +25,9 @@ import {
   loginSchema, 
   forgotPasswordSchema, 
   resetPasswordSchema,
-  insertNotificationSchema
+  insertNotificationSchema,
+  n8nLogSchema,
+  n8nLogFiltersSchema
 } from "@shared/schema";
 import { z } from "zod";
 import {
@@ -1463,6 +1465,158 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("❌ Erreur réception logs N8N:", error);
       res.status(500).json({ 
         success: false, 
+        error: error.message 
+      });
+    }
+  });
+
+  /**
+   * ✅ Route pour lire les logs N8N d'un client
+   * 
+   * GET /api/logs/client/:id
+   * Query params: startDate, endDate, event, limit, offset
+   * 
+   * Sécurité :
+   * - Authentifié (requireAuth)
+   * - Utilisateur peut seulement lire ses propres logs (req.user.id === :id)
+   * - Admin peut lire les logs de n'importe quel client
+   * 
+   * Réponse : { logs: N8NLogWithMetadata[], total: number, hasMore: boolean }
+   */
+  app.get("/api/logs/client/:id", requireAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const currentUser = (req as any).user;
+
+      // Validation de sécurité : utilisateur peut uniquement lire ses propres logs
+      // sauf s'il est admin
+      if (currentUser.id !== id && currentUser.role !== 'admin') {
+        return res.status(403).json({ 
+          message: "Vous n'êtes pas autorisé à accéder à ces logs" 
+        });
+      }
+
+      // Validation des filtres avec Zod
+      const filtersResult = n8nLogFiltersSchema.safeParse({
+        startDate: req.query.startDate as string | undefined,
+        endDate: req.query.endDate as string | undefined,
+        event: req.query.event as string | undefined,
+        limit: req.query.limit ? parseInt(req.query.limit as string, 10) : 100,
+        offset: req.query.offset ? parseInt(req.query.offset as string, 10) : 0,
+      });
+
+      if (!filtersResult.success) {
+        return res.status(400).json({ 
+          message: "Paramètres de filtrage invalides",
+          errors: filtersResult.error.flatten()
+        });
+      }
+
+      const filters = filtersResult.data;
+
+      // Chemin du dossier des logs du client
+      const clientDir = path.join(process.cwd(), "reports", "logs", id);
+
+      // Vérifier si le dossier existe
+      if (!fs.existsSync(clientDir)) {
+        return res.json({ 
+          logs: [], 
+          total: 0, 
+          hasMore: false 
+        });
+      }
+
+      // Lire tous les fichiers du dossier
+      const files = await fs.promises.readdir(clientDir);
+      
+      // Filtrer uniquement les fichiers JSON avec pattern log-*.json
+      const logFiles = files.filter(file => 
+        file.startsWith('log-') && file.endsWith('.json')
+      ).sort().reverse(); // Tri inversé pour avoir les plus récents en premier
+
+      // Parser les logs avec gestion d'erreurs
+      const parsedLogs: Array<{
+        log: z.infer<typeof n8nLogSchema>;
+        fileName: string;
+        fileTimestamp: string;
+      }> = [];
+
+      for (const fileName of logFiles) {
+        try {
+          const filePath = path.join(clientDir, fileName);
+          const fileContent = await fs.promises.readFile(filePath, 'utf-8');
+          const rawLog = JSON.parse(fileContent);
+          
+          // Valider avec Zod
+          const validationResult = n8nLogSchema.safeParse(rawLog);
+          
+          if (validationResult.success) {
+            // Extraire le timestamp du nom de fichier (log-2025-11-11T22-36-32-613Z.json)
+            const fileTimestamp = fileName.replace('log-', '').replace('.json', '').replace(/-/g, ':');
+            
+            parsedLogs.push({
+              log: validationResult.data,
+              fileName,
+              fileTimestamp: fileTimestamp.replace(/:/g, '-')
+            });
+          } else {
+            console.warn(`⚠️ Log invalide ignoré: ${fileName}`, validationResult.error);
+          }
+        } catch (error) {
+          console.error(`❌ Erreur lecture log ${fileName}:`, error);
+          // Continue avec les autres fichiers
+        }
+      }
+
+      // Appliquer les filtres
+      let filteredLogs = parsedLogs;
+
+      // Filtre par date de début
+      if (filters.startDate) {
+        filteredLogs = filteredLogs.filter(({ log }) => 
+          new Date(log.timestamp) >= new Date(filters.startDate!)
+        );
+      }
+
+      // Filtre par date de fin
+      if (filters.endDate) {
+        filteredLogs = filteredLogs.filter(({ log }) => 
+          new Date(log.timestamp) <= new Date(filters.endDate!)
+        );
+      }
+
+      // Filtre par type d'événement
+      if (filters.event) {
+        filteredLogs = filteredLogs.filter(({ log }) => 
+          log.event === filters.event
+        );
+      }
+
+      const total = filteredLogs.length;
+
+      // Pagination
+      const paginatedLogs = filteredLogs.slice(
+        filters.offset, 
+        filters.offset + filters.limit
+      );
+
+      // Transformer en format de réponse
+      const logsWithMetadata = paginatedLogs.map(({ log, fileName, fileTimestamp }) => ({
+        ...log,
+        fileName,
+        fileTimestamp
+      }));
+
+      res.json({
+        logs: logsWithMetadata,
+        total,
+        hasMore: filters.offset + filters.limit < total
+      });
+
+    } catch (error: any) {
+      console.error("❌ Erreur lecture logs N8N:", error);
+      res.status(500).json({ 
+        message: "Erreur lors de la lecture des logs",
         error: error.message 
       });
     }
