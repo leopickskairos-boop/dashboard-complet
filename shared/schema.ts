@@ -210,3 +210,37 @@ export const insertMonthlyReportSchema = createInsertSchema(monthlyReports, {
 // Types for monthly reports
 export type InsertMonthlyReport = z.infer<typeof insertMonthlyReportSchema>;
 export type MonthlyReport = typeof monthlyReports.$inferSelect;
+
+// ===== N8N LOGS (File-based storage, no PostgreSQL table) =====
+
+/**
+ * Schema for N8N logs received via webhook router
+ * Logs are stored as JSON files in /reports/logs/{clientId}/
+ */
+export const n8nLogSchema = z.object({
+  timestamp: z.string().datetime(), // ISO 8601 timestamp
+  event: z.string(), // Event type (e.g., 'call_started', 'call_ended', 'test_connection')
+  source: z.string().optional(), // Source identifier (e.g., 'n8n_workflow', 'api')
+  user: z.string().optional(), // User email or identifier
+  data: z.record(z.unknown()).optional(), // Flexible payload data
+  metadata: z.record(z.unknown()).optional(), // Additional metadata
+});
+
+// Schema for log query filters
+export const n8nLogFiltersSchema = z.object({
+  startDate: z.string().datetime().optional(),
+  endDate: z.string().datetime().optional(),
+  event: z.string().optional(),
+  limit: z.number().int().positive().max(1000).default(100),
+  offset: z.number().int().nonnegative().default(0),
+});
+
+// Types for N8N logs
+export type N8NLog = z.infer<typeof n8nLogSchema>;
+export type N8NLogFilters = z.infer<typeof n8nLogFiltersSchema>;
+
+// Extended N8N log with file metadata (returned by API)
+export type N8NLogWithMetadata = N8NLog & {
+  fileName: string;
+  fileTimestamp: string;
+};
