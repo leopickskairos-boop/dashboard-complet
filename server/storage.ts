@@ -344,6 +344,8 @@ export class DatabaseStorage implements IStorage {
     activeCalls: number;
     conversionRate: number;
     averageDuration: number;
+    hoursSaved: number;
+    estimatedRevenue: number;
   }> {
     const conditions = [eq(calls.userId, userId)];
     
@@ -383,11 +385,23 @@ export class DatabaseStorage implements IStorage {
       .where(and(...conditions, eq(calls.status, 'completed')));
     const averageDuration = Number(durationResult[0]?.avgDuration || 0);
 
+    // Business metrics
+    const MINUTES_PER_CALL = 5;
+    const AVERAGE_CLIENT_VALUE = 80;
+    
+    // Hours saved: totalCalls × 5 minutes / 60
+    const hoursSaved = (totalCalls * MINUTES_PER_CALL) / 60;
+    
+    // Estimated revenue: completedCalls (appointments) × average client value
+    const estimatedRevenue = completedCalls * AVERAGE_CLIENT_VALUE;
+
     return {
       totalCalls,
       activeCalls,
-      conversionRate: Math.round(conversionRate * 10) / 10, // Round to 1 decimal
+      conversionRate: Math.round(conversionRate * 10) / 10,
       averageDuration: Math.round(averageDuration),
+      hoursSaved: Math.round(hoursSaved * 10) / 10,
+      estimatedRevenue,
     };
   }
 

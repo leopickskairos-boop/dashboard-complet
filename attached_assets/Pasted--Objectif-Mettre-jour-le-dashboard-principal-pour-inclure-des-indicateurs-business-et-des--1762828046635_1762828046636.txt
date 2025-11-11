@@ -1,0 +1,98 @@
+🎯 Objectif :
+Mettre à jour le dashboard principal pour inclure des **indicateurs business** et des **recommandations IA positives**,  
+adaptées à un usage professionnel (cabinet, agence, entreprise).  
+Aucune donnée négative ou interprétable comme un échec ne doit apparaître.
+
+---
+
+## 🏠 SECTION 1 : Accueil (Vue d’ensemble de l’activité)
+Les 4 cartes existantes sont conservées :
+- Total des appels  
+- Appels actifs  
+- Taux de conversion  
+- Durée moyenne  
+
+### ➕ Ajouter deux nouvelles cartes :
+1️⃣ **⏱️ Heures économisées**
+- Calcul : `nb_appels × 5 / 60` (5 minutes par appel)
+- Sous-texte : “Gagnées ce mois-ci grâce à l’IA”
+- Format d’affichage : HHhMM
+- Couleur : vert clair
+
+2️⃣ **💰 Revenus estimés**
+- Calcul : `nb_rdv × valeur_moyenne_client` (ex. 80 €)
+- Sous-texte : “Estimés à partir des rendez-vous IA”
+- Couleur : doré / jaune
+
+Ces deux cartes s’ajoutent à la vue principale pour refléter **l’efficacité économique** de l’agent IA.
+
+---
+
+## 🤖 SECTION 2 : Insights IA & Tendances
+Créer une nouvelle section sous la “Liste des appels” ou sur un onglet dédié.  
+Objectif : afficher **des recommandations IA positives et valorisantes**, générées automatiquement.
+
+### 📈 Recommandations IA
+Afficher jusqu’à **3 recommandations** à la fois, choisies dynamiquement parmi une liste de suggestions positives.
+
+Chaque recommandation doit :
+- Être **positive, concrète et mesurable**
+- Mettre en avant les forces ou opportunités de l’IA
+- Être rédigée dans un ton professionnel
+
+---
+
+### ⚙️ **Recommandations de Performance**
+- “Les appels entre 9h et 11h affichent le meilleur taux de conversion.”
+- “Les rendez-vous sont confirmés plus rapidement en fin de journée.”
+- “Les appels traités en moins de 30 secondes ont 2× plus de chances d’aboutir.”
+- “Les conversations dépassant 1min30 conduisent souvent à un rendez-vous confirmé.”
+- “Les clients rappellent souvent dans les 10 minutes suivant un premier message clair.”
+
+---
+
+### 💼 **Recommandations Business**
+- “Les appels du lundi matin sont 18 % plus efficaces pour la prise de rendez-vous.”
+- “Les appels du vendredi permettent souvent de remplir les créneaux de la semaine suivante.”
+- “Les cabinets actifs après 19h obtiennent 12 % de rendez-vous supplémentaires.”
+- “Les jours de forte activité (mardi et jeudi) sont les plus rentables pour l’IA.”
+- “Un volume régulier d’appels maintient un taux de conversion stable sur la durée.”
+
+---
+
+### 🧠 **Affichage & comportement**
+- Les recommandations changent chaque semaine ou à chaque rafraîchissement du dashboard.
+- Toujours afficher **3 maximum** pour garder une lecture fluide.
+- Icônes suggérées : 💡, 📈, 🤖 selon le type de donnée.
+- Design : cartes vertes ou bleues, fond léger, ton positif.
+- Jamais d’alertes ou messages négatifs.
+
+---
+
+## 🧩 Résultat attendu
+- Dashboard enrichi avec 6 KPI business + section Insights IA
+- Aucune donnée d’échec ou d’erreur affichée
+- Les recommandations montrent la **valeur et l’efficacité** de l’agent IA
+- Ton professionnel, rassurant et motivant
+
+---
+
+## 💬 Exemple de rendu attendu
+```
+Vue d’ensemble de votre activité
+--------------------------------
+📞 152 appels totaux | 🧠 18 appels actifs | 📈 28 % de conversion
+⏱️ 10h40 économisées | 💰 3 200 € estimés | 🕒 1m42 durée moyenne
+
+Insights IA & Tendances
+------------------------
+💡 Recommandation IA : “Les appels entre 9h et 11h affichent le meilleur taux de conversion.”
+📈 Performance : “Les rendez-vous sont confirmés plus rapidement en fin de journée.”
+🤖 Astuce business : “Les appels du vendredi remplissent souvent les créneaux de la semaine suivante.”
+```
+
+---
+
+✅ **Objectif final :**
+Créer une expérience client premium où le dashboard agit comme un **coach IA stratégique**,  
+mettant en avant les forces, tendances et gains concrets générés par l’agent IA.
