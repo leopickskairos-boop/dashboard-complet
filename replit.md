@@ -86,24 +86,26 @@ The project utilizes a modern web stack:
 - **Example N8N Call**: `POST /api/logs/router/speedai_001` with JSON body containing event data
 - **TODO**: Implement per-client API token authentication, optional PostgreSQL storage for analytics
 
-**N8N Logs Visualization (Phase 2.6 - Complete):**
-- **Dashboard Integration**: New "Logs N8N" section in client dashboard displaying all N8N workflow events
-- **Comprehensive Filtering**: Dual filtering system with temporal and event type filters
-  - **Temporal Filters**: "Toutes les périodes", "Il y a 1h", "Aujourd'hui", "Il y a 2 jours", "Cette semaine" (consistent with other dashboard sections)
+**N8N Logs Visualization - Admin Only (Phase 2.6 - Complete):**
+- **Admin Dashboard Integration**: New "Logs N8N" section in admin dashboard only (not visible to clients)
+- **Multi-Client Monitoring**: Admins can view logs from all clients with comprehensive filtering
+- **Triple Filtering System**:
+  - **Client Filter**: Select specific client or view all clients
+  - **Temporal Filters**: "Toutes les périodes", "Il y a 1h", "Aujourd'hui", "Il y a 2 jours", "Cette semaine"
   - **Event Filters**: "Tous les événements", "Test de connexion", "Appel démarré", "Appel terminé", "Webhook reçu"
-- **API Endpoint**: `GET /api/logs/client/:id` with authentication, pagination (limit=50), and query parameters (event, startDate)
-- **Interactive Table**: Displays timestamp (formatted French locale), event type (badge), source, and user email
+- **Admin API Endpoint**: `GET /api/admin/logs` with admin authentication, pagination (limit=100), and query parameters (userId, event, startDate)
+- **Interactive Table**: Displays timestamp, client ID, event type, source, user email, and action buttons
 - **Detail Dialog**: Click any log row to view complete log data including:
   - Full timestamp with seconds
-  - Event type and source
-  - User information
+  - Client ID and event type
+  - Source and user information
   - JSON data payload (pretty-printed)
   - Optional metadata (if present)
   - File name reference
 - **Type Safety**: Complete TypeScript types (N8NLog, N8NLogWithMetadata, N8NLogFilters) with Zod validation
 - **Real-time Updates**: Query cache invalidation on filter changes ensures fresh data
 - **Empty States**: Clear messaging when no logs match filter criteria
-- **Security**: Requires authentication, clients can only view their own logs (isolation by user ID)
+- **Security**: Requires admin authentication, only admins can view logs from all clients
 
 **Trial System Details:**
 - **Account States**: Users progress through states: `trial` (30-day access) → `expired` (trial ended, awaiting payment) → `active` (paid subscription) or `suspended` (admin action)

@@ -28,9 +28,8 @@ import {
   Brain
 } from "lucide-react";
 import { Line, LineChart, XAxis, YAxis, Tooltip, ResponsiveContainer, Bar, BarChart } from "recharts";
-import type { Call, PublicUser, N8NLogWithMetadata } from "@shared/schema";
+import type { Call, PublicUser } from "@shared/schema";
 import { TrialCountdown } from "@/components/TrialCountdown";
-import { FileText, Code } from "lucide-react";
 
 // Status badge variants with icons
 const statusConfig = {

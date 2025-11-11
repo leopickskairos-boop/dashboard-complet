@@ -32,10 +32,18 @@ import {
 import { useState } from "react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Shield, UserX, UserCheck, Trash2, Calendar, Phone, Clock, Activity, Search } from "lucide-react";
+import { Shield, UserX, UserCheck, Trash2, Calendar, Phone, Clock, Activity, Search, FileText, Code, Eye, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import type { N8NLogWithMetadata } from "@shared/schema";
 
 interface AdminUser {
   id: string;
@@ -61,6 +69,12 @@ export default function AdminPage() {
   const [healthFilter, setHealthFilter] = useState<string>("all");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  
+  // N8N Logs states
+  const [logsUserFilter, setLogsUserFilter] = useState<string>("all");
+  const [logsEventFilter, setLogsEventFilter] = useState<string>("all");
+  const [logsDateFilter, setLogsDateFilter] = useState<string>("all");
+  const [selectedLog, setSelectedLog] = useState<N8NLogWithMetadata | null>(null);
 
   const { data: users, isLoading } = useQuery<AdminUser[]>({
     queryKey: ["/api/admin/users", searchQuery],
@@ -134,6 +148,61 @@ export default function AdminPage() {
       });
     },
   });
+
+  // Fetch N8N logs for all clients (admin only)
+  const { data: logsData, isLoading: logsLoading } = useQuery<{
+    logs: N8NLogWithMetadata[];
+    total: number;
+    hasMore: boolean;
+  }>({
+    queryKey: ['/api/admin/logs', logsUserFilter, logsEventFilter, logsDateFilter],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      
+      // User filter
+      if (logsUserFilter && logsUserFilter !== 'all') {
+        params.set('userId', logsUserFilter);
+      }
+      
+      // Event filter
+      if (logsEventFilter && logsEventFilter !== 'all') {
+        params.set('event', logsEventFilter);
+      }
+      
+      // Date filter
+      if (logsDateFilter && logsDateFilter !== 'all') {
+        const now = new Date();
+        let startDate: Date | null = null;
+        
+        switch (logsDateFilter) {
+          case 'hour':
+            startDate = new Date(now.getTime() - 60 * 60 * 1000);
+            break;
+          case 'today':
+            startDate = new Date(now.setHours(0, 0, 0, 0));
+            break;
+          case 'two_days':
+            startDate = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000);
+            break;
+          case 'week':
+            startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            break;
+        }
+        
+        if (startDate) {
+          params.set('startDate', startDate.toISOString());
+        }
+      }
+      
+      params.set('limit', '100');
+      
+      const res = await fetch(`/api/admin/logs?${params}`);
+      if (!res.ok) throw new Error('Failed to fetch logs');
+      return res.json();
+    },
+  });
+
+  const logs = logsData?.logs || [];
 
   if (!user || user.role !== "admin") {
     return (
@@ -407,6 +476,156 @@ export default function AdminPage() {
         </CardContent>
       </Card>
 
+      {/* N8N Logs Section */}
+      <Card className="mb-12">
+        <CardHeader>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                <FileText className="w-5 h-5 text-purple-400" />
+              </div>
+              <div>
+                <CardTitle>Logs N8N</CardTitle>
+                <CardDescription>
+                  Historique des événements reçus de tous les clients
+                </CardDescription>
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Select value={logsUserFilter} onValueChange={setLogsUserFilter}>
+                <SelectTrigger className="w-full sm:w-[220px]" data-testid="select-logs-user-filter">
+                  <SelectValue placeholder="Tous les clients" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous les clients</SelectItem>
+                  {users?.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.email}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={logsDateFilter} onValueChange={setLogsDateFilter}>
+                <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-logs-date-filter">
+                  <SelectValue placeholder="Toutes les périodes" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Toutes les périodes</SelectItem>
+                  <SelectItem value="hour">Il y a 1h</SelectItem>
+                  <SelectItem value="today">Aujourd'hui</SelectItem>
+                  <SelectItem value="two_days">Il y a 2 jours</SelectItem>
+                  <SelectItem value="week">Cette semaine</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={logsEventFilter} onValueChange={setLogsEventFilter}>
+                <SelectTrigger className="w-full sm:w-[200px]" data-testid="select-logs-event-filter">
+                  <SelectValue placeholder="Tous les événements" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous les événements</SelectItem>
+                  <SelectItem value="test_connection">Test de connexion</SelectItem>
+                  <SelectItem value="call_started">Appel démarré</SelectItem>
+                  <SelectItem value="call_ended">Appel terminé</SelectItem>
+                  <SelectItem value="webhook_received">Webhook reçu</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {logsLoading ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            </div>
+          ) : logs.length === 0 ? (
+            <div className="text-center py-12">
+              <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground mb-2">Aucun log disponible</p>
+              <p className="text-sm text-muted-foreground">
+                Les logs N8N apparaîtront ici automatiquement
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Timestamp</TableHead>
+                    <TableHead>Client</TableHead>
+                    <TableHead>Événement</TableHead>
+                    <TableHead>Source</TableHead>
+                    <TableHead>Utilisateur</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {logs.map((log, index) => (
+                    <TableRow 
+                      key={log.fileName} 
+                      className="hover-elevate cursor-pointer transition-colors"
+                      onClick={() => setSelectedLog(log)}
+                      data-testid={`log-row-${index}`}
+                    >
+                      <TableCell>
+                        <div className="text-sm">
+                          {format(new Date(log.timestamp), "dd MMM yyyy", { locale: fr })}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {format(new Date(log.timestamp), "HH:mm:ss", { locale: fr })}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm font-mono text-muted-foreground text-xs">
+                          {(log as any).userId?.slice(0, 8)}...
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="gap-1">
+                          <Code className="w-3 h-3" />
+                          {log.event}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm text-muted-foreground">
+                          {log.source || '-'}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm text-muted-foreground">
+                          {log.user || '-'}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedLog(log);
+                          }}
+                          data-testid={`button-view-log-${index}`}
+                        >
+                          <Eye className="w-4 h-4 mr-2" />
+                          Détails
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              
+              {logsData?.hasMore && (
+                <div className="mt-4 text-center">
+                  <p className="text-sm text-muted-foreground">
+                    {logsData.total} logs au total
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle>Légende des indicateurs de santé</CardTitle>
@@ -435,6 +654,96 @@ export default function AdminPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Log Detail Dialog */}
+      <Dialog open={!!selectedLog} onOpenChange={() => setSelectedLog(null)}>
+        <DialogContent className="max-w-3xl" data-testid="dialog-log-detail">
+          <DialogHeader>
+            <DialogTitle>Détail du log N8N</DialogTitle>
+            <DialogDescription>
+              Informations complètes sur cet événement
+            </DialogDescription>
+          </DialogHeader>
+          {selectedLog && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                    Timestamp
+                  </div>
+                  <div className="text-sm">
+                    {format(new Date(selectedLog.timestamp), "dd MMMM yyyy 'à' HH:mm:ss", { locale: fr })}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                    Événement
+                  </div>
+                  <Badge variant="outline" className="gap-1">
+                    <Code className="w-3 h-3" />
+                    {selectedLog.event}
+                  </Badge>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                    Client ID
+                  </div>
+                  <div className="text-xs font-mono text-muted-foreground">{(selectedLog as any).userId}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                    Source
+                  </div>
+                  <div className="text-sm">{selectedLog.source || '-'}</div>
+                </div>
+              </div>
+
+              <div>
+                <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                  Utilisateur
+                </div>
+                <div className="text-sm">{selectedLog.user || '-'}</div>
+              </div>
+
+              {selectedLog.data && Object.keys(selectedLog.data).length > 0 && (
+                <div>
+                  <div className="text-xs text-muted-foreground uppercase tracking-wide mb-2">
+                    Données
+                  </div>
+                  <div className="bg-muted p-4 rounded-lg overflow-auto max-h-[400px]">
+                    <pre className="text-xs font-mono">
+                      {JSON.stringify(selectedLog.data, null, 2)}
+                    </pre>
+                  </div>
+                </div>
+              )}
+
+              {selectedLog.metadata && Object.keys(selectedLog.metadata).length > 0 && (
+                <div>
+                  <div className="text-xs text-muted-foreground uppercase tracking-wide mb-2">
+                    Métadonnées
+                  </div>
+                  <div className="bg-muted p-4 rounded-lg overflow-auto max-h-[200px]">
+                    <pre className="text-xs font-mono">
+                      {JSON.stringify(selectedLog.metadata, null, 2)}
+                    </pre>
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                  Nom du fichier
+                </div>
+                <div className="text-xs font-mono text-muted-foreground">{selectedLog.fileName}</div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
