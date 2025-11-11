@@ -4,6 +4,7 @@ import { createServer, type Server } from "http";
 import Stripe from "stripe";
 import { storage } from "./storage";
 import { fileStorage } from "./file-storage.service";
+import { aiInsightsService } from "./ai-insights.service";
 import { 
   hashPassword, 
   comparePassword, 
@@ -581,6 +582,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching stats:", error);
       res.status(500).json({ message: "Erreur lors de la récupération des statistiques" });
+    }
+  });
+
+  // Get AI-powered insights based on real call data
+  app.get("/api/calls/ai-insights", requireAuth, requireVerified, requireSubscription, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const timeFilter = req.query.timeFilter as 'hour' | 'today' | 'two_days' | 'week' | undefined;
+      
+      const insights = await aiInsightsService.generateInsights(userId, timeFilter);
+      res.json(insights);
+    } catch (error) {
+      console.error("Error generating AI insights:", error);
+      res.status(500).json({ message: "Erreur lors de la génération des insights IA" });
     }
   });
 

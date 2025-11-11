@@ -58,31 +58,16 @@ const statusFilterOptions = [
   { value: "active", label: "Appel actif" },
 ];
 
-// AI Recommendations Pool - Positive and professional insights
-const aiRecommendations = {
-  performance: [
-    { icon: Lightbulb, text: "Les appels entre 9h et 11h affichent le meilleur taux de conversion.", type: "performance" },
-    { icon: BarChart3, text: "Les rendez-vous sont confirmés plus rapidement en fin de journée.", type: "performance" },
-    { icon: Brain, text: "Les appels traités en moins de 30 secondes ont 2× plus de chances d'aboutir.", type: "performance" },
-    { icon: Lightbulb, text: "Les conversations dépassant 1min30 conduisent souvent à un rendez-vous confirmé.", type: "performance" },
-    { icon: BarChart3, text: "Les clients rappellent souvent dans les 10 minutes suivant un premier message clair.", type: "performance" },
-  ],
-  business: [
-    { icon: Calendar, text: "Les appels du lundi matin sont 18 % plus efficaces pour la prise de rendez-vous.", type: "business" },
-    { icon: TrendingUp, text: "Les appels du vendredi permettent souvent de remplir les créneaux de la semaine suivante.", type: "business" },
-    { icon: Brain, text: "Les cabinets actifs après 19h obtiennent 12 % de rendez-vous supplémentaires.", type: "business" },
-    { icon: BarChart3, text: "Les jours de forte activité (mardi et jeudi) sont les plus rentables pour l'IA.", type: "business" },
-    { icon: Lightbulb, text: "Un volume régulier d'appels maintient un taux de conversion stable sur la durée.", type: "business" },
-    { icon: TrendingUp, text: "Votre agent IA répond 24/7, maximisant les opportunités de rendez-vous.", type: "business" },
-    { icon: Brain, text: "L'automatisation intelligente libère votre équipe pour des tâches à forte valeur ajoutée.", type: "business" },
-  ],
-};
-
-// Function to get 3 random recommendations
-const getRandomRecommendations = () => {
-  const allRecommendations = [...aiRecommendations.performance, ...aiRecommendations.business];
-  const shuffled = allRecommendations.sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, 3);
+// Icon mapping for AI insights
+const iconMap: { [key: string]: any } = {
+  'lightbulb': Lightbulb,
+  'chart': BarChart3,
+  'calendar': Calendar,
+  'clock': Clock,
+  'moon': Activity,
+  'trending-up': TrendingUp,
+  'target': TrendingUp,
+  'brain': Brain,
 };
 
 export default function Dashboard() {
@@ -93,7 +78,6 @@ export default function Dashboard() {
   const [selectedCall, setSelectedCall] = useState<Call | null>(null);
   const [chartDialog, setChartDialog] = useState<'total' | 'conversion' | 'duration' | null>(null);
   const [isMobile, setIsMobile] = useState<boolean>(false);
-  const [recommendations, setRecommendations] = useState(getRandomRecommendations());
 
   // Fetch current user for trial countdown
   const { data: user } = useQuery<PublicUser>({
@@ -158,6 +142,22 @@ export default function Dashboard() {
       if (globalTimeFilter && globalTimeFilter !== 'all') params.set('timeFilter', globalTimeFilter);
       const res = await fetch(`/api/calls/chart-data?${params}`);
       if (!res.ok) throw new Error('Failed to fetch chart data');
+      return res.json();
+    },
+  });
+
+  // Fetch AI-powered insights based on real call data
+  const { data: aiInsights = [], isLoading: insightsLoading, refetch: refetchInsights } = useQuery<{
+    icon: string;
+    type: 'performance' | 'business';
+    text: string;
+  }[]>({
+    queryKey: ['/api/calls/ai-insights', globalTimeFilter],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (globalTimeFilter && globalTimeFilter !== 'all') params.set('timeFilter', globalTimeFilter);
+      const res = await fetch(`/api/calls/ai-insights?${params}`);
+      if (!res.ok) throw new Error('Failed to fetch AI insights');
       return res.json();
     },
   });
@@ -330,18 +330,18 @@ export default function Dashboard() {
             </Card>
 
             {/* Hours Saved - Not Clickable */}
-            <Card data-testid="card-hours-saved" className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 border-green-500/20">
+            <Card data-testid="card-hours-saved">
               <CardContent className="p-6">
                 <div className="flex items-start justify-between mb-4">
-                  <div className="w-12 h-12 rounded-lg bg-green-500/10 flex items-center justify-center">
-                    <Timer className="w-6 h-6 text-green-400" />
+                  <div className="w-12 h-12 rounded-lg bg-white/5 flex items-center justify-center">
+                    <Timer className="w-6 h-6 text-white neon-green" />
                   </div>
                   <TrendingUp className="w-4 h-4 text-green-500" />
                 </div>
                 <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
                   Heures économisées
                 </div>
-                <div className="text-3xl font-bold mb-1 text-green-400" data-testid="stat-hours-saved">
+                <div className="text-3xl font-bold mb-1" data-testid="stat-hours-saved">
                   {formatHours(stats?.hoursSaved)}
                 </div>
                 <p className="text-xs text-green-400">Gagnées ce mois-ci grâce à l'IA</p>
@@ -349,21 +349,21 @@ export default function Dashboard() {
             </Card>
 
             {/* Estimated Revenue - Not Clickable */}
-            <Card data-testid="card-estimated-revenue" className="bg-gradient-to-br from-yellow-500/10 to-amber-500/10 border-yellow-500/20">
+            <Card data-testid="card-estimated-revenue">
               <CardContent className="p-6">
                 <div className="flex items-start justify-between mb-4">
-                  <div className="w-12 h-12 rounded-lg bg-yellow-500/10 flex items-center justify-center">
-                    <Euro className="w-6 h-6 text-yellow-400" />
+                  <div className="w-12 h-12 rounded-lg bg-white/5 flex items-center justify-center">
+                    <Euro className="w-6 h-6 text-white neon-gold" />
                   </div>
                   <TrendingUp className="w-4 h-4 text-green-500" />
                 </div>
                 <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
                   Revenus estimés
                 </div>
-                <div className="text-3xl font-bold mb-1 text-yellow-400" data-testid="stat-estimated-revenue">
+                <div className="text-3xl font-bold mb-1" data-testid="stat-estimated-revenue">
                   {formatCurrency(stats?.estimatedRevenue)}
                 </div>
-                <p className="text-xs text-yellow-400">Estimés à partir des rendez-vous IA</p>
+                <p className="text-xs text-green-400">Estimés à partir des rendez-vous IA</p>
               </CardContent>
             </Card>
           </div>
@@ -379,50 +379,63 @@ export default function Dashboard() {
               <div>
                 <CardTitle className="text-xl">Insights IA & Tendances</CardTitle>
                 <CardDescription>
-                  Recommandations intelligentes pour optimiser vos performances
+                  Recommandations intelligentes basées sur vos données réelles
                 </CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {recommendations.map((rec, index) => {
-                const Icon = rec.icon;
-                return (
-                  <div 
-                    key={index}
-                    className="flex gap-4 p-4 rounded-lg bg-background/50 border border-border/50 hover-elevate transition-all"
-                    data-testid={`recommendation-${index}`}
+            {insightsLoading ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              </div>
+            ) : aiInsights.length === 0 ? (
+              <div className="text-center py-12">
+                <Brain className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">Aucune donnée disponible pour générer des insights</p>
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {aiInsights.map((insight, index) => {
+                    const Icon = iconMap[insight.icon] || Brain;
+                    return (
+                      <div 
+                        key={index}
+                        className="flex gap-4 p-4 rounded-lg bg-background/50 border border-border/50 hover-elevate transition-all"
+                        data-testid={`recommendation-${index}`}
+                      >
+                        <div className="shrink-0">
+                          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <Icon className="w-5 h-5 text-primary" />
+                          </div>
+                        </div>
+                        <div className="flex-1">
+                          <div className="text-sm font-medium mb-1">
+                            {insight.type === 'performance' ? '📈 Performance' : '💼 Business'}
+                          </div>
+                          <p className="text-sm text-muted-foreground leading-relaxed">
+                            {insight.text}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="mt-6 text-center">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => refetchInsights()}
+                    className="gap-2"
+                    data-testid="button-refresh-recommendations"
                   >
-                    <div className="shrink-0">
-                      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <Icon className="w-5 h-5 text-primary" />
-                      </div>
-                    </div>
-                    <div className="flex-1">
-                      <div className="text-sm font-medium mb-1">
-                        {rec.type === 'performance' ? '📈 Performance' : '💼 Business'}
-                      </div>
-                      <p className="text-sm text-muted-foreground leading-relaxed">
-                        {rec.text}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            <div className="mt-6 text-center">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setRecommendations(getRandomRecommendations())}
-                className="gap-2"
-                data-testid="button-refresh-recommendations"
-              >
-                <Brain className="w-4 h-4" />
-                Actualiser les recommandations
-              </Button>
-            </div>
+                    <Brain className="w-4 h-4" />
+                    Actualiser les recommandations
+                  </Button>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 
