@@ -2,6 +2,8 @@
 import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import Stripe from "stripe";
+import fs from "fs";
+import path from "path";
 import { storage } from "./storage";
 import { fileStorage } from "./file-storage.service";
 import { aiInsightsService } from "./ai-insights.service";
@@ -1392,6 +1394,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error deleting user:", error);
       res.status(500).json({ message: "Erreur lors de la suppression du compte" });
+    }
+  });
+
+  // ===== N8N LOGS ROUTER - MULTI-CLIENT INFRASTRUCTURE =====
+  
+  /**
+   * ✅ Route dynamique pour recevoir les logs de chaque client via N8N
+   * 
+   * Bénéfices :
+   * - 🔹 Multi-clients : Chaque client a son propre "canal" de réception
+   * - 🔹 Traçabilité : Chaque appel est horodaté et stocké
+   * - 🔹 Scalabilité : Infrastructure prête pour CRM, API tierces
+   * - 🔹 Automatisation : N8N envoie automatiquement vers le bon espace
+   * - 🔹 Sécurité future : Token unique par client (TODO: implémenter auth)
+   * 
+   * Exemple d'appel N8N :
+   * POST https://vocaledash.com/api/logs/router/speedai_001
+   * Body JSON = { timestamp, event, data, ... }
+   * 
+   * TODO: Sécuriser avec API key ou token par client
+   * TODO: Optionnel - Sauvegarder aussi en base PostgreSQL pour analytics
+   */
+  app.post("/api/logs/router/:clientId", async (req, res) => {
+    try {
+      const { clientId } = req.params;
+      const data = req.body;
+
+      // Validation basique
+      if (!clientId) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Client ID manquant dans l'URL." 
+        });
+      }
+
+      console.log(`🧾 Log N8N reçu pour le client ${clientId}:`, JSON.stringify(data).substring(0, 200) + '...');
+
+      // Création de l'arborescence : /reports/logs/{clientId}/
+      const baseDir = path.join(process.cwd(), "reports", "logs");
+      const clientDir = path.join(baseDir, clientId);
+
+      // Crée les dossiers s'ils n'existent pas
+      if (!fs.existsSync(baseDir)) {
+        fs.mkdirSync(baseDir, { recursive: true });
+        console.log(`[N8N Logs] Dossier base créé: ${baseDir}`);
+      }
+      if (!fs.existsSync(clientDir)) {
+        fs.mkdirSync(clientDir, { recursive: true });
+        console.log(`[N8N Logs] Dossier client créé: ${clientDir}`);
+      }
+
+      // Sauvegarde du log sous forme de fichier JSON horodaté
+      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+      const filePath = path.join(clientDir, `log-${timestamp}.json`);
+      fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf-8");
+
+      console.log(`✅ Log N8N enregistré: ${filePath}`);
+
+      res.status(200).json({
+        success: true,
+        message: `Log enregistré avec succès pour le client ${clientId}`,
+        file: filePath,
+        timestamp: new Date().toISOString()
+      });
+
+    } catch (error: any) {
+      console.error("❌ Erreur réception logs N8N:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: error.message 
+      });
     }
   });
 

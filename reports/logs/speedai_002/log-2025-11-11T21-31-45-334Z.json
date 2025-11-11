@@ -1,0 +1,8 @@
+{
+  "event": "call_started",
+  "timestamp": "2025-01-11T21:32:00Z",
+  "data": {
+    "caller": "+33687654321",
+    "campaign": "Demo Client 2"
+  }
+}

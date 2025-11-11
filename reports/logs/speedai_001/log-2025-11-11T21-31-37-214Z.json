@@ -1,0 +1,10 @@
+{
+  "event": "call_completed",
+  "timestamp": "2025-01-11T21:30:00Z",
+  "data": {
+    "caller": "+33612345678",
+    "duration": 180,
+    "status": "completed",
+    "summary": "Test N8N log reception"
+  }
+}

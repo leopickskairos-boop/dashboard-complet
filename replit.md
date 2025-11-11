@@ -73,6 +73,19 @@ The project utilizes a modern web stack:
 - **Statistics Display**: Total calls, total minutes used, last activity date, and registration date for each user.
 - **N8N Webhook Integration**: Unique API keys for each client enabling automated call creation via external workflows.
 
+**N8N Logs Router - Multi-Client Infrastructure (Phase 2.5 - Complete):**
+- **Dynamic Log Reception**: Scalable endpoint `/api/logs/router/:clientId` for receiving N8N workflow data per client
+- **Client Isolation**: Each client has dedicated storage directory `/reports/logs/{clientId}/`
+- **Automatic Organization**: Files auto-named with ISO timestamps `log-{timestamp}.json`
+- **Traceability**: Complete audit trail with horodated JSON logs for compliance and debugging
+- **Scalability Benefits**:
+  - 🔹 Multi-tenant ready: Zero data mixing between clients
+  - 🔹 Integration ready: Foundation for CRM, analytics, external APIs
+  - 🔹 Automation friendly: N8N workflows send to isolated client channels
+  - 🔹 Future security: Prepared for per-client token authentication (TODO)
+- **Example N8N Call**: `POST /api/logs/router/speedai_001` with JSON body containing event data
+- **TODO**: Implement per-client API token authentication, optional PostgreSQL storage for analytics
+
 **Trial System Details:**
 - **Account States**: Users progress through states: `trial` (30-day access) → `expired` (trial ended, awaiting payment) → `active` (paid subscription) or `suspended` (admin action)
 - **Trial Expiration Flow**: When trial ends, account status becomes `expired`, user redirected to trial-expired page, Stripe Checkout Session generated and sent via email
