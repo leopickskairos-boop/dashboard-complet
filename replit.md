@@ -107,6 +107,25 @@ The project utilizes a modern web stack:
 - **Empty States**: Clear messaging when no logs match filter criteria
 - **Security**: Requires admin authentication, only admins can view logs from all clients
 
+**Admin Clients Data API (Phase 2.7 - Complete):**
+- **Comprehensive Admin Endpoint**: `GET /api/admin/clients-data` provides complete overview of all clients for N8N integration management
+- **Security**: Protected by requireAuth and requireAdmin middlewares, only accessible to administrators
+- **Response Data**: Returns JSON array with comprehensive client information:
+  - `client_id`: Unique client identifier (UUID)
+  - `email`: Client email address
+  - `router_url`: N8N webhook endpoint URL for this client
+  - `api_key_hash`: Hashed API key (never plaintext)
+  - `latest_log`: Filename of most recent log file (or null)
+  - `latest_log_date`: ISO timestamp of latest log modification (or null)
+  - `accountStatus`: Current account state (trial, active, expired, suspended)
+  - `subscriptionStatus`: Stripe subscription status (active, canceled, null)
+  - `createdAt`: Account creation timestamp
+- **Query Parameters**: Optional `client_id` parameter to filter results by specific client
+- **Sorting**: Results sorted by createdAt descending (newest clients first)
+- **Robust Error Handling**: Gracefully handles missing log directories and unreadable files without failing entire request
+- **Audit Logging**: All access logged with admin email and timestamp for security compliance
+- **Use Cases**: N8N integration setup, client monitoring, log infrastructure verification, debugging
+
 **Trial System Details:**
 - **Account States**: Users progress through states: `trial` (30-day access) → `expired` (trial ended, awaiting payment) → `active` (paid subscription) or `suspended` (admin action)
 - **Trial Expiration Flow**: When trial ends, account status becomes `expired`, user redirected to trial-expired page, Stripe Checkout Session generated and sent via email
