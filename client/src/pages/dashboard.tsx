@@ -28,8 +28,9 @@ import {
   Brain
 } from "lucide-react";
 import { Line, LineChart, XAxis, YAxis, Tooltip, ResponsiveContainer, Bar, BarChart } from "recharts";
-import type { Call, PublicUser } from "@shared/schema";
+import type { Call, PublicUser, N8NLogWithMetadata } from "@shared/schema";
 import { TrialCountdown } from "@/components/TrialCountdown";
+import { FileText, Code } from "lucide-react";
 
 // Status badge variants with icons
 const statusConfig = {
@@ -78,6 +79,11 @@ export default function Dashboard() {
   const [selectedCall, setSelectedCall] = useState<Call | null>(null);
   const [chartDialog, setChartDialog] = useState<'total' | 'conversion' | 'duration' | null>(null);
   const [isMobile, setIsMobile] = useState<boolean>(false);
+  
+  // N8N Logs filters and selection
+  const [logsEventFilter, setLogsEventFilter] = useState<string>("all");
+  const [logsDateFilter, setLogsDateFilter] = useState<string>("all");
+  const [selectedLog, setSelectedLog] = useState<N8NLogWithMetadata | null>(null);
 
   // Fetch current user for trial countdown
   const { data: user } = useQuery<PublicUser>({
@@ -161,6 +167,59 @@ export default function Dashboard() {
       return res.json();
     },
   });
+
+  // Fetch N8N logs for current user
+  const { data: logsData, isLoading: logsLoading } = useQuery<{
+    logs: N8NLogWithMetadata[];
+    total: number;
+    hasMore: boolean;
+  }>({
+    queryKey: ['/api/logs', user?.id, logsEventFilter, logsDateFilter],
+    queryFn: async () => {
+      if (!user?.id) return { logs: [], total: 0, hasMore: false };
+      
+      const params = new URLSearchParams();
+      
+      // Event filter
+      if (logsEventFilter && logsEventFilter !== 'all') {
+        params.set('event', logsEventFilter);
+      }
+      
+      // Date filter
+      if (logsDateFilter && logsDateFilter !== 'all') {
+        const now = new Date();
+        let startDate: Date | null = null;
+        
+        switch (logsDateFilter) {
+          case 'hour':
+            startDate = new Date(now.getTime() - 60 * 60 * 1000);
+            break;
+          case 'today':
+            startDate = new Date(now.setHours(0, 0, 0, 0));
+            break;
+          case 'two_days':
+            startDate = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000);
+            break;
+          case 'week':
+            startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            break;
+        }
+        
+        if (startDate) {
+          params.set('startDate', startDate.toISOString());
+        }
+      }
+      
+      params.set('limit', '50');
+      
+      const res = await fetch(`/api/logs/client/${user.id}?${params}`);
+      if (!res.ok) throw new Error('Failed to fetch logs');
+      return res.json();
+    },
+    enabled: !!user?.id,
+  });
+
+  const logs = logsData?.logs || [];
 
   // Format duration from seconds to readable format
   const formatDuration = (seconds: number | null | undefined) => {
@@ -439,6 +498,147 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
+        {/* N8N Logs Section */}
+        <Card className="mb-12">
+          <CardHeader>
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                  <FileText className="w-5 h-5 text-purple-400" />
+                </div>
+                <div>
+                  <CardTitle>Logs N8N</CardTitle>
+                  <CardDescription>
+                    Historique des événements reçus de vos workflows N8N
+                  </CardDescription>
+                </div>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Select value={logsDateFilter} onValueChange={setLogsDateFilter}>
+                  <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-logs-date-filter">
+                    <SelectValue placeholder="Toutes les périodes" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Toutes les périodes</SelectItem>
+                    <SelectItem value="hour">Il y a 1h</SelectItem>
+                    <SelectItem value="today">Aujourd'hui</SelectItem>
+                    <SelectItem value="two_days">Il y a 2 jours</SelectItem>
+                    <SelectItem value="week">Cette semaine</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={logsEventFilter} onValueChange={setLogsEventFilter}>
+                  <SelectTrigger className="w-full sm:w-[200px]" data-testid="select-logs-event-filter">
+                    <SelectValue placeholder="Tous les événements" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous les événements</SelectItem>
+                    <SelectItem value="test_connection">Test de connexion</SelectItem>
+                    <SelectItem value="call_started">Appel démarré</SelectItem>
+                    <SelectItem value="call_ended">Appel terminé</SelectItem>
+                    <SelectItem value="webhook_received">Webhook reçu</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {logsLoading ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              </div>
+            ) : logs.length === 0 ? (
+              <div className="text-center py-12">
+                <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground mb-2">Aucun log disponible</p>
+                <p className="text-sm text-muted-foreground">
+                  Les logs de vos workflows N8N apparaîtront ici automatiquement
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
+                        Timestamp
+                      </th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
+                        Événement
+                      </th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
+                        Source
+                      </th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
+                        Utilisateur
+                      </th>
+                      <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {logs.map((log, index) => (
+                      <tr 
+                        key={log.fileName} 
+                        className="border-b hover-elevate cursor-pointer transition-colors"
+                        onClick={() => setSelectedLog(log)}
+                        data-testid={`log-row-${index}`}
+                      >
+                        <td className="py-3 px-4">
+                          <div className="text-sm">
+                            {format(new Date(log.timestamp), "dd MMM yyyy", { locale: fr })}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {format(new Date(log.timestamp), "HH:mm:ss", { locale: fr })}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <Badge variant="outline" className="gap-1">
+                            <Code className="w-3 h-3" />
+                            {log.event}
+                          </Badge>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="text-sm text-muted-foreground">
+                            {log.source || '-'}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="text-sm text-muted-foreground">
+                            {log.user || '-'}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedLog(log);
+                            }}
+                            data-testid={`button-view-log-${index}`}
+                          >
+                            <Eye className="w-4 h-4 mr-2" />
+                            Détails
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                
+                {logsData?.hasMore && (
+                  <div className="mt-4 text-center">
+                    <p className="text-sm text-muted-foreground">
+                      {logsData.total} logs au total
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Calls List Section */}
         <Card>
           <CardHeader>
@@ -706,6 +906,89 @@ export default function Dashboard() {
                     ID de référence
                   </div>
                   <div className="text-xs font-mono text-muted-foreground">{selectedCall.id}</div>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Log Detail Dialog */}
+        <Dialog open={!!selectedLog} onOpenChange={() => setSelectedLog(null)}>
+          <DialogContent className="max-w-3xl" data-testid="dialog-log-detail">
+            <DialogHeader>
+              <DialogTitle>Détail du log N8N</DialogTitle>
+              <DialogDescription>
+                Informations complètes sur cet événement
+              </DialogDescription>
+            </DialogHeader>
+            {selectedLog && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                      Timestamp
+                    </div>
+                    <div className="text-sm">
+                      {format(new Date(selectedLog.timestamp), "dd MMMM yyyy 'à' HH:mm:ss", { locale: fr })}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                      Événement
+                    </div>
+                    <Badge variant="outline" className="gap-1">
+                      <Code className="w-3 h-3" />
+                      {selectedLog.event}
+                    </Badge>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                      Source
+                    </div>
+                    <div className="text-sm">{selectedLog.source || '-'}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                      Utilisateur
+                    </div>
+                    <div className="text-sm">{selectedLog.user || '-'}</div>
+                  </div>
+                </div>
+
+                {selectedLog.data && Object.keys(selectedLog.data).length > 0 && (
+                  <div>
+                    <div className="text-xs text-muted-foreground uppercase tracking-wide mb-2">
+                      Données
+                    </div>
+                    <div className="bg-muted p-4 rounded-lg overflow-auto max-h-[400px]">
+                      <pre className="text-xs font-mono">
+                        {JSON.stringify(selectedLog.data, null, 2)}
+                      </pre>
+                    </div>
+                  </div>
+                )}
+
+                {selectedLog.metadata && Object.keys(selectedLog.metadata).length > 0 && (
+                  <div>
+                    <div className="text-xs text-muted-foreground uppercase tracking-wide mb-2">
+                      Métadonnées
+                    </div>
+                    <div className="bg-muted p-4 rounded-lg overflow-auto max-h-[200px]">
+                      <pre className="text-xs font-mono">
+                        {JSON.stringify(selectedLog.metadata, null, 2)}
+                      </pre>
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                    Nom du fichier
+                  </div>
+                  <div className="text-xs font-mono text-muted-foreground">{selectedLog.fileName}</div>
                 </div>
               </div>
             )}
