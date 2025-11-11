@@ -1539,15 +1539,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const baseLogsDir = path.join(process.cwd(), "reports", "logs");
       const frontendUrl = process.env.FRONTEND_URL || process.env.REPLIT_DEV_DOMAIN || 'http://localhost:5000';
       
-      const clientsData = await Promise.all(users.map(async (user) => {
+      const clientsData = users.map((user) => {
         let latestLog = null;
         let latestLogDate = null;
         
-        // Check if user has log directory
-        const clientLogDir = path.join(baseLogsDir, user.id);
-        
-        if (fs.existsSync(clientLogDir)) {
-          try {
+        // Safely check if user has log directory and read latest log
+        try {
+          const clientLogDir = path.join(baseLogsDir, user.id);
+          
+          if (fs.existsSync(clientLogDir)) {
             const files = fs.readdirSync(clientLogDir);
             const logFiles = files.filter(f => f.endsWith('.json'));
             
@@ -1557,11 +1557,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
               let mostRecentTime = 0;
               
               for (const file of logFiles) {
-                const filePath = path.join(clientLogDir, file);
-                const stats = fs.statSync(filePath);
-                if (stats.mtimeMs > mostRecentTime) {
-                  mostRecentTime = stats.mtimeMs;
-                  mostRecentFile = file;
+                try {
+                  const filePath = path.join(clientLogDir, file);
+                  const stats = fs.statSync(filePath);
+                  if (stats.mtimeMs > mostRecentTime) {
+                    mostRecentTime = stats.mtimeMs;
+                    mostRecentFile = file;
+                  }
+                } catch (fileErr) {
+                  // Skip unreadable files, continue with others
+                  console.error(`Error reading log file ${file} for client ${user.id}:`, fileErr);
                 }
               }
               
@@ -1570,9 +1575,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 latestLogDate = new Date(mostRecentTime).toISOString();
               }
             }
-          } catch (err) {
-            console.error(`Error reading logs for client ${user.id}:`, err);
           }
+        } catch (err) {
+          // Log error but continue processing other clients
+          console.error(`Error processing logs for client ${user.id}:`, err);
         }
         
         return {
@@ -1586,7 +1592,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           subscriptionStatus: user.subscriptionStatus || null,
           createdAt: user.createdAt
         };
-      }));
+      });
       
       res.json(clientsData);
     } catch (error: any) {
