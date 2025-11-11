@@ -31,8 +31,12 @@ The project utilizes a modern web stack:
 - **Automated Trial-to-Paid Conversion**: Daily cron service (3:00 AM) checks trial expirations, generates Stripe Checkout Sessions per assigned plan, sends payment links via email, and updates account status. Stripe webhooks (subscription.created, invoice.payment_succeeded) automatically activate accounts on successful payment.
 - **Admin Plan Assignment**: Admins can assign subscription plans to trial users via dropdown interface, enabling targeted tier management during trial period.
 - **User Dashboard**: Protected dashboard accessible to verified users (trial or active subscription), featuring:
-  - **6 KPI Cards**: Total calls, active calls, conversion rate, average duration, hours saved (calls × 5min / 60), and estimated revenue (appointments × €80)
-  - **AI Insights & Trends**: Interactive section displaying 3 randomized positive recommendations from a pool of 12 professional insights (5 performance + 7 business recommendations)
+  - **6 KPI Cards**: Total calls, active calls, conversion rate, average duration, hours saved (calls × 5min / 60), and estimated revenue (appointments × €80) - all with unified design
+  - **AI Insights & Trends**: Intelligent section displaying exactly 3 data-driven recommendations powered by `AIInsightsService`:
+    - **Personalized Analysis**: Analyzes real call data for best performing hours, optimal days, conversion trends, after-hours opportunities, and call duration patterns
+    - **Smart Fallback System**: Guarantees 3 insights always - supplements with business tips when data insufficient
+    - **Real-time Synchronization**: Insights update based on temporal filter selection (hour/today/2 days/week)
+    - **Dynamic Icon Mapping**: Visual icons adapt to insight type (brain, chart, trending-up, lightbulb, calendar, target)
   - **Temporal Filters**: Real-time filtering across all statistics
   - **Dynamic Charts**: Recharts integration for visual analytics
   - **Trial Countdown Banner**: Shows days remaining for trial users
