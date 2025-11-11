@@ -1399,6 +1399,122 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get N8N logs for all clients (admin only)
+  app.get("/api/admin/logs", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { userId, event, startDate, limit = '100' } = req.query;
+      
+      const baseDir = path.join(process.cwd(), "reports", "logs");
+      
+      // Check if logs directory exists
+      if (!fs.existsSync(baseDir)) {
+        return res.json({ logs: [], total: 0, hasMore: false });
+      }
+      
+      const allLogs: any[] = [];
+      
+      // If userId filter is provided, only read that user's logs
+      if (userId && typeof userId === 'string') {
+        const userDir = path.join(baseDir, userId);
+        
+        if (fs.existsSync(userDir)) {
+          const files = fs.readdirSync(userDir);
+          
+          for (const file of files) {
+            if (file.endsWith('.json')) {
+              try {
+                const filePath = path.join(userDir, file);
+                const content = fs.readFileSync(filePath, 'utf-8');
+                const logData = JSON.parse(content);
+                
+                // Apply event filter
+                if (event && typeof event === 'string' && logData.event !== event) {
+                  continue;
+                }
+                
+                // Apply date filter
+                if (startDate && typeof startDate === 'string') {
+                  const logDate = new Date(logData.timestamp);
+                  const filterDate = new Date(startDate);
+                  if (logDate < filterDate) {
+                    continue;
+                  }
+                }
+                
+                allLogs.push({
+                  ...logData,
+                  fileName: file,
+                  userId: userId
+                });
+              } catch (err) {
+                console.error(`Error reading log file ${file}:`, err);
+              }
+            }
+          }
+        }
+      } else {
+        // Read logs from all clients
+        const clientDirs = fs.readdirSync(baseDir);
+        
+        for (const clientId of clientDirs) {
+          const clientPath = path.join(baseDir, clientId);
+          
+          if (fs.statSync(clientPath).isDirectory()) {
+            const files = fs.readdirSync(clientPath);
+            
+            for (const file of files) {
+              if (file.endsWith('.json')) {
+                try {
+                  const filePath = path.join(clientPath, file);
+                  const content = fs.readFileSync(filePath, 'utf-8');
+                  const logData = JSON.parse(content);
+                  
+                  // Apply event filter
+                  if (event && typeof event === 'string' && logData.event !== event) {
+                    continue;
+                  }
+                  
+                  // Apply date filter
+                  if (startDate && typeof startDate === 'string') {
+                    const logDate = new Date(logData.timestamp);
+                    const filterDate = new Date(startDate);
+                    if (logDate < filterDate) {
+                      continue;
+                    }
+                  }
+                  
+                  allLogs.push({
+                    ...logData,
+                    fileName: file,
+                    userId: clientId
+                  });
+                } catch (err) {
+                  console.error(`Error reading log file ${file}:`, err);
+                }
+              }
+            }
+          }
+        }
+      }
+      
+      // Sort by timestamp descending (most recent first)
+      allLogs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      
+      // Apply pagination
+      const limitNum = parseInt(limit as string) || 100;
+      const paginatedLogs = allLogs.slice(0, limitNum);
+      
+      res.json({
+        logs: paginatedLogs,
+        total: allLogs.length,
+        hasMore: allLogs.length > limitNum
+      });
+    } catch (error: any) {
+      console.error("Error fetching N8N logs:", error);
+      res.status(500).json({ message: "Erreur lors de la récupération des logs" });
+    }
+  });
+
   // ===== N8N LOGS ROUTER - MULTI-CLIENT INFRASTRUCTURE =====
   
   /**
