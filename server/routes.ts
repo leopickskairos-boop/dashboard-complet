@@ -7,6 +7,7 @@ import path from "path";
 import { storage } from "./storage";
 import { fileStorage } from "./file-storage.service";
 import { aiInsightsService } from "./ai-insights.service";
+import { aiAnalyticsService } from "./ai-analytics.service";
 import { 
   hashPassword, 
   comparePassword, 
@@ -600,6 +601,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error generating AI insights:", error);
       res.status(500).json({ message: "Erreur lors de la génération des insights IA" });
+    }
+  });
+
+  // Get deep analytics for specific KPI metric
+  app.get("/api/analytics/:metric", requireAuth, requireVerified, requireSubscription, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const metric = req.params.metric as string;
+      const timeFilter = req.query.timeFilter as 'hour' | 'today' | 'two_days' | 'week' | undefined;
+      
+      // Validate metric parameter
+      const validMetrics = ['volume', 'conversion', 'timeslots', 'duration'];
+      if (!validMetrics.includes(metric)) {
+        return res.status(400).json({ message: `Métrique invalide. Valeurs acceptées: ${validMetrics.join(', ')}` });
+      }
+
+      // Dispatch to appropriate service method
+      let insight;
+      switch (metric) {
+        case 'volume':
+          insight = await aiAnalyticsService.analyzeCallVolume(userId, timeFilter);
+          break;
+        case 'conversion':
+          insight = await aiAnalyticsService.analyzeConversionRate(userId, timeFilter);
+          break;
+        case 'timeslots':
+          insight = await aiAnalyticsService.analyzeTimeSlots(userId, timeFilter);
+          break;
+        case 'duration':
+          insight = await aiAnalyticsService.analyzeAverageDuration(userId, timeFilter);
+          break;
+      }
+
+      res.json(insight);
+    } catch (error) {
+      console.error(`Error generating ${req.params.metric} analytics:`, error);
+      res.status(500).json({ message: "Erreur lors de l'analyse approfondie" });
     }
   });
 
