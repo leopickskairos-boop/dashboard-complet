@@ -30,6 +30,7 @@ import {
 import { Line, LineChart, XAxis, YAxis, Tooltip, ResponsiveContainer, Bar, BarChart } from "recharts";
 import type { Call, PublicUser } from "@shared/schema";
 import { TrialCountdown } from "@/components/TrialCountdown";
+import { AnalyticsDialog } from "@/components/AnalyticsDialog";
 
 // Status badge variants with icons
 const statusConfig = {
@@ -77,6 +78,7 @@ export default function Dashboard() {
   const [appointmentsOnly, setAppointmentsOnly] = useState<boolean>(false);
   const [selectedCall, setSelectedCall] = useState<Call | null>(null);
   const [chartDialog, setChartDialog] = useState<'total' | 'conversion' | 'duration' | null>(null);
+  const [analyticsMetric, setAnalyticsMetric] = useState<'volume' | 'conversion' | 'timeslots' | 'duration' | null>(null);
   const [isMobile, setIsMobile] = useState<boolean>(false);
 
   // Fetch current user for trial countdown
@@ -253,7 +255,22 @@ export default function Dashboard() {
                   <div className="w-12 h-12 rounded-lg bg-white/5 flex items-center justify-center">
                     <Phone className="w-6 h-6 text-white neon-cyan" />
                   </div>
-                  <TrendingUp className="w-4 h-4 text-green-500" />
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setAnalyticsMetric('volume');
+                      }}
+                      data-testid="button-analyze-volume"
+                      className="h-7 px-2 gap-1"
+                    >
+                      <Brain className="w-3 h-3" />
+                      <span className="text-xs">Analyser</span>
+                    </Button>
+                    <TrendingUp className="w-4 h-4 text-green-500" />
+                  </div>
                 </div>
                 <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
                   Total des appels
@@ -294,7 +311,22 @@ export default function Dashboard() {
                   <div className="w-12 h-12 rounded-lg bg-white/5 flex items-center justify-center">
                     <TrendingUp className="w-6 h-6 text-white neon-green" />
                   </div>
-                  <TrendingDown className="w-4 h-4 text-red-500" />
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setAnalyticsMetric('conversion');
+                      }}
+                      data-testid="button-analyze-conversion"
+                      className="h-7 px-2 gap-1"
+                    >
+                      <Brain className="w-3 h-3" />
+                      <span className="text-xs">Analyser</span>
+                    </Button>
+                    <TrendingDown className="w-4 h-4 text-red-500" />
+                  </div>
                 </div>
                 <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
                   Taux de conversion
@@ -317,7 +349,22 @@ export default function Dashboard() {
                   <div className="w-12 h-12 rounded-lg bg-white/5 flex items-center justify-center">
                     <Clock className="w-6 h-6 text-white neon-turquoise" />
                   </div>
-                  <TrendingUp className="w-4 h-4 text-green-500" />
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setAnalyticsMetric('duration');
+                      }}
+                      data-testid="button-analyze-duration"
+                      className="h-7 px-2 gap-1"
+                    >
+                      <Brain className="w-3 h-3" />
+                      <span className="text-xs">Analyser</span>
+                    </Button>
+                    <TrendingUp className="w-4 h-4 text-green-500" />
+                  </div>
                 </div>
                 <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
                   Durée moyenne
@@ -793,6 +840,18 @@ export default function Dashboard() {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Analytics Dialog */}
+        <AnalyticsDialog
+          metric={analyticsMetric}
+          open={!!analyticsMetric}
+          onOpenChange={(open) => {
+            if (!open) {
+              setAnalyticsMetric(null);
+            }
+          }}
+          timeFilter={globalTimeFilter !== 'all' ? globalTimeFilter as 'hour' | 'today' | 'two_days' | 'week' : undefined}
+        />
       </div>
     </div>
   );
