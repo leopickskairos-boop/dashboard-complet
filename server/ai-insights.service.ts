@@ -6,6 +6,7 @@ interface AIInsight {
   icon: string;
   type: 'performance' | 'business';
   text: string;
+  level?: 'good' | 'average' | 'warning';
 }
 
 export class AIInsightsService {
@@ -97,11 +98,25 @@ export class AIInsightsService {
     });
 
     if (bestHour !== -1 && bestRate > 0) {
-      const endHour = bestHour + 2;
+      const completedInHour = hourlyStats[bestHour].completed;
+      const totalCompleted = userCalls.filter(c => c.status === 'completed').length;
+      const percentOfTotal = totalCompleted > 0 ? Math.round((completedInHour / totalCompleted) * 100) : 0;
+      
+      let timeLabel: string;
+      if (bestHour >= 22) {
+        timeLabel = "tard le soir (après 22h)";
+      } else if (bestHour >= 19) {
+        timeLabel = `en fin de journée (${bestHour}h-${Math.min(bestHour + 2, 23)}h)`;
+      } else {
+        const endHour = Math.min(bestHour + 2, 23);
+        timeLabel = `entre ${bestHour}h et ${endHour}h`;
+      }
+      
       return {
         icon: 'chart',
         type: 'performance',
-        text: `Les appels entre ${bestHour}h et ${endHour}h affichent le meilleur taux de conversion (+${Math.round(bestRate)} %).`,
+        text: `${percentOfTotal}% des RDV confirmés ont lieu ${timeLabel}. Concentrez vos efforts marketing sur ce créneau.`,
+        level: percentOfTotal >= 40 ? 'good' : percentOfTotal >= 20 ? 'average' : 'warning',
       };
     }
 
@@ -139,10 +154,29 @@ export class AIInsightsService {
 
     if (bestDay !== -1 && maxCompleted > 0) {
       const dayName = daysOfWeek[bestDay];
+      const totalCompleted = userCalls.filter(c => c.status === 'completed').length;
+      const percentOfTotal = totalCompleted > 0 ? Math.round((maxCompleted / totalCompleted) * 100) : 0;
+      
+      // Find worst day for comparison
+      let worstDay = -1;
+      let minCompleted = Infinity;
+      Object.entries(dailyStats).forEach(([day, stats]) => {
+        if (stats.total >= 2 && stats.completed < minCompleted) {
+          minCompleted = stats.completed;
+          worstDay = parseInt(day);
+        }
+      });
+      
+      let worstDayInfo = "";
+      if (worstDay !== -1 && worstDay !== bestDay && minCompleted === 0) {
+        worstDayInfo = ` Aucun RDV confirmé le ${daysOfWeek[worstDay]}.`;
+      }
+      
       return {
         icon: 'calendar',
         type: 'business',
-        text: `Le ${dayName} reste la journée la plus performante avec ${maxCompleted} rendez-vous confirmés.`,
+        text: `${percentOfTotal}% des RDV sont pris le ${dayName} (${maxCompleted} confirmations).${worstDayInfo}`,
+        level: percentOfTotal >= 30 ? 'good' : percentOfTotal >= 15 ? 'average' : 'warning',
       };
     }
 
@@ -154,18 +188,30 @@ export class AIInsightsService {
    */
   private async analyzeOptimalDuration(userCalls: any[]): Promise<AIInsight | null> {
     const completedCalls = userCalls.filter(c => c.status === 'completed' && c.duration);
+    const failedCalls = userCalls.filter(c => c.status === 'failed' && c.duration);
     
     if (completedCalls.length === 0) return null;
 
-    const avgDuration = completedCalls.reduce((sum, call) => sum + (call.duration || 0), 0) / completedCalls.length;
+    const avgCompletedDuration = completedCalls.reduce((sum, call) => sum + (call.duration || 0), 0) / completedCalls.length;
+    const avgFailedDuration = failedCalls.length > 0 
+      ? failedCalls.reduce((sum, call) => sum + (call.duration || 0), 0) / failedCalls.length 
+      : 0;
     
-    if (avgDuration > 0) {
-      const minutes = Math.floor(avgDuration / 60);
-      const seconds = Math.round(avgDuration % 60);
+    if (avgCompletedDuration > 0) {
+      const minutes = Math.floor(avgCompletedDuration / 60);
+      const seconds = Math.round(avgCompletedDuration % 60);
+      
+      let comparison = "";
+      if (avgFailedDuration > 0 && avgCompletedDuration > avgFailedDuration) {
+        const diffPercent = Math.round(((avgCompletedDuration - avgFailedDuration) / avgFailedDuration) * 100);
+        comparison = ` (+${diffPercent}% vs appels échoués).`;
+      }
+      
       return {
         icon: 'clock',
         type: 'performance',
-        text: `Les appels d'environ ${minutes}min${seconds}s aboutissent le plus souvent à un rendez-vous.`,
+        text: `Durée moyenne des RDV confirmés : ${minutes}min ${seconds}s${comparison}`,
+        level: 'average',
       };
     }
 
@@ -180,14 +226,37 @@ export class AIInsightsService {
       const hour = new Date(call.startTime).getHours();
       return hour >= 19 || hour < 8;
     });
-
+    
+    const totalCalls = userCalls.length;
     const afterHoursCompleted = afterHoursCalls.filter(c => c.status === 'completed').length;
-
-    if (afterHoursCompleted > 0) {
+    const afterHoursTotal = afterHoursCalls.length;
+    
+    if (afterHoursTotal === 0 && totalCalls > 5) {
       return {
         icon: 'moon',
         type: 'business',
-        text: `Votre agent IA a converti ${afterHoursCompleted} appel${afterHoursCompleted > 1 ? 's' : ''} après 19h ce mois-ci.`,
+        text: `Aucun appel reçu après 19h sur les ${totalCalls} appels. Potentiel inexploité en soirée.`,
+        level: 'warning',
+      };
+    }
+
+    if (afterHoursCompleted > 0) {
+      const percentOfAfterHours = Math.round((afterHoursCompleted / afterHoursTotal) * 100);
+      const totalCompleted = userCalls.filter(c => c.status === 'completed').length;
+      const percentOfTotal = totalCompleted > 0 ? Math.round((afterHoursCompleted / totalCompleted) * 100) : 0;
+      
+      return {
+        icon: 'moon',
+        type: 'business',
+        text: `${afterHoursCompleted} RDV pris en soirée (après 19h), soit ${percentOfTotal}% du total. Taux de conversion soirée : ${percentOfAfterHours}%.`,
+        level: percentOfAfterHours >= 30 ? 'good' : percentOfAfterHours >= 15 ? 'average' : 'warning',
+      };
+    } else if (afterHoursTotal > 0) {
+      return {
+        icon: 'moon',
+        type: 'business',
+        text: `${afterHoursTotal} appel${afterHoursTotal > 1 ? 's' : ''} reçu${afterHoursTotal > 1 ? 's' : ''} après 19h, aucun converti. Script à optimiser pour les appels tardifs.`,
+        level: 'warning',
       };
     }
 
@@ -200,22 +269,33 @@ export class AIInsightsService {
   private async analyzeConversionTrends(userCalls: any[]): Promise<AIInsight | null> {
     const totalCalls = userCalls.length;
     const completedCalls = userCalls.filter(c => c.status === 'completed').length;
+    const failedCalls = userCalls.filter(c => c.status === 'failed').length;
     
     if (totalCalls === 0) return null;
 
     const conversionRate = (completedCalls / totalCalls) * 100;
+    const failureRate = (failedCalls / totalCalls) * 100;
 
-    if (conversionRate > 30) {
+    if (conversionRate > 40) {
       return {
         icon: 'trending-up',
         type: 'performance',
-        text: `Excellent taux de conversion de ${Math.round(conversionRate)} % ce mois-ci, continuez ainsi !`,
+        text: `Taux de RDV confirmés : ${Math.round(conversionRate)}% (${completedCalls}/${totalCalls} appels). Performance excellente.`,
+        level: 'good',
       };
-    } else if (conversionRate > 20) {
+    } else if (conversionRate > 25) {
       return {
         icon: 'target',
         type: 'performance',
-        text: `Taux de conversion stable à ${Math.round(conversionRate)} %, votre agent IA performe bien.`,
+        text: `Taux de conversion : ${Math.round(conversionRate)}% (${completedCalls} RDV sur ${totalCalls} appels). Dans la moyenne du secteur.`,
+        level: 'average',
+      };
+    } else if (failureRate > 30) {
+      return {
+        icon: 'target',
+        type: 'performance',
+        text: `${Math.round(failureRate)}% d'appels échoués (${failedCalls}/${totalCalls}). Revoyez le script ou les créneaux horaires.`,
+        level: 'warning',
       };
     }
 
@@ -230,17 +310,17 @@ export class AIInsightsService {
       {
         icon: 'lightbulb',
         type: 'business',
-        text: "Votre agent IA est prêt à répondre 24/7 pour ne manquer aucune opportunité.",
+        text: "En attente de données d'appels. Les premiers insights apparaîtront après vos 5 premiers appels.",
       },
       {
         icon: 'chart',
         type: 'performance',
-        text: "Les premiers appels arrivent bientôt. Votre dashboard affichera des statistiques détaillées.",
+        text: "L'analyse des créneaux horaires sera disponible après 10 appels minimum.",
       },
       {
-        icon: 'brain',
+        icon: 'calendar',
         type: 'business',
-        text: "L'automatisation intelligente libère votre équipe pour des tâches à forte valeur ajoutée.",
+        text: "Les tendances hebdomadaires seront calculées à partir de 7 jours d'activité.",
       },
     ];
   }
@@ -253,27 +333,27 @@ export class AIInsightsService {
       {
         icon: 'trending-up',
         type: 'business',
-        text: `Vous avez ${totalCalls} appel${totalCalls > 1 ? 's' : ''} enregistré${totalCalls > 1 ? 's' : ''}. Plus de données généreront des insights personnalisés.`,
-      },
-      {
-        icon: 'brain',
-        type: 'business',
-        text: "Votre agent IA répond automatiquement 24/7, maximisant vos opportunités commerciales.",
-      },
-      {
-        icon: 'lightbulb',
-        type: 'performance',
-        text: "L'automatisation intelligente économise du temps précieux pour votre équipe.",
+        text: `${totalCalls} appel${totalCalls > 1 ? 's' : ''} analysé${totalCalls > 1 ? 's' : ''}. Encore ${Math.max(0, 10 - totalCalls)} appels pour débloquer l'analyse des créneaux horaires.`,
       },
       {
         icon: 'calendar',
         type: 'business',
-        text: "Continuez à enregistrer des appels pour découvrir vos créneaux les plus performants.",
+        text: `Besoin de ${Math.max(0, 5 - totalCalls)} appels supplémentaires pour identifier vos jours les plus performants.`,
+      },
+      {
+        icon: 'chart',
+        type: 'performance',
+        text: "Analyse du taux de conversion disponible après 3 appels avec différents statuts.",
+      },
+      {
+        icon: 'clock',
+        type: 'performance',
+        text: "L'analyse de durée optimale nécessite au moins 3 RDV confirmés.",
       },
       {
         icon: 'target',
-        type: 'performance',
-        text: "Chaque appel enrichit l'analyse IA pour des recommandations plus précises.",
+        type: 'business',
+        text: "Les recommandations de plages horaires seront disponibles après une semaine d'activité.",
       },
     ];
 

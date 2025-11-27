@@ -446,10 +446,17 @@ export default function Dashboard() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {aiInsights.map((insight, index) => {
                     const Icon = iconMap[insight.icon] || Brain;
+                    const levelConfig = {
+                      good: { indicator: '🟢', borderClass: 'border-green-500/30', bgClass: 'bg-green-500/5' },
+                      average: { indicator: '🟠', borderClass: 'border-orange-500/30', bgClass: 'bg-orange-500/5' },
+                      warning: { indicator: '🔴', borderClass: 'border-red-500/30', bgClass: 'bg-red-500/5' },
+                    };
+                    const config = insight.level ? levelConfig[insight.level as keyof typeof levelConfig] : { indicator: '', borderClass: 'border-border/50', bgClass: 'bg-background/50' };
+                    
                     return (
                       <div 
                         key={index}
-                        className="flex gap-4 p-4 rounded-lg bg-background/50 border border-border/50 hover-elevate transition-all"
+                        className={`flex gap-4 p-4 rounded-lg ${config.bgClass} border ${config.borderClass} hover-elevate transition-all`}
                         data-testid={`recommendation-${index}`}
                       >
                         <div className="shrink-0">
@@ -458,8 +465,9 @@ export default function Dashboard() {
                           </div>
                         </div>
                         <div className="flex-1">
-                          <div className="text-sm font-medium mb-1">
-                            {insight.type === 'performance' ? '📈 Performance' : '💼 Business'}
+                          <div className="text-sm font-medium mb-1 flex items-center gap-2">
+                            {config.indicator && <span>{config.indicator}</span>}
+                            <span>{insight.type === 'performance' ? 'Performance' : 'Business'}</span>
                           </div>
                           <p className="text-sm text-muted-foreground leading-relaxed">
                             {insight.text}
@@ -468,18 +476,6 @@ export default function Dashboard() {
                       </div>
                     );
                   })}
-                </div>
-                <div className="mt-6 text-center">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => refetchInsights()}
-                    className="gap-2"
-                    data-testid="button-refresh-recommendations"
-                  >
-                    <Brain className="w-4 h-4" />
-                    Actualiser les recommandations
-                  </Button>
                 </div>
               </>
             )}
