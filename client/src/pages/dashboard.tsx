@@ -149,10 +149,11 @@ export default function Dashboard() {
   });
 
   // Fetch AI-powered insights based on real call data
-  const { data: aiInsights = [], isLoading: insightsLoading, refetch: refetchInsights } = useQuery<{
+  const { data: aiInsights = [], isLoading: insightsLoading } = useQuery<{
     icon: string;
     type: 'performance' | 'business';
     text: string;
+    level?: 'good' | 'average' | 'warning';
   }[]>({
     queryKey: ['/api/calls/ai-insights', globalTimeFilter],
     queryFn: async () => {

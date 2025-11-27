@@ -311,16 +311,19 @@ export class AIInsightsService {
         icon: 'lightbulb',
         type: 'business',
         text: "En attente de données d'appels. Les premiers insights apparaîtront après vos 5 premiers appels.",
+        level: 'average',
       },
       {
         icon: 'chart',
         type: 'performance',
         text: "L'analyse des créneaux horaires sera disponible après 10 appels minimum.",
+        level: 'average',
       },
       {
         icon: 'calendar',
         type: 'business',
         text: "Les tendances hebdomadaires seront calculées à partir de 7 jours d'activité.",
+        level: 'average',
       },
     ];
   }
@@ -334,26 +337,31 @@ export class AIInsightsService {
         icon: 'trending-up',
         type: 'business',
         text: `${totalCalls} appel${totalCalls > 1 ? 's' : ''} analysé${totalCalls > 1 ? 's' : ''}. Encore ${Math.max(0, 10 - totalCalls)} appels pour débloquer l'analyse des créneaux horaires.`,
+        level: 'average',
       },
       {
         icon: 'calendar',
         type: 'business',
         text: `Besoin de ${Math.max(0, 5 - totalCalls)} appels supplémentaires pour identifier vos jours les plus performants.`,
+        level: 'average',
       },
       {
         icon: 'chart',
         type: 'performance',
         text: "Analyse du taux de conversion disponible après 3 appels avec différents statuts.",
+        level: 'average',
       },
       {
         icon: 'clock',
         type: 'performance',
         text: "L'analyse de durée optimale nécessite au moins 3 RDV confirmés.",
+        level: 'average',
       },
       {
         icon: 'target',
         type: 'business',
         text: "Les recommandations de plages horaires seront disponibles après une semaine d'activité.",
+        level: 'average',
       },
     ];
 
