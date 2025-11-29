@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, boolean, integer, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, boolean, integer, pgEnum, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -105,6 +105,7 @@ export const calls = pgTable("calls", {
   appointmentDate: timestamp("appointment_date"), // Date du rendez-vous (seulement pour status 'completed')
   emailSent: boolean("email_sent").notNull().default(false),
   callSid: text("call_sid"), // External call reference from voice API
+  metadata: jsonb("metadata"), // Données additionnelles de N8N (event_type, agency_name, etc.)
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -120,6 +121,20 @@ export const insertCallSchema = createInsertSchema(calls, {
 // Types for calls
 export type InsertCall = z.infer<typeof insertCallSchema>;
 export type Call = typeof calls.$inferSelect;
+
+// N8N Webhook payload schema for call data ingestion
+export const n8nCallWebhookSchema = z.object({
+  phoneNumber: z.string().min(1, "Numéro de téléphone requis"),
+  status: z.enum(['active', 'completed', 'failed', 'canceled', 'no_answer']),
+  startTime: z.string().datetime({ message: "Format de date invalide pour startTime" }),
+  endTime: z.string().datetime({ message: "Format de date invalide pour endTime" }).optional(),
+  duration: z.number().int().min(0).optional(),
+  summary: z.string().optional(),
+  appointmentDate: z.string().datetime({ message: "Format de date invalide pour appointmentDate" }).optional(),
+  metadata: z.record(z.any()).optional(), // Accepts any JSON object
+});
+
+export type N8nCallWebhookPayload = z.infer<typeof n8nCallWebhookSchema>;
 
 // Notifications table for user notifications
 export const notifications = pgTable("notifications", {

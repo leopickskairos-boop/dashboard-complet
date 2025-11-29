@@ -28,7 +28,8 @@ import {
   resetPasswordSchema,
   insertNotificationSchema,
   n8nLogSchema,
-  n8nLogFiltersSchema
+  n8nLogFiltersSchema,
+  n8nCallWebhookSchema
 } from "@shared/schema";
 import { z } from "zod";
 import {
@@ -1261,54 +1262,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ===== WEBHOOK ROUTES (API Key Authentication) =====
 
   // N8N Webhook - Create a call from external automation
+  // Route: POST /api/webhooks/n8n
+  // Auth: Bearer token (API key)
+  // Body: { phoneNumber, status, startTime, endTime, duration, summary, appointmentDate, metadata }
   app.post("/api/webhooks/n8n", requireApiKey, async (req, res) => {
     try {
       const userId = req.user!.id;
       
-      // Validate incoming data
-      const webhookSchema = z.object({
-        phoneNumber: z.string().min(1, "Numéro de téléphone requis"),
-        status: z.enum(['active', 'completed', 'failed', 'no_answer', 'canceled']),
-        startTime: z.string().optional(),
-        endTime: z.string().optional(),
-        duration: z.number().optional(),
-        summary: z.string().optional(),
-        appointmentDate: z.string().optional(),
+      // Validate incoming data using shared schema
+      const data = n8nCallWebhookSchema.parse(req.body);
+      
+      console.log(`📞 N8N Webhook: Nouvel appel reçu pour user ${userId}`, {
+        phoneNumber: data.phoneNumber,
+        status: data.status,
+        hasMetadata: !!data.metadata
       });
       
-      const data = webhookSchema.parse(req.body);
-      
-      // Create call in database
+      // Create call in database with metadata
       const call = await storage.createCall({
         userId,
         phoneNumber: data.phoneNumber,
         status: data.status,
-        startTime: data.startTime ? new Date(data.startTime) : new Date(),
+        startTime: new Date(data.startTime),
         endTime: data.endTime ? new Date(data.endTime) : undefined,
         duration: data.duration,
         summary: data.summary,
         appointmentDate: data.appointmentDate ? new Date(data.appointmentDate) : undefined,
+        metadata: data.metadata || null,
       });
+      
+      console.log(`✅ N8N Webhook: Appel créé avec succès - ID: ${call.id}`);
       
       res.status(201).json({
         success: true,
-        message: "Appel créé avec succès",
-        call: {
-          id: call.id,
-          phoneNumber: call.phoneNumber,
-          status: call.status,
-          createdAt: call.createdAt,
-        },
+        call_id: call.id,
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
+        console.error("❌ N8N Webhook: Validation error:", error.errors);
         return res.status(400).json({ 
           success: false,
           error: "Données invalides",
           details: error.errors 
         });
       }
-      console.error("Webhook error:", error);
+      console.error("❌ N8N Webhook error:", error);
       res.status(500).json({ 
         success: false,
         error: "Erreur lors de la création de l'appel" 
