@@ -234,11 +234,25 @@ export class DatabaseStorage implements IStorage {
   }
 
   async regenerateApiKey(userId: string): Promise<{ apiKey: string; apiKeyHash: string }> {
+    console.log("[regenerateApiKey] Starting for userId:", userId);
+    
     const { apiKey, apiKeyHash } = await generateApiKey();
-    await db
+    console.log("[regenerateApiKey] Generated new hash:", apiKeyHash.substring(0, 20) + "...");
+    
+    const [updatedUser] = await db
       .update(users)
       .set({ apiKeyHash })
-      .where(eq(users.id, userId));
+      .where(eq(users.id, userId))
+      .returning();
+    
+    if (!updatedUser) {
+      console.error("[regenerateApiKey] ERROR: No user updated for userId:", userId);
+      throw new Error("Failed to update API key - user not found");
+    }
+    
+    console.log("[regenerateApiKey] SUCCESS - User updated:", updatedUser.email);
+    console.log("[regenerateApiKey] Stored hash:", updatedUser.apiKeyHash?.substring(0, 20) + "...");
+    
     return { apiKey, apiKeyHash };
   }
 
