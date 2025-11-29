@@ -237,7 +237,10 @@ export class DatabaseStorage implements IStorage {
     console.log("[getAllUsersWithApiKey] Found", result.length, "users with API keys");
     if (result.length > 0) {
       result.forEach(u => {
-        console.log("[getAllUsersWithApiKey] - User:", u.email, "| Hash:", u.apiKeyHash?.substring(0, 20) + "...");
+        console.log("[getAllUsersWithApiKey] - User:", u.email, 
+          "| Hash:", u.apiKeyHash?.substring(0, 20) + "...",
+          "| accountStatus:", u.accountStatus,
+          "| subscriptionStatus:", u.subscriptionStatus);
       });
     } else {
       // Debug: check all users to see if apiKeyHash exists
