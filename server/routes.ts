@@ -1634,9 +1634,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       console.error("❌ N8N Webhook error:", error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error("❌ N8N Webhook error details:", errorMessage);
       res.status(500).json({
         success: false,
         error: "Erreur lors de la création de l'appel",
+        details: errorMessage,
       });
     }
   });
