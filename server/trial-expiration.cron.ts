@@ -253,11 +253,21 @@ SpeedAI - Réceptionniste IA Vocale
 
   /**
    * Get frontend URL from environment
+   * Priority: FRONTEND_URL > REPLIT_DOMAINS (production) > REPLIT_DEV_DOMAIN (dev) > localhost
    */
   private getFrontendUrl(): string {
-    return process.env.FRONTEND_URL || 
-           (process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : '') ||
-           'http://localhost:5000';
+    if (process.env.FRONTEND_URL) {
+      return process.env.FRONTEND_URL;
+    }
+    if (process.env.REPLIT_DOMAINS) {
+      const domains = process.env.REPLIT_DOMAINS.split(',');
+      const productionDomain = domains.find(d => d.includes('.replit.app')) || domains[0];
+      return `https://${productionDomain}`;
+    }
+    if (process.env.REPLIT_DEV_DOMAIN) {
+      return `https://${process.env.REPLIT_DEV_DOMAIN}`;
+    }
+    return 'http://localhost:5000';
   }
 
   /**

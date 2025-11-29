@@ -7,7 +7,28 @@ if (!process.env.RESEND_API_KEY) {
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 const FROM_EMAIL = 'SpeedAI <onboarding@resend.dev>';
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5000';
+
+// Environment variable priority for frontend URL:
+// 1. FRONTEND_URL (explicit configuration)
+// 2. REPLIT_DOMAINS (production deployment URL)
+// 3. REPLIT_DEV_DOMAIN (development URL)
+// 4. localhost:5000 (fallback)
+function getFrontendUrl(): string {
+  if (process.env.FRONTEND_URL) {
+    return process.env.FRONTEND_URL;
+  }
+  if (process.env.REPLIT_DOMAINS) {
+    const domains = process.env.REPLIT_DOMAINS.split(',');
+    const productionDomain = domains.find(d => d.includes('.replit.app')) || domains[0];
+    return `https://${productionDomain}`;
+  }
+  if (process.env.REPLIT_DEV_DOMAIN) {
+    return `https://${process.env.REPLIT_DEV_DOMAIN}`;
+  }
+  return 'http://localhost:5000';
+}
+
+const FRONTEND_URL = getFrontendUrl();
 
 export async function sendVerificationEmail(email: string, token: string) {
   const verificationUrl = `${FRONTEND_URL}/verify-email?token=${token}`;

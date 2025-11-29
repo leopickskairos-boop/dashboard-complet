@@ -5,11 +5,30 @@ const SMTP_PASSWORD = process.env.SMTP_PASSWORD;
 
 // Environment variable priority:
 // 1. FRONTEND_URL (explicit configuration, e.g., custom domain)
-// 2. REPLIT_DEV_DOMAIN (automatic Replit public URL)
-// 3. localhost:5000 (local development fallback)
-const FRONTEND_URL = process.env.FRONTEND_URL 
-  || (process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : null)
-  || 'http://localhost:5000';
+// 2. REPLIT_DOMAINS (production deployment URL - comma-separated, use first one)
+// 3. REPLIT_DEV_DOMAIN (development URL)
+// 4. localhost:5000 (local development fallback)
+function getFrontendUrl(): string {
+  if (process.env.FRONTEND_URL) {
+    return process.env.FRONTEND_URL;
+  }
+  // In production, REPLIT_DOMAINS contains the production URL(s)
+  if (process.env.REPLIT_DOMAINS) {
+    const domains = process.env.REPLIT_DOMAINS.split(',');
+    const productionDomain = domains.find(d => d.includes('.replit.app')) || domains[0];
+    console.log('[Gmail] Using production domain:', productionDomain);
+    return `https://${productionDomain}`;
+  }
+  // In development
+  if (process.env.REPLIT_DEV_DOMAIN) {
+    console.log('[Gmail] Using dev domain:', process.env.REPLIT_DEV_DOMAIN);
+    return `https://${process.env.REPLIT_DEV_DOMAIN}`;
+  }
+  return 'http://localhost:5000';
+}
+
+const FRONTEND_URL = getFrontendUrl();
+console.log('[Gmail] FRONTEND_URL configured as:', FRONTEND_URL);
 
 if (!SMTP_USER || !SMTP_PASSWORD) {
   console.warn('[Gmail] SMTP credentials not configured. Emails will not be sent.');
