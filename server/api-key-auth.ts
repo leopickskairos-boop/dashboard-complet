@@ -81,14 +81,20 @@ export async function requireApiKey(req: Request, res: Response, next: NextFunct
       });
     }
 
-    // Check if user has active subscription
-    if (matchedUser.subscriptionStatus !== 'active') {
-      console.log("❌ User subscription not active:", matchedUser.email, matchedUser.subscriptionStatus);
+    // Check if user has active subscription OR is in trial period
+    const accountStatus = (matchedUser as any).accountStatus || 'expired';
+    const isTrialUser = accountStatus === 'trial';
+    const isActiveSubscriber = matchedUser.subscriptionStatus === 'active';
+    
+    if (!isTrialUser && !isActiveSubscriber) {
+      console.log("❌ User subscription not active:", matchedUser.email, "subscriptionStatus:", matchedUser.subscriptionStatus, "accountStatus:", accountStatus);
       return res.status(403).json({ 
         error: "No active subscription",
-        message: "Un abonnement actif est requis pour utiliser l'API" 
+        message: "Un abonnement actif ou période d'essai est requis pour utiliser l'API" 
       });
     }
+    
+    console.log("✅ User access granted:", matchedUser.email, "| Trial:", isTrialUser, "| Active:", isActiveSubscriber);
 
     // Attach user to request
     (req as any).user = matchedUser;
