@@ -227,10 +227,28 @@ export class DatabaseStorage implements IStorage {
   async getAllUsersWithApiKey(): Promise<User[]> {
     // Return all users that have an API key hash
     // This is needed because bcrypt requires comparing each hash individually
-    return db
+    console.log("[getAllUsersWithApiKey] Fetching users with API keys...");
+    
+    const result = await db
       .select()
       .from(users)
-      .where(sql`${users.apiKeyHash} IS NOT NULL`);
+      .where(isNotNull(users.apiKeyHash));
+    
+    console.log("[getAllUsersWithApiKey] Found", result.length, "users with API keys");
+    if (result.length > 0) {
+      result.forEach(u => {
+        console.log("[getAllUsersWithApiKey] - User:", u.email, "| Hash:", u.apiKeyHash?.substring(0, 20) + "...");
+      });
+    } else {
+      // Debug: check all users to see if apiKeyHash exists
+      const allUsers = await db.select().from(users);
+      console.log("[getAllUsersWithApiKey] DEBUG - Total users in DB:", allUsers.length);
+      allUsers.forEach(u => {
+        console.log("[getAllUsersWithApiKey] DEBUG - User:", u.email, "| apiKeyHash:", u.apiKeyHash ? "EXISTS" : "NULL");
+      });
+    }
+    
+    return result;
   }
 
   async regenerateApiKey(userId: string): Promise<{ apiKey: string; apiKeyHash: string }> {
