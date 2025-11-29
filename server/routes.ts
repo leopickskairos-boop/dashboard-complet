@@ -1603,8 +1603,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         hasMetadata: !!data.metadata,
       });
 
-      // Create call in database with metadata
-      const call = await storage.createCall({
+      // Create call in database (metadata handled separately for backward compatibility)
+      const callData: any = {
         userId,
         phoneNumber: data.phoneNumber,
         status: data.status,
@@ -1615,8 +1615,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         appointmentDate: data.appointmentDate
           ? new Date(data.appointmentDate)
           : undefined,
-        metadata: data.metadata || null,
-      });
+      };
+      
+      // Only include metadata if provided (to support DBs without metadata column)
+      if (data.metadata) {
+        callData.metadata = data.metadata;
+      }
+      
+      const call = await storage.createCall(callData);
 
       console.log(`✅ N8N Webhook: Appel créé avec succès - ID: ${call.id}`);
 

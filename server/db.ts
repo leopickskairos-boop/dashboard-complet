@@ -26,6 +26,45 @@ logSanitizedDatabaseUrl();
 export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 export const db = drizzle({ client: pool, schema });
 
+// Schema guard: Ensure critical columns exist (auto-migration for production parity)
+async function ensureSchemaConsistency() {
+  try {
+    console.log('🔧 [SCHEMA GUARD] Checking schema consistency...');
+    
+    // Check if calls.metadata column exists
+    const metadataCheck = await pool.query(`
+      SELECT column_name FROM information_schema.columns 
+      WHERE table_name = 'calls' AND column_name = 'metadata'
+    `);
+    
+    if (metadataCheck.rows.length === 0) {
+      console.log('🔧 [SCHEMA GUARD] Adding missing column: calls.metadata (JSONB)');
+      await pool.query(`ALTER TABLE calls ADD COLUMN IF NOT EXISTS metadata JSONB`);
+      console.log('✅ [SCHEMA GUARD] Column calls.metadata added successfully');
+    } else {
+      console.log('✅ [SCHEMA GUARD] Column calls.metadata exists');
+    }
+    
+    // Check if users.account_status column exists
+    const accountStatusCheck = await pool.query(`
+      SELECT column_name FROM information_schema.columns 
+      WHERE table_name = 'users' AND column_name = 'account_status'
+    `);
+    
+    if (accountStatusCheck.rows.length === 0) {
+      console.log('🔧 [SCHEMA GUARD] Adding missing column: users.account_status');
+      await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS account_status TEXT DEFAULT 'trial'`);
+      console.log('✅ [SCHEMA GUARD] Column users.account_status added successfully');
+    } else {
+      console.log('✅ [SCHEMA GUARD] Column users.account_status exists');
+    }
+    
+    console.log('✅ [SCHEMA GUARD] Schema consistency check completed');
+  } catch (e) {
+    console.error('❌ [SCHEMA GUARD] Error ensuring schema consistency:', e);
+  }
+}
+
 // Diagnostic query at startup to verify connection and data access
 async function runStartupDiagnostic() {
   try {
@@ -49,5 +88,11 @@ async function runStartupDiagnostic() {
   }
 }
 
-// Run diagnostic after a short delay to ensure connection is ready
-setTimeout(runStartupDiagnostic, 2000);
+// Run schema guard first, then diagnostic
+async function initializeDatabase() {
+  await ensureSchemaConsistency();
+  await runStartupDiagnostic();
+}
+
+// Run initialization after a short delay to ensure connection is ready
+setTimeout(initializeDatabase, 2000);
