@@ -98,7 +98,10 @@ export default function Dashboard() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Fetch stats with global time filter
+  // Auto-refresh interval (30 seconds)
+  const REFRESH_INTERVAL = 30000;
+
+  // Fetch stats with global time filter - auto-refreshes every 30 seconds
   const { data: stats, isLoading: statsLoading } = useQuery<{
     totalCalls: number;
     activeCalls: number;
@@ -115,9 +118,11 @@ export default function Dashboard() {
       if (!res.ok) throw new Error('Failed to fetch stats');
       return res.json();
     },
+    refetchInterval: REFRESH_INTERVAL,
+    refetchIntervalInBackground: false,
   });
 
-  // Fetch calls with filters
+  // Fetch calls with filters - auto-refreshes every 30 seconds
   const { data: calls = [], isLoading: callsLoading } = useQuery<Call[]>({
     queryKey: ['/api/calls', callsTimeFilter, statusFilter, appointmentsOnly],
     queryFn: async () => {
@@ -129,9 +134,11 @@ export default function Dashboard() {
       if (!res.ok) throw new Error('Failed to fetch calls');
       return res.json();
     },
+    refetchInterval: REFRESH_INTERVAL,
+    refetchIntervalInBackground: false,
   });
 
-  // Fetch chart data with global time filter
+  // Fetch chart data with global time filter - auto-refreshes every 30 seconds
   const { data: chartData = [], isLoading: chartLoading } = useQuery<{
     date: string;
     totalCalls: number;
@@ -146,9 +153,11 @@ export default function Dashboard() {
       if (!res.ok) throw new Error('Failed to fetch chart data');
       return res.json();
     },
+    refetchInterval: REFRESH_INTERVAL,
+    refetchIntervalInBackground: false,
   });
 
-  // Fetch AI-powered insights based on real call data
+  // Fetch AI-powered insights based on real call data - auto-refreshes every 60 seconds (less frequent for insights)
   const { data: aiInsights = [], isLoading: insightsLoading } = useQuery<{
     icon: string;
     type: 'performance' | 'business';
@@ -163,6 +172,8 @@ export default function Dashboard() {
       if (!res.ok) throw new Error('Failed to fetch AI insights');
       return res.json();
     },
+    refetchInterval: REFRESH_INTERVAL * 2, // 60 seconds for insights
+    refetchIntervalInBackground: false,
   });
 
   // Format duration from seconds to readable format

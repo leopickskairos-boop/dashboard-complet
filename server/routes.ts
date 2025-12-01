@@ -796,6 +796,226 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
+  // ===== N8N REPORT DATA EXTRACTION API =====
+  // This endpoint is used by N8N to extract all client data for PDF report generation
+  app.get(
+    "/api/n8n/client-report-data/:clientId",
+    async (req, res) => {
+      try {
+        const apiKey = req.headers.authorization?.replace("Bearer ", "");
+        const { clientId } = req.params;
+        const { month, year } = req.query;
+        
+        // Validate API key (admin or client's own key)
+        if (!apiKey) {
+          return res.status(401).json({ error: "API key required" });
+        }
+        
+        // Get user by API key
+        const authenticatedUser = await authenticateByApiKey(apiKey);
+        if (!authenticatedUser) {
+          return res.status(401).json({ error: "Invalid API key" });
+        }
+        
+        // Check authorization: admin can access any client, users can only access their own
+        const isAdmin = authenticatedUser.role === "admin";
+        const isOwnData = authenticatedUser.id === clientId;
+        
+        if (!isAdmin && !isOwnData) {
+          return res.status(403).json({ error: "Access denied" });
+        }
+        
+        // Get the target user
+        const targetUser = await storage.getUser(clientId);
+        if (!targetUser) {
+          return res.status(404).json({ error: "Client not found" });
+        }
+        
+        // Determine the period (default: last month)
+        const now = new Date();
+        const reportMonth = month ? parseInt(month as string) : now.getMonth(); // 0-indexed, so current month - 1 for last month
+        const reportYear = year ? parseInt(year as string) : now.getFullYear();
+        
+        // Get start and end dates for the period
+        const startDate = new Date(reportYear, reportMonth - 1, 1);
+        const endDate = new Date(reportYear, reportMonth, 0, 23, 59, 59, 999);
+        
+        // Get all calls for this client in the period
+        const allCalls = await storage.getCalls(clientId, {});
+        const periodCalls = allCalls.filter((call) => {
+          const callDate = new Date(call.startTime);
+          return callDate >= startDate && callDate <= endDate;
+        });
+        
+        // Calculate comprehensive metrics
+        const totalCalls = periodCalls.length;
+        const answeredCalls = periodCalls.filter((c) => c.status === "completed").length;
+        const missedCalls = periodCalls.filter((c) => c.status === "missed").length;
+        
+        // Duration metrics
+        const callsWithDuration = periodCalls.filter((c) => c.duration && c.duration > 0);
+        const totalDuration = callsWithDuration.reduce((sum, c) => sum + (c.duration || 0), 0);
+        const avgDuration = callsWithDuration.length > 0 ? totalDuration / callsWithDuration.length : 0;
+        
+        // Conversion metrics
+        const conversionCounts: Record<string, number> = {};
+        periodCalls.forEach((call: any) => {
+          const result = call.conversionResult || 'unknown';
+          conversionCounts[result] = (conversionCounts[result] || 0) + 1;
+        });
+        
+        // Client mood distribution
+        const moodCounts: Record<string, number> = {};
+        periodCalls.forEach((call: any) => {
+          if (call.clientMood) {
+            moodCounts[call.clientMood] = (moodCounts[call.clientMood] || 0) + 1;
+          }
+        });
+        
+        // Service types
+        const serviceCounts: Record<string, number> = {};
+        periodCalls.forEach((call: any) => {
+          if (call.serviceType) {
+            serviceCounts[call.serviceType] = (serviceCounts[call.serviceType] || 0) + 1;
+          }
+        });
+        
+        // Top keywords
+        const keywordCounts: Record<string, number> = {};
+        periodCalls.forEach((call: any) => {
+          const keywords = call.keywords || [];
+          keywords.forEach((kw: string) => {
+            const normalized = kw.toLowerCase().trim();
+            if (normalized.length > 2) {
+              keywordCounts[normalized] = (keywordCounts[normalized] || 0) + 1;
+            }
+          });
+        });
+        const topKeywords = Object.entries(keywordCounts)
+          .map(([keyword, count]) => ({ keyword, count }))
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 15);
+        
+        // Appointments by day of week
+        const appointmentsByDay: Record<string, number> = {};
+        periodCalls.forEach((call: any) => {
+          if (call.appointmentDayOfWeek) {
+            appointmentsByDay[call.appointmentDayOfWeek] = (appointmentsByDay[call.appointmentDayOfWeek] || 0) + 1;
+          }
+        });
+        
+        // Hourly distribution
+        const hourlyDistribution: Record<string, number> = {};
+        periodCalls.forEach((call) => {
+          const hour = new Date(call.startTime).getHours();
+          const hourKey = `${hour}:00`;
+          hourlyDistribution[hourKey] = (hourlyDistribution[hourKey] || 0) + 1;
+        });
+        
+        // Quality metrics
+        const callsWithConfidence = periodCalls.filter((c: any) => c.bookingConfidence !== null);
+        const avgBookingConfidence = callsWithConfidence.length > 0
+          ? callsWithConfidence.reduce((sum: number, c: any) => sum + (c.bookingConfidence || 0), 0) / callsWithConfidence.length
+          : 0;
+        
+        const returningClients = periodCalls.filter((c: any) => c.isReturningClient === true).length;
+        const lastMinuteBookings = periodCalls.filter((c: any) => c.isLastMinute === true).length;
+        const upsellAccepted = periodCalls.filter((c: any) => c.upsellAccepted === true).length;
+        
+        // Build complete report data
+        const reportData = {
+          client: {
+            id: targetUser.id,
+            email: targetUser.email,
+            companyName: (targetUser as any).companyName || null,
+            subscriptionStatus: targetUser.subscriptionStatus,
+          },
+          period: {
+            month: reportMonth,
+            year: reportYear,
+            startDate: startDate.toISOString(),
+            endDate: endDate.toISOString(),
+          },
+          summary: {
+            totalCalls,
+            answeredCalls,
+            missedCalls,
+            answerRate: totalCalls > 0 ? (answeredCalls / totalCalls) * 100 : 0,
+            totalDurationMinutes: Math.round(totalDuration / 60),
+            averageDurationSeconds: Math.round(avgDuration),
+          },
+          conversions: {
+            breakdown: conversionCounts,
+            total: Object.values(conversionCounts).reduce((a, b) => a + b, 0),
+          },
+          clientInsights: {
+            moodDistribution: moodCounts,
+            returningClients,
+            returningClientRate: totalCalls > 0 ? (returningClients / totalCalls) * 100 : 0,
+          },
+          services: {
+            distribution: serviceCounts,
+          },
+          bookings: {
+            byDayOfWeek: appointmentsByDay,
+            avgConfidence: Math.round(avgBookingConfidence),
+            lastMinuteCount: lastMinuteBookings,
+            upsellAccepted,
+            upsellRate: totalCalls > 0 ? (upsellAccepted / totalCalls) * 100 : 0,
+          },
+          activity: {
+            hourlyDistribution,
+            topKeywords,
+          },
+          calls: periodCalls.map((call: any) => ({
+            id: call.id,
+            callId: call.callId,
+            phoneNumber: call.phoneNumber,
+            status: call.status,
+            duration: call.duration,
+            startTime: call.startTime,
+            summary: call.summary,
+            transcript: call.transcript,
+            tags: call.tags,
+            conversionResult: call.conversionResult,
+            clientMood: call.clientMood,
+            serviceType: call.serviceType,
+            bookingConfidence: call.bookingConfidence,
+          })),
+          generatedAt: new Date().toISOString(),
+        };
+        
+        console.log(`[N8N Report Data] Exported data for client ${clientId} - Period: ${reportMonth}/${reportYear} - ${totalCalls} calls`);
+        
+        res.json(reportData);
+      } catch (error) {
+        console.error("Error generating N8N report data:", error);
+        res.status(500).json({ error: "Failed to generate report data" });
+      }
+    },
+  );
+
+  // Helper function to authenticate by API key
+  async function authenticateByApiKey(apiKey: string): Promise<any> {
+    try {
+      const bcrypt = await import("bcryptjs");
+      const usersWithKeys = await storage.getAllUsersWithApiKey();
+      
+      for (const user of usersWithKeys) {
+        if (user.apiKeyHash) {
+          const isMatch = await bcrypt.compare(apiKey, user.apiKeyHash);
+          if (isMatch) {
+            return user;
+          }
+        }
+      }
+      return null;
+    } catch (error) {
+      console.error("Error authenticating by API key:", error);
+      return null;
+    }
+  }
+
   // Get AI-powered insights based on real call data
   app.get(
     "/api/calls/ai-insights",
