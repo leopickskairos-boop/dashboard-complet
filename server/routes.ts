@@ -672,6 +672,130 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
+  // Get enriched call statistics with N8N data
+  app.get(
+    "/api/calls/enriched-stats",
+    requireAuth,
+    requireVerified,
+    requireSubscription,
+    async (req, res) => {
+      try {
+        const userId = req.user!.id;
+        const timeFilter = req.query.timeFilter as
+          | "hour"
+          | "today"
+          | "two_days"
+          | "week"
+          | undefined;
+
+        const calls = await storage.getCalls(userId, { timeFilter });
+        
+        // Calculate enriched metrics from N8N data
+        const totalCalls = calls.length;
+        
+        // Conversion results breakdown
+        const conversionCounts = new Map<string, number>();
+        calls.forEach((call) => {
+          const result = (call as any).conversionResult || 'unknown';
+          conversionCounts.set(result, (conversionCounts.get(result) || 0) + 1);
+        });
+        const conversionResults = Array.from(conversionCounts.entries())
+          .map(([result, count]) => ({
+            result,
+            count,
+            percentage: totalCalls > 0 ? (count / totalCalls) * 100 : 0,
+          }))
+          .sort((a, b) => b.count - a.count);
+        
+        // Client mood distribution
+        const moodCounts = new Map<string, number>();
+        calls.forEach((call) => {
+          const mood = (call as any).clientMood;
+          if (mood) {
+            moodCounts.set(mood, (moodCounts.get(mood) || 0) + 1);
+          }
+        });
+        const clientMoods = Array.from(moodCounts.entries())
+          .map(([mood, count]) => ({
+            mood,
+            count,
+            percentage: totalCalls > 0 ? (count / totalCalls) * 100 : 0,
+          }))
+          .sort((a, b) => b.count - a.count);
+        
+        // Service type distribution
+        const serviceCounts = new Map<string, number>();
+        calls.forEach((call) => {
+          const service = (call as any).serviceType;
+          if (service) {
+            serviceCounts.set(service, (serviceCounts.get(service) || 0) + 1);
+          }
+        });
+        const serviceTypes = Array.from(serviceCounts.entries())
+          .map(([serviceType, count]) => ({
+            serviceType,
+            count,
+            percentage: totalCalls > 0 ? (count / totalCalls) * 100 : 0,
+          }))
+          .sort((a, b) => b.count - a.count);
+        
+        // Booking metrics
+        const callsWithConfidence = calls.filter((c: any) => c.bookingConfidence !== null);
+        const averageBookingConfidence = callsWithConfidence.length > 0
+          ? callsWithConfidence.reduce((sum: number, c: any) => sum + (c.bookingConfidence || 0), 0) / callsWithConfidence.length
+          : 0;
+        
+        const lastMinuteBookings = calls.filter((c: any) => c.isLastMinute === true).length;
+        const appointmentsTaken = calls.filter((c: any) => c.appointmentDate !== null).length;
+        
+        // Client insights
+        const returningClients = calls.filter((c: any) => c.isReturningClient === true).length;
+        const upsellAccepted = calls.filter((c: any) => c.upsellAccepted === true).length;
+        
+        // Quality metrics
+        const callsWithTranscript = calls.filter((c: any) => c.transcript && c.transcript.length > 0).length;
+        
+        // Top keywords
+        const keywordCounts = new Map<string, number>();
+        calls.forEach((call: any) => {
+          const keywords = call.keywords || [];
+          keywords.forEach((kw: string) => {
+            const normalized = kw.toLowerCase().trim();
+            if (normalized.length > 2) {
+              keywordCounts.set(normalized, (keywordCounts.get(normalized) || 0) + 1);
+            }
+          });
+        });
+        const topKeywords = Array.from(keywordCounts.entries())
+          .map(([keyword, count]) => ({ keyword, count }))
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 10);
+        
+        res.json({
+          totalCalls,
+          conversionResults,
+          clientMoods,
+          serviceTypes,
+          averageBookingConfidence,
+          lastMinuteBookings,
+          lastMinutePercentage: appointmentsTaken > 0 ? (lastMinuteBookings / appointmentsTaken) * 100 : 0,
+          returningClients,
+          returningClientPercentage: totalCalls > 0 ? (returningClients / totalCalls) * 100 : 0,
+          upsellAccepted,
+          upsellConversionRate: totalCalls > 0 ? (upsellAccepted / totalCalls) * 100 : 0,
+          callsWithTranscript,
+          transcriptPercentage: totalCalls > 0 ? (callsWithTranscript / totalCalls) * 100 : 0,
+          topKeywords,
+        });
+      } catch (error) {
+        console.error("Error fetching enriched stats:", error);
+        res
+          .status(500)
+          .json({ message: "Erreur lors de la récupération des statistiques enrichies" });
+      }
+    },
+  );
+
   // Get AI-powered insights based on real call data
   app.get(
     "/api/calls/ai-insights",
@@ -1586,49 +1710,129 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ===== WEBHOOK ROUTES (API Key Authentication) =====
 
-  // N8N Webhook - Create a call from external automation
+  // N8N Webhook - Create a call from external automation with rich data
   // Route: POST /api/webhooks/n8n
   // Auth: Bearer token (API key)
-  // Body: { phoneNumber, status, startTime, endTime, duration, summary, appointmentDate, metadata }
+  // Body: Full N8N payload with all call details, metadata, and analytics
   app.post("/api/webhooks/n8n", requireApiKey, async (req, res) => {
     try {
       const userId = req.user!.id;
 
       // Validate incoming data using shared schema
       const data = n8nCallWebhookSchema.parse(req.body);
+      const meta = data.metadata || {};
 
       console.log(`📞 N8N Webhook: Nouvel appel reçu pour user ${userId}`, {
         phoneNumber: data.phoneNumber,
         status: data.status,
+        event_type: data.event_type || meta.event_type,
+        call_id: data.call_id,
         hasMetadata: !!data.metadata,
       });
 
-      // Create call in database (metadata handled separately for backward compatibility)
+      // Build comprehensive call data from all fields
       const callData: any = {
         userId,
+        
+        // Basic call info
         phoneNumber: data.phoneNumber,
         status: data.status,
         startTime: new Date(data.startTime),
         endTime: data.endTime ? new Date(data.endTime) : undefined,
         duration: data.duration,
+        
+        // External references
+        callId: data.call_id,
+        agentId: data.agent_id,
+        
+        // Call type and event
+        eventType: data.event_type || meta.event_type,
+        
+        // Call outcome
+        callAnswered: data.call_answered,
+        isOutOfScope: data.is_out_of_scope,
+        conversionResult: data.conversion_result,
+        callSuccessful: data.call_successful,
+        disconnectionReason: data.disconnection_reason,
+        
+        // Content
         summary: data.summary,
-        appointmentDate: data.appointmentDate
-          ? new Date(data.appointmentDate)
-          : undefined,
+        transcript: data.transcript,
+        tags: data.tags,
+        
+        // Appointment details
+        appointmentDate: data.appointmentDate ? new Date(data.appointmentDate) : undefined,
+        appointmentHour: data.appointmentHour,
+        appointmentDayOfWeek: data.appointmentDayOfWeek,
+        bookingDelayDays: data.booking_delay_days,
+        isLastMinute: data.is_last_minute,
+        groupCategory: data.group_category || meta.group_category,
+        
+        // Client info from metadata
+        clientName: meta.client_name,
+        clientEmail: meta.client_email,
+        clientMood: meta.client_mood,
+        isReturningClient: meta.is_returning_client,
+        
+        // Business context from metadata
+        agencyName: meta.agency_name,
+        companyName: meta.company_name,
+        serviceType: meta.service_type,
+        nbPersonnes: meta.nb_personnes,
+        
+        // Call quality metrics from metadata
+        bookingConfidence: meta.booking_confidence,
+        callQuality: meta.call_quality,
+        languageDetected: meta.language_detected,
+        
+        // Analysis fields from metadata
+        questionsAsked: meta.questions_asked,
+        objections: meta.objections,
+        keywords: meta.keywords,
+        painPoints: meta.pain_points,
+        compliments: meta.compliments,
+        upsellAccepted: meta.upsell_accepted,
+        competitorMentioned: meta.competitor_mentioned,
+        
+        // Special cases from metadata
+        preferences: meta.preferences,
+        specialOccasion: meta.special_occasion,
+        originalDate: meta.original_date,
+        originalTime: meta.original_time,
+        modificationReason: meta.modification_reason,
+        cancellationReason: meta.cancellation_reason,
+        cancellationTime: meta.cancellation_time ? new Date(meta.cancellation_time) : undefined,
+        
+        // Technical from metadata
+        calendarId: meta.calendar_id,
+        timezone: meta.timezone,
+        recordingUrl: meta.recording_url,
+        collectedAt: data.collected_at ? new Date(data.collected_at) : new Date(),
+        
+        // Store full metadata for any additional fields
+        metadata: data.metadata,
       };
       
-      // Only include metadata if provided (to support DBs without metadata column)
-      if (data.metadata) {
-        callData.metadata = data.metadata;
-      }
+      // Remove undefined values to avoid DB issues
+      Object.keys(callData).forEach(key => {
+        if (callData[key] === undefined) {
+          delete callData[key];
+        }
+      });
       
       const call = await storage.createCall(callData);
 
-      console.log(`✅ N8N Webhook: Appel créé avec succès - ID: ${call.id}`);
+      console.log(`✅ N8N Webhook: Appel créé avec succès - ID: ${call.id}`, {
+        eventType: callData.eventType,
+        conversionResult: callData.conversionResult,
+        clientName: callData.clientName,
+        hasTranscript: !!callData.transcript,
+      });
 
       res.status(201).json({
         success: true,
         call_id: call.id,
+        stored_fields: Object.keys(callData).length,
       });
     } catch (error) {
       if (error instanceof z.ZodError) {

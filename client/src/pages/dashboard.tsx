@@ -630,18 +630,26 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Call Detail Dialog */}
+        {/* Call Detail Dialog - Enriched with N8N data */}
         <Dialog open={!!selectedCall} onOpenChange={() => setSelectedCall(null)}>
-          <DialogContent className="max-w-2xl" data-testid="dialog-call-detail">
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" data-testid="dialog-call-detail">
             <DialogHeader>
-              <DialogTitle>Détail de l'appel</DialogTitle>
+              <DialogTitle className="flex items-center gap-2">
+                Détail de l'appel
+                {selectedCall?.eventType && (
+                  <Badge variant="outline" className="text-xs font-normal">
+                    {selectedCall.eventType}
+                  </Badge>
+                )}
+              </DialogTitle>
               <DialogDescription>
                 Informations complètes sur cet appel
               </DialogDescription>
             </DialogHeader>
             {selectedCall && (
               <div className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
+                {/* Basic Info Row */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div>
                     <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
                       Téléphone
@@ -663,8 +671,73 @@ export default function Dashboard() {
                       );
                     })()}
                   </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                      Durée
+                    </div>
+                    <div className="text-sm">{formatDuration(selectedCall.duration)}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                      Conversion
+                    </div>
+                    <Badge variant={selectedCall.conversionResult === 'converted' ? 'default' : 'secondary'}>
+                      {selectedCall.conversionResult === 'converted' ? 'Converti' : selectedCall.conversionResult || 'N/A'}
+                    </Badge>
+                  </div>
                 </div>
 
+                {/* Client Info - if available */}
+                {(selectedCall.clientName || selectedCall.clientEmail || selectedCall.agencyName) && (
+                  <div className="bg-blue-500/5 border border-blue-500/20 rounded-lg p-4">
+                    <div className="text-xs text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
+                      <Activity className="w-3 h-3" />
+                      Informations client
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      {selectedCall.clientName && (
+                        <div>
+                          <div className="text-xs text-muted-foreground mb-1">Nom</div>
+                          <div className="text-sm font-medium">{selectedCall.clientName}</div>
+                        </div>
+                      )}
+                      {selectedCall.clientEmail && (
+                        <div>
+                          <div className="text-xs text-muted-foreground mb-1">Email</div>
+                          <div className="text-sm font-mono text-xs">{selectedCall.clientEmail}</div>
+                        </div>
+                      )}
+                      {selectedCall.clientMood && (
+                        <div>
+                          <div className="text-xs text-muted-foreground mb-1">Humeur</div>
+                          <Badge variant={selectedCall.clientMood === 'positif' ? 'default' : selectedCall.clientMood === 'négatif' ? 'destructive' : 'secondary'}>
+                            {selectedCall.clientMood}
+                          </Badge>
+                        </div>
+                      )}
+                      {selectedCall.agencyName && (
+                        <div>
+                          <div className="text-xs text-muted-foreground mb-1">Établissement</div>
+                          <div className="text-sm">{selectedCall.agencyName}</div>
+                        </div>
+                      )}
+                      {selectedCall.nbPersonnes && (
+                        <div>
+                          <div className="text-xs text-muted-foreground mb-1">Nb personnes</div>
+                          <div className="text-sm font-medium">{selectedCall.nbPersonnes}</div>
+                        </div>
+                      )}
+                      {selectedCall.serviceType && (
+                        <div>
+                          <div className="text-xs text-muted-foreground mb-1">Type de service</div>
+                          <Badge variant="outline">{selectedCall.serviceType}</Badge>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Timing Info */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
@@ -686,36 +759,27 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                <div>
-                  <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
-                    Durée
+                {/* Tags */}
+                {selectedCall.tags && selectedCall.tags.length > 0 && (
+                  <div>
+                    <div className="text-xs text-muted-foreground uppercase tracking-wide mb-2">
+                      Tags
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedCall.tags.map((tag, idx) => (
+                        <Badge key={idx} variant="outline" className="text-xs">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
-                  <div className="text-sm">{formatDuration(selectedCall.duration)}</div>
-                </div>
+                )}
 
-                <div>
-                  <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
-                    Email de confirmation envoyé
-                  </div>
-                  <div className="text-sm">
-                    {selectedCall.emailSent ? (
-                      <Badge variant="default" className="gap-1">
-                        <CheckCircle2 className="w-3 h-3" />
-                        Oui
-                      </Badge>
-                    ) : (
-                      <Badge variant="secondary" className="gap-1">
-                        <XCircle className="w-3 h-3" />
-                        Non
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-
+                {/* Summary */}
                 {selectedCall.summary && (
                   <div>
                     <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
-                      Résumé de l'appel
+                      Résumé IA de l'appel
                     </div>
                     <div className="text-sm bg-muted p-4 rounded-lg">
                       {selectedCall.summary}
@@ -723,7 +787,19 @@ export default function Dashboard() {
                   </div>
                 )}
 
-                {/* Date du rendez-vous - Uniquement pour les appels avec statut "completed" */}
+                {/* Transcript */}
+                {selectedCall.transcript && (
+                  <div>
+                    <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                      Transcription complète
+                    </div>
+                    <div className="text-xs bg-muted/50 p-4 rounded-lg max-h-40 overflow-y-auto font-mono whitespace-pre-wrap">
+                      {selectedCall.transcript}
+                    </div>
+                  </div>
+                )}
+
+                {/* Appointment Info */}
                 {selectedCall.status === 'completed' && selectedCall.appointmentDate && (
                   <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
                     <div className="flex items-start gap-3">
@@ -732,24 +808,95 @@ export default function Dashboard() {
                       </div>
                       <div className="flex-1">
                         <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1.5">
-                          📅 Date du rendez-vous
+                          Date du rendez-vous
                         </div>
                         <div className="text-base font-semibold">
                           {format(new Date(selectedCall.appointmentDate), "EEEE dd MMMM yyyy 'à' HH:mm", { locale: fr })}
                         </div>
-                        <div className="text-xs text-muted-foreground mt-1">
-                          Rendez-vous confirmé
+                        <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                          {selectedCall.bookingDelayDays !== null && selectedCall.bookingDelayDays !== undefined && (
+                            <span>Réservé {selectedCall.bookingDelayDays}j à l'avance</span>
+                          )}
+                          {selectedCall.isLastMinute && (
+                            <Badge variant="secondary" className="text-xs">Last minute</Badge>
+                          )}
                         </div>
                       </div>
                     </div>
                   </div>
                 )}
 
-                <div>
-                  <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
-                    ID de référence
+                {/* Call Quality Metrics */}
+                {(selectedCall.bookingConfidence || selectedCall.callQuality || selectedCall.disconnectionReason) && (
+                  <div className="grid grid-cols-3 gap-4">
+                    {selectedCall.bookingConfidence !== null && selectedCall.bookingConfidence !== undefined && (
+                      <div>
+                        <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                          Confiance
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-primary rounded-full transition-all"
+                              style={{ width: `${selectedCall.bookingConfidence}%` }}
+                            />
+                          </div>
+                          <span className="text-xs font-medium">{selectedCall.bookingConfidence}%</span>
+                        </div>
+                      </div>
+                    )}
+                    {selectedCall.callQuality && (
+                      <div>
+                        <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                          Qualité
+                        </div>
+                        <Badge variant={selectedCall.callQuality === 'fluide' ? 'default' : 'secondary'}>
+                          {selectedCall.callQuality}
+                        </Badge>
+                      </div>
+                    )}
+                    {selectedCall.disconnectionReason && (
+                      <div>
+                        <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                          Fin d'appel
+                        </div>
+                        <div className="text-xs text-muted-foreground">{selectedCall.disconnectionReason}</div>
+                      </div>
+                    )}
                   </div>
-                  <div className="text-xs font-mono text-muted-foreground">{selectedCall.id}</div>
+                )}
+
+                {/* Keywords */}
+                {selectedCall.keywords && selectedCall.keywords.length > 0 && (
+                  <div>
+                    <div className="text-xs text-muted-foreground uppercase tracking-wide mb-2">
+                      Mots-clés détectés
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {selectedCall.keywords.map((kw, idx) => (
+                        <Badge key={idx} variant="secondary" className="text-xs">
+                          {kw}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Reference IDs */}
+                <div className="flex items-center gap-6 pt-4 border-t text-xs text-muted-foreground">
+                  <div>
+                    <span className="opacity-60">ID:</span> <span className="font-mono">{selectedCall.id.slice(0, 8)}...</span>
+                  </div>
+                  {selectedCall.callId && (
+                    <div>
+                      <span className="opacity-60">Call ID:</span> <span className="font-mono">{selectedCall.callId}</span>
+                    </div>
+                  )}
+                  {selectedCall.agentId && (
+                    <div>
+                      <span className="opacity-60">Agent:</span> <span className="font-mono">{selectedCall.agentId.slice(0, 12)}...</span>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

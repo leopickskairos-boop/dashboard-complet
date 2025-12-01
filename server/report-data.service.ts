@@ -57,6 +57,42 @@ export interface MonthlyReportMetrics {
     title: string;
     message: string;
   }>;
+  
+  // ===== ENRICHED N8N METRICS =====
+  
+  // Conversion results breakdown
+  conversionResults: Array<{ result: string; count: number; percentage: number }>;
+  
+  // Client sentiment distribution
+  clientMoods: Array<{ mood: string; count: number; percentage: number }>;
+  
+  // Service type distribution
+  serviceTypes: Array<{ serviceType: string; count: number; percentage: number }>;
+  
+  // Booking metrics
+  averageBookingConfidence: number;
+  averageBookingDelayDays: number;
+  lastMinuteBookings: number;
+  lastMinutePercentage: number;
+  
+  // Client insights
+  returningClients: number;
+  returningClientPercentage: number;
+  upsellAccepted: number;
+  upsellConversionRate: number;
+  
+  // Quality metrics
+  callsWithTranscript: number;
+  averageCallQuality: string;
+  
+  // Top keywords from all calls
+  topKeywords: Array<{ keyword: string; count: number }>;
+  
+  // Event type distribution
+  eventTypes: Array<{ eventType: string; count: number; percentage: number }>;
+  
+  // Day of week distribution for appointments
+  appointmentsByDayOfWeek: Array<{ day: string; count: number; percentage: number }>;
 }
 
 export class ReportDataService {
@@ -219,6 +255,67 @@ export class ReportDataService {
       peakHours,
       callsByStatus,
     });
+    
+    // ===== ENRICHED N8N METRICS =====
+    
+    // Conversion results breakdown
+    const conversionResults = this.calculateDistribution(
+      currentCalls, 
+      (call: any) => call.conversionResult || 'unknown'
+    );
+    
+    // Client mood distribution  
+    const clientMoods = this.calculateDistribution(
+      currentCalls.filter((c: any) => c.clientMood),
+      (call: any) => call.clientMood
+    );
+    
+    // Service type distribution
+    const serviceTypes = this.calculateDistribution(
+      currentCalls.filter((c: any) => c.serviceType),
+      (call: any) => call.serviceType
+    );
+    
+    // Event type distribution
+    const eventTypes = this.calculateDistribution(
+      currentCalls.filter((c: any) => c.eventType),
+      (call: any) => call.eventType
+    );
+    
+    // Booking metrics
+    const callsWithConfidence = currentCalls.filter((c: any) => c.bookingConfidence !== null);
+    const averageBookingConfidence = callsWithConfidence.length > 0
+      ? callsWithConfidence.reduce((sum: number, c: any) => sum + (c.bookingConfidence || 0), 0) / callsWithConfidence.length
+      : 0;
+    
+    const callsWithDelay = currentCalls.filter((c: any) => c.bookingDelayDays !== null);
+    const averageBookingDelayDays = callsWithDelay.length > 0
+      ? callsWithDelay.reduce((sum: number, c: any) => sum + (c.bookingDelayDays || 0), 0) / callsWithDelay.length
+      : 0;
+    
+    const lastMinuteBookings = currentCalls.filter((c: any) => c.isLastMinute === true).length;
+    const lastMinutePercentage = appointmentsTaken > 0 ? (lastMinuteBookings / appointmentsTaken) * 100 : 0;
+    
+    // Client insights
+    const returningClients = currentCalls.filter((c: any) => c.isReturningClient === true).length;
+    const returningClientPercentage = totalCalls > 0 ? (returningClients / totalCalls) * 100 : 0;
+    
+    const upsellAccepted = currentCalls.filter((c: any) => c.upsellAccepted === true).length;
+    const upsellConversionRate = totalCalls > 0 ? (upsellAccepted / totalCalls) * 100 : 0;
+    
+    // Quality metrics
+    const callsWithTranscript = currentCalls.filter((c: any) => c.transcript && c.transcript.length > 0).length;
+    const qualityDistribution = this.calculateDistribution(
+      currentCalls.filter((c: any) => c.callQuality),
+      (call: any) => call.callQuality
+    );
+    const averageCallQuality = qualityDistribution.length > 0 ? qualityDistribution[0].result : 'N/A';
+    
+    // Top keywords from all calls
+    const topKeywords = this.extractTopKeywords(currentCalls);
+    
+    // Appointments by day of week
+    const appointmentsByDayOfWeek = this.calculateAppointmentsByDayOfWeek(currentCalls);
 
     // Format month name
     const month = periodStart.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
@@ -256,7 +353,110 @@ export class ReportDataService {
       callsByStatus,
       insights,
       aiRecommendations,
+      // Enriched N8N metrics
+      conversionResults,
+      clientMoods,
+      serviceTypes,
+      averageBookingConfidence,
+      averageBookingDelayDays,
+      lastMinuteBookings,
+      lastMinutePercentage,
+      returningClients,
+      returningClientPercentage,
+      upsellAccepted,
+      upsellConversionRate,
+      callsWithTranscript,
+      averageCallQuality,
+      topKeywords,
+      eventTypes,
+      appointmentsByDayOfWeek,
     };
+  }
+  
+  /**
+   * Calculate generic distribution for any field
+   */
+  private static calculateDistribution(
+    calls: any[], 
+    getField: (call: any) => string
+  ): Array<{ result: string; count: number; percentage: number }> {
+    const total = calls.length;
+    if (total === 0) return [];
+    
+    const distribution = new Map<string, number>();
+    calls.forEach((call) => {
+      const value = getField(call);
+      if (value) {
+        distribution.set(value, (distribution.get(value) || 0) + 1);
+      }
+    });
+    
+    return Array.from(distribution.entries())
+      .map(([result, count]) => ({
+        result,
+        count,
+        percentage: (count / total) * 100,
+      }))
+      .sort((a, b) => b.count - a.count);
+  }
+  
+  /**
+   * Extract top keywords from call metadata
+   */
+  private static extractTopKeywords(calls: any[]): Array<{ keyword: string; count: number }> {
+    const keywordCount = new Map<string, number>();
+    
+    calls.forEach((call) => {
+      const keywords = call.keywords || [];
+      keywords.forEach((keyword: string) => {
+        const normalized = keyword.toLowerCase().trim();
+        if (normalized.length > 2) {
+          keywordCount.set(normalized, (keywordCount.get(normalized) || 0) + 1);
+        }
+      });
+    });
+    
+    return Array.from(keywordCount.entries())
+      .map(([keyword, count]) => ({ keyword, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 15); // Top 15 keywords
+  }
+  
+  /**
+   * Calculate appointment distribution by day of week
+   */
+  private static calculateAppointmentsByDayOfWeek(
+    calls: any[]
+  ): Array<{ day: string; count: number; percentage: number }> {
+    const daysOfWeek = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+    const dayCounts = new Map<string, number>();
+    
+    // Initialize all days
+    daysOfWeek.forEach(day => dayCounts.set(day, 0));
+    
+    // Count appointments by day
+    const callsWithAppointment = calls.filter((c: any) => c.appointmentDate);
+    callsWithAppointment.forEach((call: any) => {
+      // Use appointmentDayOfWeek if available, otherwise calculate from appointmentDate
+      if (call.appointmentDayOfWeek) {
+        const dayName = daysOfWeek.find(d => 
+          d.toLowerCase() === call.appointmentDayOfWeek.toLowerCase()
+        ) || call.appointmentDayOfWeek;
+        dayCounts.set(dayName, (dayCounts.get(dayName) || 0) + 1);
+      } else if (call.appointmentDate) {
+        const dayIndex = new Date(call.appointmentDate).getDay();
+        const dayName = daysOfWeek[dayIndex];
+        dayCounts.set(dayName, (dayCounts.get(dayName) || 0) + 1);
+      }
+    });
+    
+    const total = callsWithAppointment.length;
+    
+    return daysOfWeek.map(day => ({
+      day,
+      count: dayCounts.get(day) || 0,
+      percentage: total > 0 ? ((dayCounts.get(day) || 0) / total) * 100 : 0,
+    }));
   }
 
   /**

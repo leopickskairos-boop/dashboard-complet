@@ -92,20 +92,90 @@ export type User = typeof users.$inferSelect;
 // Public user type (without sensitive data)
 export type PublicUser = Omit<User, 'password' | 'verificationToken' | 'verificationTokenExpiry' | 'resetPasswordToken' | 'resetPasswordTokenExpiry'>;
 
-// Calls table for tracking phone calls
+// Calls table for tracking phone calls with rich N8N data
 export const calls = pgTable("calls", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id),
+  
+  // Basic call info
   phoneNumber: text("phone_number").notNull(),
   startTime: timestamp("start_time").notNull(),
   endTime: timestamp("end_time"),
   duration: integer("duration"), // Duration in seconds
   status: text("status").notNull(), // 'active', 'completed', 'failed', 'canceled', 'no_answer'
+  
+  // External references
+  callId: text("call_id"), // External call ID from N8N (e.g., call_test_curl_001)
+  agentId: text("agent_id"), // AI agent ID (e.g., agent_74b0dd455566d4141adc040641)
+  callSid: text("call_sid"), // Legacy external call reference
+  
+  // Call type and event
+  eventType: text("event_type"), // 'reservation', 'inquiry', 'cancellation', 'modification', etc.
+  
+  // Call outcome
+  callAnswered: boolean("call_answered"),
+  isOutOfScope: boolean("is_out_of_scope"),
+  conversionResult: text("conversion_result"), // 'converted', 'not_converted', 'pending'
+  callSuccessful: boolean("call_successful"),
+  disconnectionReason: text("disconnection_reason"), // 'user_hangup', 'agent_hangup', 'timeout', etc.
+  
+  // Content
   summary: text("summary"),
-  appointmentDate: timestamp("appointment_date"), // Date du rendez-vous (seulement pour status 'completed')
+  transcript: text("transcript"), // Full conversation transcript
+  tags: text("tags").array(), // Array of tags (e.g., ['réservation', 'restaurant', 'dîner'])
+  
+  // Appointment details
+  appointmentDate: timestamp("appointment_date"),
+  appointmentHour: integer("appointment_hour"), // Hour of appointment (0-23)
+  appointmentDayOfWeek: integer("appointment_day_of_week"), // Day of week (0-6, 0=Sunday)
+  bookingDelayDays: integer("booking_delay_days"), // Days between call and appointment
+  isLastMinute: boolean("is_last_minute"), // Booking made with short notice
+  groupCategory: text("group_category"), // Size category (e.g., "2", "4-6", "7+")
+  
+  // Client info (from metadata)
+  clientName: text("client_name"),
+  clientEmail: text("client_email"),
+  clientMood: text("client_mood"), // 'positif', 'neutre', 'négatif'
+  isReturningClient: boolean("is_returning_client"),
+  
+  // Business context
+  agencyName: text("agency_name"),
+  companyName: text("company_name"),
+  serviceType: text("service_type"), // 'diner', 'dejeuner', 'consultation', etc.
+  nbPersonnes: integer("nb_personnes"), // Number of people for reservation
+  
+  // Call quality metrics
+  bookingConfidence: integer("booking_confidence"), // 0-100 confidence score
+  callQuality: text("call_quality"), // 'fluide', 'difficile', 'interrompu'
+  languageDetected: text("language_detected"), // 'fr', 'en', 'es', etc.
+  
+  // Analysis fields
+  questionsAsked: text("questions_asked").array(),
+  objections: text("objections").array(),
+  keywords: text("keywords").array(),
+  painPoints: text("pain_points").array(),
+  compliments: text("compliments").array(),
+  upsellAccepted: boolean("upsell_accepted"),
+  competitorMentioned: boolean("competitor_mentioned"),
+  
+  // Special cases
+  preferences: text("preferences"),
+  specialOccasion: text("special_occasion"),
+  originalDate: text("original_date"), // For modifications
+  originalTime: text("original_time"),
+  modificationReason: text("modification_reason"),
+  cancellationReason: text("cancellation_reason"),
+  cancellationTime: timestamp("cancellation_time"),
+  
+  // Technical
+  calendarId: text("calendar_id"),
+  timezone: text("timezone"),
+  recordingUrl: text("recording_url"),
+  collectedAt: timestamp("collected_at"), // When N8N collected this data
+  
+  // Legacy fields
   emailSent: boolean("email_sent").notNull().default(false),
-  callSid: text("call_sid"), // External call reference from voice API
-  metadata: jsonb("metadata"), // Données additionnelles de N8N (event_type, agency_name, etc.)
+  metadata: jsonb("metadata"), // Any additional data not captured in specific fields
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -122,16 +192,82 @@ export const insertCallSchema = createInsertSchema(calls, {
 export type InsertCall = z.infer<typeof insertCallSchema>;
 export type Call = typeof calls.$inferSelect;
 
-// N8N Webhook payload schema for call data ingestion
+// N8N Webhook payload schema for call data ingestion (comprehensive)
 export const n8nCallWebhookSchema = z.object({
+  // Basic call info (required)
   phoneNumber: z.string().min(1, "Numéro de téléphone requis"),
   status: z.enum(['active', 'completed', 'failed', 'canceled', 'no_answer']),
   startTime: z.string().datetime({ message: "Format de date invalide pour startTime" }),
+  
+  // Basic call info (optional)
   endTime: z.string().datetime({ message: "Format de date invalide pour endTime" }).optional(),
   duration: z.number().int().min(0).optional(),
+  
+  // External references
+  call_id: z.string().optional(),
+  agent_id: z.string().optional(),
+  
+  // Call type and event
+  event_type: z.string().optional(),
+  
+  // Call outcome
+  call_answered: z.boolean().optional(),
+  is_out_of_scope: z.boolean().optional(),
+  conversion_result: z.string().optional(),
+  call_successful: z.boolean().optional(),
+  disconnection_reason: z.string().optional(),
+  
+  // Content
   summary: z.string().optional(),
+  transcript: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+  
+  // Appointment details
   appointmentDate: z.string().datetime({ message: "Format de date invalide pour appointmentDate" }).optional(),
-  metadata: z.record(z.any()).optional(), // Accepts any JSON object
+  appointmentHour: z.number().int().min(0).max(23).optional(),
+  appointmentDayOfWeek: z.number().int().min(0).max(6).optional(),
+  booking_delay_days: z.number().int().optional(),
+  is_last_minute: z.boolean().optional(),
+  group_category: z.string().optional(),
+  
+  // N8N specific fields (ignored but accepted)
+  dashboard_api_key: z.string().optional(),
+  dashboard_url: z.string().optional(),
+  collected_at: z.string().datetime().optional(),
+  
+  // Rich metadata from N8N (all fields extracted)
+  metadata: z.object({
+    event_type: z.string().optional(),
+    agency_name: z.string().optional(),
+    company_name: z.string().optional(),
+    nb_personnes: z.number().int().optional(),
+    group_category: z.string().optional(),
+    service_type: z.string().optional(),
+    preferences: z.string().nullable().optional(),
+    special_occasion: z.string().nullable().optional(),
+    original_date: z.string().nullable().optional(),
+    original_time: z.string().nullable().optional(),
+    modification_reason: z.string().nullable().optional(),
+    cancellation_reason: z.string().nullable().optional(),
+    cancellation_time: z.string().nullable().optional(),
+    client_name: z.string().nullable().optional(),
+    client_email: z.string().nullable().optional(),
+    client_mood: z.string().nullable().optional(),
+    is_returning_client: z.boolean().nullable().optional(),
+    booking_confidence: z.number().int().min(0).max(100).optional(),
+    questions_asked: z.array(z.string()).optional(),
+    objections: z.array(z.string()).optional(),
+    keywords: z.array(z.string()).optional(),
+    pain_points: z.array(z.string()).optional(),
+    compliments: z.array(z.string()).optional(),
+    upsell_accepted: z.boolean().nullable().optional(),
+    competitor_mentioned: z.boolean().optional(),
+    language_detected: z.string().optional(),
+    call_quality: z.string().optional(),
+    calendar_id: z.string().nullable().optional(),
+    timezone: z.string().optional(),
+    recording_url: z.string().nullable().optional(),
+  }).passthrough().optional(), // passthrough allows additional unknown fields
 });
 
 export type N8nCallWebhookPayload = z.infer<typeof n8nCallWebhookSchema>;
