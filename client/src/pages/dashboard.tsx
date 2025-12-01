@@ -563,11 +563,17 @@ export default function Dashboard() {
                       <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
                         Téléphone
                       </th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground hidden md:table-cell">
+                        Type
+                      </th>
                       <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
                         Durée
                       </th>
                       <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">
                         Statut
+                      </th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground hidden lg:table-cell">
+                        Détails RDV
                       </th>
                       <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">
                         Action
@@ -604,6 +610,18 @@ export default function Dashboard() {
                           <td className="py-4 px-4">
                             <div className="text-sm font-mono">{call.phoneNumber}</div>
                           </td>
+                          <td className="py-4 px-4 hidden md:table-cell">
+                            {call.eventType ? (
+                              <Badge variant="outline" className="text-xs capitalize">
+                                {call.eventType === 'reservation' ? 'Réservation' : 
+                                 call.eventType === 'information' ? 'Info' :
+                                 call.eventType === 'complaint' ? 'Réclamation' :
+                                 call.eventType === 'other' ? 'Autre' : call.eventType}
+                              </Badge>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">-</span>
+                            )}
+                          </td>
                           <td className="py-4 px-4">
                             <div className="text-sm">{formatDuration(call.duration)}</div>
                           </td>
@@ -612,6 +630,29 @@ export default function Dashboard() {
                               <StatusIcon className="w-3 h-3" />
                               {config?.label || call.status}
                             </Badge>
+                          </td>
+                          <td className="py-4 px-4 hidden lg:table-cell">
+                            {(call.status === 'completed' || call.conversionResult === 'converted') && call.appointmentDate ? (
+                              <div className="space-y-1">
+                                <div className="text-xs font-medium">
+                                  {format(new Date(call.appointmentDate), 'dd/MM HH:mm', { locale: fr })}
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  {call.nbPersonnes && (
+                                    <Badge variant="secondary" className="text-xs px-1.5 py-0">
+                                      {call.nbPersonnes} pers.
+                                    </Badge>
+                                  )}
+                                  {call.serviceType && (
+                                    <Badge variant="outline" className="text-xs px-1.5 py-0 capitalize">
+                                      {call.serviceType}
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">-</span>
+                            )}
                           </td>
                           <td className="py-4 px-4 text-right">
                             <Button

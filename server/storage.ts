@@ -417,13 +417,32 @@ export class DatabaseStorage implements IStorage {
       .where(and(...conditions, eq(calls.status, 'active')));
     const activeCalls = Number(activeResult[0]?.count || 0);
 
-    // Conversion rate (completed calls / total calls)
-    const completedResult = await db
+    // Conversion rate - Combines both N8N conversion_result and legacy status data
+    // Counts: 1) Calls with conversion_result = 'converted' (N8N data)
+    //         2) Calls with status = 'completed' but NO conversion_result set (legacy data)
+    // This ensures we don't undercount during mixed data scenarios
+    
+    // Count calls explicitly converted via N8N
+    const convertedResult = await db
       .select({ count: count() })
       .from(calls)
-      .where(and(...conditions, eq(calls.status, 'completed')));
-    const completedCalls = Number(completedResult[0]?.count || 0);
-    const conversionRate = totalCalls > 0 ? (completedCalls / totalCalls) * 100 : 0;
+      .where(and(...conditions, eq(calls.conversionResult, 'converted')));
+    const convertedCalls = Number(convertedResult[0]?.count || 0);
+    
+    // Count legacy completed calls that don't have conversion_result set
+    const legacyCompletedResult = await db
+      .select({ count: count() })
+      .from(calls)
+      .where(and(
+        ...conditions, 
+        eq(calls.status, 'completed'),
+        sql`${calls.conversionResult} IS NULL OR ${calls.conversionResult} = ''`
+      ));
+    const legacyCompletedCalls = Number(legacyCompletedResult[0]?.count || 0);
+    
+    // Total successful calls = N8N converted + legacy completed (no overlap)
+    const successfulCalls = convertedCalls + legacyCompletedCalls;
+    const conversionRate = totalCalls > 0 ? (successfulCalls / totalCalls) * 100 : 0;
 
     // Average duration (only for completed calls)
     const durationResult = await db
@@ -439,8 +458,8 @@ export class DatabaseStorage implements IStorage {
     // Hours saved: totalCalls × 5 minutes / 60
     const hoursSaved = (totalCalls * MINUTES_PER_CALL) / 60;
     
-    // Estimated revenue: completedCalls (appointments) × average client value
-    const estimatedRevenue = completedCalls * AVERAGE_CLIENT_VALUE;
+    // Estimated revenue: successful conversions × average client value
+    const estimatedRevenue = successfulCalls * AVERAGE_CLIENT_VALUE;
 
     return {
       totalCalls,
