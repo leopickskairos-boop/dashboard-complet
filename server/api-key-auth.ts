@@ -12,24 +12,28 @@ import { isValidApiKeyFormat, verifyApiKey } from "./api-key";
 export async function requireApiKey(req: Request, res: Response, next: NextFunction) {
   try {
     const authHeader = req.headers.authorization;
+    let apiKey: string | null = null;
 
-    if (!authHeader) {
-      return res.status(401).json({ 
-        error: "Missing Authorization header",
-        message: "Veuillez fournir une clé API dans le header Authorization: Bearer YOUR_API_KEY" 
-      });
+    // Try to get API key from Authorization header first
+    if (authHeader) {
+      const parts = authHeader.split(" ");
+      if (parts.length === 2 && parts[0] === "Bearer") {
+        apiKey = parts[1];
+      }
+    }
+    
+    // Fallback: Try to get API key from request body (N8N sends it as dashboard_api_key)
+    if (!apiKey && req.body && req.body.dashboard_api_key) {
+      apiKey = req.body.dashboard_api_key;
+      console.log("🔑 API Key from body (dashboard_api_key)");
     }
 
-    // Extract Bearer token
-    const parts = authHeader.split(" ");
-    if (parts.length !== 2 || parts[0] !== "Bearer") {
+    if (!apiKey) {
       return res.status(401).json({ 
-        error: "Invalid Authorization format",
-        message: "Format attendu: Authorization: Bearer YOUR_API_KEY" 
+        error: "Missing API key",
+        message: "Veuillez fournir une clé API via Authorization: Bearer YOUR_API_KEY ou dashboard_api_key dans le body" 
       });
     }
-
-    const apiKey = parts[1];
 
     // Validate API key format
     if (!isValidApiKeyFormat(apiKey)) {
