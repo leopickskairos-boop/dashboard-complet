@@ -5,6 +5,7 @@ import {
   notifications,
   notificationPreferences,
   monthlyReports,
+  speedaiClients,
   type User, 
   type InsertUser, 
   type Call, 
@@ -14,7 +15,9 @@ import {
   type NotificationPreferences,
   type InsertNotificationPreferences,
   type MonthlyReport,
-  type InsertMonthlyReport
+  type InsertMonthlyReport,
+  type SpeedaiClient,
+  type InsertSpeedaiClient
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, desc, sql, count, isNotNull } from "drizzle-orm";
@@ -112,6 +115,15 @@ export interface IStorage {
   createMonthlyReport(report: InsertMonthlyReport): Promise<MonthlyReport>;
   getUsersForMonthlyReportGeneration(): Promise<User[]>;
   getUsersWithExpiringTrials(): Promise<User[]>;
+  
+  // SpeedAI Clients management (by agent_id)
+  getSpeedaiClientByAgentId(agentId: string): Promise<SpeedaiClient | undefined>;
+  getAllSpeedaiClients(): Promise<SpeedaiClient[]>;
+  createOrUpdateSpeedaiClient(agentId: string, data?: Partial<InsertSpeedaiClient>): Promise<SpeedaiClient>;
+  getCallsByAgentId(agentId: string, filters?: {
+    month?: number;
+    year?: number;
+  }): Promise<Call[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -813,6 +825,72 @@ export class DatabaseStorage implements IStorage {
       lastActivity,
       healthStatus,
     };
+  }
+
+  // ===== SpeedAI Clients Management =====
+  
+  async getSpeedaiClientByAgentId(agentId: string): Promise<SpeedaiClient | undefined> {
+    const [client] = await db
+      .select()
+      .from(speedaiClients)
+      .where(eq(speedaiClients.agentId, agentId));
+    return client || undefined;
+  }
+
+  async getAllSpeedaiClients(): Promise<SpeedaiClient[]> {
+    return await db
+      .select()
+      .from(speedaiClients)
+      .orderBy(desc(speedaiClients.lastCallAt));
+  }
+
+  async createOrUpdateSpeedaiClient(agentId: string, data?: Partial<InsertSpeedaiClient>): Promise<SpeedaiClient> {
+    const existing = await this.getSpeedaiClientByAgentId(agentId);
+    const now = new Date();
+    
+    if (existing) {
+      // Update existing client
+      const [updated] = await db
+        .update(speedaiClients)
+        .set({
+          ...data,
+          lastCallAt: now,
+          updatedAt: now,
+        })
+        .where(eq(speedaiClients.agentId, agentId))
+        .returning();
+      return updated;
+    } else {
+      // Create new client
+      const [created] = await db
+        .insert(speedaiClients)
+        .values({
+          agentId,
+          firstCallAt: now,
+          lastCallAt: now,
+          ...data,
+        })
+        .returning();
+      return created;
+    }
+  }
+
+  async getCallsByAgentId(agentId: string, filters?: { month?: number; year?: number }): Promise<Call[]> {
+    let query = db.select().from(calls).where(eq(calls.agentId, agentId));
+    
+    // Apply month/year filter if provided
+    if (filters?.month && filters?.year) {
+      const startDate = new Date(filters.year, filters.month - 1, 1);
+      const endDate = new Date(filters.year, filters.month, 0, 23, 59, 59, 999);
+      
+      const allCalls = await query.orderBy(desc(calls.startTime));
+      return allCalls.filter(call => {
+        const callDate = new Date(call.startTime);
+        return callDate >= startDate && callDate <= endDate;
+      });
+    }
+    
+    return await query.orderBy(desc(calls.startTime));
   }
 }
 

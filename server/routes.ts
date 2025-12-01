@@ -798,37 +798,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ===== N8N REPORT DATA EXTRACTION API =====
   // This endpoint is used by N8N to extract all client data for PDF report generation
+  // Queries by agent_id (SpeedAI client identifier)
   app.get(
-    "/api/n8n/client-report-data/:clientId",
+    "/api/n8n/client-report-data/:agentId",
     async (req, res) => {
       try {
         const apiKey = req.headers.authorization?.replace("Bearer ", "");
-        const { clientId } = req.params;
+        const { agentId } = req.params;
         const { month, year } = req.query;
         
-        // Validate API key (admin or client's own key)
+        // Validate API key
         if (!apiKey) {
           return res.status(401).json({ error: "API key required" });
         }
         
-        // Get user by API key
+        // Get user by API key (must be admin for this endpoint)
         const authenticatedUser = await authenticateByApiKey(apiKey);
         if (!authenticatedUser) {
           return res.status(401).json({ error: "Invalid API key" });
         }
         
-        // Check authorization: admin can access any client, users can only access their own
+        // Only admins can access client report data
         const isAdmin = authenticatedUser.role === "admin";
-        const isOwnData = authenticatedUser.id === clientId;
-        
-        if (!isAdmin && !isOwnData) {
-          return res.status(403).json({ error: "Access denied" });
+        if (!isAdmin) {
+          return res.status(403).json({ error: "Admin access required" });
         }
         
-        // Get the target user
-        const targetUser = await storage.getUser(clientId);
-        if (!targetUser) {
-          return res.status(404).json({ error: "Client not found" });
+        // Get the SpeedAI client by agent_id
+        const speedaiClient = await storage.getSpeedaiClientByAgentId(agentId);
+        if (!speedaiClient) {
+          return res.status(404).json({ error: "SpeedAI client not found", agent_id: agentId });
         }
         
         // Determine the period (default: last month)
@@ -840,11 +839,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const startDate = new Date(reportYear, reportMonth - 1, 1);
         const endDate = new Date(reportYear, reportMonth, 0, 23, 59, 59, 999);
         
-        // Get all calls for this client in the period
-        const allCalls = await storage.getCalls(clientId, {});
-        const periodCalls = allCalls.filter((call) => {
-          const callDate = new Date(call.startTime);
-          return callDate >= startDate && callDate <= endDate;
+        // Get all calls for this agent_id in the period
+        const periodCalls = await storage.getCallsByAgentId(agentId, {
+          month: reportMonth,
+          year: reportYear,
         });
         
         // Calculate comprehensive metrics
@@ -925,10 +923,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Build complete report data
         const reportData = {
           client: {
-            id: targetUser.id,
-            email: targetUser.email,
-            companyName: (targetUser as any).companyName || null,
-            subscriptionStatus: targetUser.subscriptionStatus,
+            agentId: speedaiClient.agentId,
+            businessName: speedaiClient.businessName,
+            businessType: speedaiClient.businessType,
+            contactEmail: speedaiClient.contactEmail,
+            plan: speedaiClient.plan,
+            isActive: speedaiClient.isActive,
           },
           period: {
             month: reportMonth,
@@ -985,12 +985,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
           generatedAt: new Date().toISOString(),
         };
         
-        console.log(`[N8N Report Data] Exported data for client ${clientId} - Period: ${reportMonth}/${reportYear} - ${totalCalls} calls`);
+        console.log(`[N8N Report Data] Exported data for agent ${agentId} - Period: ${reportMonth}/${reportYear} - ${totalCalls} calls`);
         
         res.json(reportData);
       } catch (error) {
         console.error("Error generating N8N report data:", error);
         res.status(500).json({ error: "Failed to generate report data" });
+      }
+    },
+  );
+
+  // Get all SpeedAI clients (for N8N to know which clients to generate reports for)
+  app.get(
+    "/api/n8n/clients",
+    async (req, res) => {
+      try {
+        const apiKey = req.headers.authorization?.replace("Bearer ", "");
+        
+        if (!apiKey) {
+          return res.status(401).json({ error: "API key required" });
+        }
+        
+        const authenticatedUser = await authenticateByApiKey(apiKey);
+        if (!authenticatedUser) {
+          return res.status(401).json({ error: "Invalid API key" });
+        }
+        
+        // Only admins can list all clients
+        if (authenticatedUser.role !== "admin") {
+          return res.status(403).json({ error: "Admin access required" });
+        }
+        
+        const clients = await storage.getAllSpeedaiClients();
+        
+        res.json({
+          total: clients.length,
+          clients: clients.map(c => ({
+            agentId: c.agentId,
+            businessName: c.businessName,
+            businessType: c.businessType,
+            contactEmail: c.contactEmail,
+            plan: c.plan,
+            isActive: c.isActive,
+            firstCallAt: c.firstCallAt,
+            lastCallAt: c.lastCallAt,
+          })),
+        });
+      } catch (error) {
+        console.error("Error fetching SpeedAI clients:", error);
+        res.status(500).json({ error: "Failed to fetch clients" });
       }
     },
   );
@@ -2042,11 +2085,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const call = await storage.createCall(callData);
 
+      // Auto-create or update SpeedAI client record based on agent_id
+      if (data.agent_id) {
+        await storage.createOrUpdateSpeedaiClient(data.agent_id, {
+          businessName: meta.company_name || meta.agency_name,
+          businessType: meta.service_type,
+          contactEmail: meta.client_email, // Will be updated with most recent
+        });
+        console.log(`🏢 SpeedAI Client: Updated/Created for agent_id: ${data.agent_id}`);
+      }
+
       console.log(`✅ N8N Webhook: Appel créé avec succès - ID: ${call.id}`, {
         eventType: callData.eventType,
         conversionResult: callData.conversionResult,
         clientName: callData.clientName,
         hasTranscript: !!callData.transcript,
+        agentId: data.agent_id,
       });
 
       res.status(201).json({

@@ -92,6 +92,44 @@ export type User = typeof users.$inferSelect;
 // Public user type (without sensitive data)
 export type PublicUser = Omit<User, 'password' | 'verificationToken' | 'verificationTokenExpiry' | 'resetPasswordToken' | 'resetPasswordTokenExpiry'>;
 
+// SpeedAI Clients table - Each agent_id represents a SpeedAI client (business)
+export const speedaiClients = pgTable("speedai_clients", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  agentId: text("agent_id").notNull().unique(), // Unique identifier from N8N (e.g., agent_74b0dd455566d4141adc040641)
+  
+  // Business info
+  businessName: text("business_name"), // Name of the business (e.g., "Restaurant Le Gourmet")
+  businessType: text("business_type"), // Type of business (e.g., "restaurant", "medical", "hotel")
+  contactEmail: text("contact_email"),
+  contactPhone: text("contact_phone"),
+  
+  // Subscription info
+  plan: text("plan").default("basic"), // 'basic', 'standard', 'premium'
+  isActive: boolean("is_active").notNull().default(true),
+  
+  // Metadata
+  timezone: text("timezone").default("Europe/Paris"),
+  language: text("language").default("fr"),
+  notes: text("notes"),
+  
+  // Timestamps
+  firstCallAt: timestamp("first_call_at"), // When we received the first call for this client
+  lastCallAt: timestamp("last_call_at"), // When we received the last call
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Insert schema for speedai_clients
+export const insertSpeedaiClientSchema = createInsertSchema(speedaiClients).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Types for speedai_clients
+export type InsertSpeedaiClient = z.infer<typeof insertSpeedaiClientSchema>;
+export type SpeedaiClient = typeof speedaiClients.$inferSelect;
+
 // Calls table for tracking phone calls with rich N8N data
 export const calls = pgTable("calls", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
