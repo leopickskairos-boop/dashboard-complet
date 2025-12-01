@@ -452,7 +452,7 @@ export class DatabaseStorage implements IStorage {
     const averageDuration = Number(durationResult[0]?.avgDuration || 0);
 
     // Business metrics
-    const MINUTES_PER_CALL = 5;
+    const MINUTES_PER_CALL = 3;
     const AVERAGE_CLIENT_VALUE = 80;
     
     // Hours saved: totalCalls × 5 minutes / 60
