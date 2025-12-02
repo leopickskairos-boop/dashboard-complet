@@ -258,14 +258,14 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-12">
             {/* Total Calls - Clickable */}
             <Card 
-              className="group relative overflow-hidden cursor-pointer bg-[#131417] bg-gradient-to-br from-white/[0.02] to-transparent shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] transition-all duration-200 ease-out hover:translate-y-[-2px] hover:shadow-[0_4px_18px_rgba(0,0,0,0.35)]" 
+              className="group relative overflow-hidden cursor-pointer bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] transition-all duration-200 ease-out hover:translate-y-[-2px] hover:shadow-[0_0_16px_rgba(200,184,138,0.15)]" 
               onClick={() => setChartDialog('total')}
               data-testid="card-total-calls"
             >
               <CardContent className="relative p-7">
                 <div className="flex items-start justify-between mb-5">
                   <div className="p-2 rounded-xl bg-white/5 flex items-center justify-center">
-                    <Phone className="w-5 h-5 text-primary transition-opacity duration-150 hover:opacity-80" />
+                    <Phone className="w-5 h-5 text-[#C8B88A] transition-opacity duration-150 hover:opacity-80" />
                   </div>
                   <div className="flex items-center gap-2">
                     <Button
@@ -299,11 +299,11 @@ export default function Dashboard() {
             </Card>
 
             {/* Active Calls - Not Clickable */}
-            <Card className="relative overflow-hidden bg-[#131417] bg-gradient-to-br from-white/[0.02] to-transparent shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] transition-all duration-200 ease-out hover:translate-y-[-2px] hover:shadow-[0_4px_18px_rgba(0,0,0,0.35)]" data-testid="card-active-calls">
+            <Card className="relative overflow-hidden bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] transition-all duration-200 ease-out hover:translate-y-[-2px] hover:shadow-[0_0_16px_rgba(200,184,138,0.15)]" data-testid="card-active-calls">
               <CardContent className="relative p-7">
                 <div className="flex items-start justify-between mb-5">
                   <div className="p-2 rounded-xl bg-white/5 flex items-center justify-center">
-                    <Activity className="w-5 h-5 text-violet-400 transition-opacity duration-150 hover:opacity-80" />
+                    <Activity className="w-5 h-5 text-[#C8B88A] transition-opacity duration-150 hover:opacity-80" />
                   </div>
                 </div>
                 <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-2 font-medium">
@@ -320,14 +320,14 @@ export default function Dashboard() {
 
             {/* Conversion Rate - Clickable */}
             <Card 
-              className="group relative overflow-hidden cursor-pointer bg-[#131417] bg-gradient-to-br from-white/[0.02] to-transparent shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] transition-all duration-200 ease-out hover:translate-y-[-2px] hover:shadow-[0_4px_18px_rgba(0,0,0,0.35)]" 
+              className="group relative overflow-hidden cursor-pointer bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] transition-all duration-200 ease-out hover:translate-y-[-2px] hover:shadow-[0_0_16px_rgba(200,184,138,0.15)]" 
               onClick={() => setChartDialog('conversion')}
               data-testid="card-conversion-rate"
             >
               <CardContent className="relative p-7">
                 <div className="flex items-start justify-between mb-5">
                   <div className="p-2 rounded-xl bg-white/5 flex items-center justify-center">
-                    <TrendingUp className="w-5 h-5 text-emerald-400 transition-opacity duration-150 hover:opacity-80" />
+                    <TrendingUp className="w-5 h-5 text-[#C8B88A] transition-opacity duration-150 hover:opacity-80" />
                   </div>
                   <div className="flex items-center gap-2">
                     <Button
@@ -362,14 +362,14 @@ export default function Dashboard() {
 
             {/* Average Duration - Clickable */}
             <Card 
-              className="group relative overflow-hidden cursor-pointer bg-[#131417] bg-gradient-to-br from-white/[0.02] to-transparent shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] transition-all duration-200 ease-out hover:translate-y-[-2px] hover:shadow-[0_4px_18px_rgba(0,0,0,0.35)]" 
+              className="group relative overflow-hidden cursor-pointer bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] transition-all duration-200 ease-out hover:translate-y-[-2px] hover:shadow-[0_0_16px_rgba(200,184,138,0.15)]" 
               onClick={() => setChartDialog('duration')}
               data-testid="card-average-duration"
             >
               <CardContent className="relative p-7">
                 <div className="flex items-start justify-between mb-5">
                   <div className="p-2 rounded-xl bg-white/5 flex items-center justify-center">
-                    <Clock className="w-5 h-5 text-cyan-400 transition-opacity duration-150 hover:opacity-80" />
+                    <Clock className="w-5 h-5 text-[#C8B88A] transition-opacity duration-150 hover:opacity-80" />
                   </div>
                   <div className="flex items-center gap-2">
                     <Button
@@ -403,11 +403,11 @@ export default function Dashboard() {
             </Card>
 
             {/* Hours Saved - Not Clickable */}
-            <Card className="relative overflow-hidden bg-[#131417] bg-gradient-to-br from-white/[0.02] to-transparent shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] transition-all duration-200 ease-out hover:translate-y-[-2px] hover:shadow-[0_4px_18px_rgba(0,0,0,0.35)]" data-testid="card-hours-saved">
+            <Card className="relative overflow-hidden bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] transition-all duration-200 ease-out hover:translate-y-[-2px] hover:shadow-[0_0_16px_rgba(200,184,138,0.15)]" data-testid="card-hours-saved">
               <CardContent className="relative p-7">
                 <div className="flex items-start justify-between mb-5">
                   <div className="p-2 rounded-xl bg-white/5 flex items-center justify-center">
-                    <Timer className="w-5 h-5 text-emerald-400 transition-opacity duration-150 hover:opacity-80" />
+                    <Timer className="w-5 h-5 text-[#C8B88A] transition-opacity duration-150 hover:opacity-80" />
                   </div>
                 </div>
                 <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-2 font-medium">
@@ -423,11 +423,11 @@ export default function Dashboard() {
             </Card>
 
             {/* Estimated Revenue - Not Clickable */}
-            <Card className="relative overflow-hidden bg-[#131417] bg-gradient-to-br from-white/[0.02] to-transparent shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] transition-all duration-200 ease-out hover:translate-y-[-2px] hover:shadow-[0_4px_18px_rgba(0,0,0,0.35)]" data-testid="card-estimated-revenue">
+            <Card className="relative overflow-hidden bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] transition-all duration-200 ease-out hover:translate-y-[-2px] hover:shadow-[0_0_16px_rgba(200,184,138,0.15)]" data-testid="card-estimated-revenue">
               <CardContent className="relative p-7">
                 <div className="flex items-start justify-between mb-5">
                   <div className="p-2 rounded-xl bg-white/5 flex items-center justify-center">
-                    <Euro className="w-5 h-5 text-amber-400 transition-opacity duration-150 hover:opacity-80" />
+                    <Euro className="w-5 h-5 text-[#C8B88A] transition-opacity duration-150 hover:opacity-80" />
                   </div>
                 </div>
                 <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-2 font-medium">
@@ -437,7 +437,7 @@ export default function Dashboard() {
                   <div className="text-[28px] font-semibold tracking-tight" data-testid="stat-estimated-revenue">
                     {formatCurrency(stats?.estimatedRevenue)}
                   </div>
-                  <div className="flex items-center gap-1 text-emerald-400 text-xs font-medium">
+                  <div className="flex items-center gap-1 text-[#C8B88A] text-xs font-medium">
                     <TrendingUp className="w-3.5 h-3.5 transition-opacity duration-150 hover:opacity-80" />
                   </div>
                 </div>
@@ -447,12 +447,12 @@ export default function Dashboard() {
         )}
 
         {/* AI Insights & Trends Section - Premium Design */}
-        <Card className="mb-12 relative overflow-hidden border-white/[0.08]">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.04] via-transparent to-violet-500/[0.02]" />
+        <Card className="mb-12 relative overflow-hidden border-[#C8B88A]/10">
+          <div className="absolute inset-0 bg-gradient-to-br from-[#C8B88A]/[0.04] via-transparent to-[#A89D78]/[0.02]" />
           <CardHeader className="relative">
             <div className="flex items-center gap-4">
-              <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center">
-                <Brain className="w-5 h-5 text-primary" />
+              <div className="w-11 h-11 rounded-xl bg-[#C8B88A]/10 flex items-center justify-center">
+                <Brain className="w-5 h-5 text-[#C8B88A]" />
               </div>
               <div>
                 <CardTitle className="text-lg font-semibold tracking-tight">Insights IA & Tendances</CardTitle>
