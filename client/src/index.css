@@ -386,3 +386,96 @@
   animation: shimmer 6s linear infinite;
   background-size: 200% 100%;
 }
+
+/* SpeedAI Premium Pulse Slow Animation - Light Line Effect */
+@keyframes pulse-slow {
+  0% { opacity: 0.2; }
+  50% { opacity: 0.5; }
+  100% { opacity: 0.2; }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 3s ease-in-out infinite;
+}
+
+/* SpeedAI Premium Glow Animation - AI Light Effect */
+@keyframes glow {
+  from { 
+    opacity: 0.6; 
+    filter: drop-shadow(0 0 2px rgba(200, 184, 138, 0.2)); 
+  }
+  to { 
+    opacity: 1; 
+    filter: drop-shadow(0 0 6px rgba(200, 184, 138, 0.4)); 
+  }
+}
+
+.animate-glow {
+  animation: glow 4s ease-in-out infinite alternate;
+}
+
+/* SpeedAI Premium Card with Light Line */
+.premium-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.premium-card::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(200, 184, 138, 0.4), transparent);
+  animation: pulse-slow 3s ease-in-out infinite;
+}
+
+/* SpeedAI Premium AI Halo */
+.ai-halo {
+  position: relative;
+}
+
+.ai-halo::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  height: 300px;
+  background: rgba(200, 184, 138, 0.2);
+  filter: blur(120px);
+  opacity: 0.2;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* SpeedAI Premium Modal with Top Light */
+.premium-modal {
+  position: relative;
+  overflow: hidden;
+}
+
+.premium-modal::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.05), transparent);
+  opacity: 0.05;
+  pointer-events: none;
+}
+
+.premium-modal::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 300px;
+  height: 120px;
+  background: rgba(200, 184, 138, 0.15);
+  filter: blur(80px);
+  pointer-events: none;
+}
