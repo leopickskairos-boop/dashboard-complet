@@ -477,16 +477,16 @@ export default function Dashboard() {
                 {aiInsights.map((insight, index) => {
                   const Icon = iconMap[insight.icon] || Brain;
                   const levelConfig = {
-                    good: { dot: 'bg-emerald-400', borderClass: 'border-emerald-500/20', bgClass: 'bg-[#15171C]' },
-                    average: { dot: 'bg-amber-400', borderClass: 'border-amber-500/20', bgClass: 'bg-[#15171C]' },
-                    warning: { dot: 'bg-rose-400', borderClass: 'border-rose-500/20', bgClass: 'bg-[#15171C]' },
+                    good: { dot: 'bg-emerald-400', borderClass: 'border-white/5', bgClass: 'bg-[#131417]' },
+                    average: { dot: 'bg-amber-400', borderClass: 'border-white/5', bgClass: 'bg-[#131417]' },
+                    warning: { dot: 'bg-rose-400', borderClass: 'border-white/5', bgClass: 'bg-[#131417]' },
                   };
-                  const config = insight.level ? levelConfig[insight.level as keyof typeof levelConfig] : { dot: 'bg-primary', borderClass: 'border-white/[0.08]', bgClass: 'bg-[#15171C]' };
+                  const config = insight.level ? levelConfig[insight.level as keyof typeof levelConfig] : { dot: 'bg-primary', borderClass: 'border-white/5', bgClass: 'bg-[#131417]' };
                   
                   return (
                     <div 
                       key={index}
-                      className={`group relative p-5 rounded-2xl ${config.bgClass} border ${config.borderClass} transition-all duration-200 hover:border-white/[0.12] shadow-inner`}
+                      className={`group relative p-6 rounded-2xl ${config.bgClass} bg-gradient-to-br from-white/[0.02] to-transparent border ${config.borderClass} transition-all duration-200 hover:border-white/[0.12]`}
                       data-testid={`recommendation-${index}`}
                     >
                       <div className="flex items-start gap-4">
