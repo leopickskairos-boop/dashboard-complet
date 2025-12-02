@@ -455,8 +455,8 @@ export default function Dashboard() {
                 <Brain className="w-5 h-5 text-[#C8B88A]" />
               </div>
               <div>
-                <CardTitle className="text-lg font-semibold tracking-tight">Insights IA & Tendances</CardTitle>
-                <CardDescription className="text-[13px]">
+                <CardTitle className="text-[20px] font-semibold tracking-tight text-white/95">Insights IA & Tendances</CardTitle>
+                <CardDescription className="text-[14px] leading-relaxed text-[#D6D7DD]">
                   Recommandations intelligentes basées sur vos données réelles
                 </CardDescription>
               </div>
@@ -498,11 +498,11 @@ export default function Dashboard() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-2">
                             <div className={`w-2 h-2 rounded-full ${config.dot}`} />
-                            <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">
+                            <span className="text-[11px] uppercase tracking-[0.18em] font-medium text-[#B8BCC6]/70">
                               {insight.type === 'performance' ? 'Performance' : 'Business'}
                             </span>
                           </div>
-                          <p className="text-[13px] text-foreground/80 leading-relaxed">
+                          <p className="text-[15px] font-medium leading-relaxed text-[#E5E5E5]">
                             {insight.text}
                           </p>
                         </div>
@@ -520,8 +520,8 @@ export default function Dashboard() {
           <CardHeader className="pb-4">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div>
-                <CardTitle className="text-lg font-semibold tracking-tight">Liste des appels</CardTitle>
-                <CardDescription className="text-[13px]">
+                <CardTitle className="text-[20px] font-semibold tracking-tight text-white/95">Liste des appels</CardTitle>
+                <CardDescription className="text-[14px] leading-relaxed text-[#D6D7DD]">
                   Historique de tous vos appels enregistrés
                 </CardDescription>
               </div>
@@ -578,25 +578,25 @@ export default function Dashboard() {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-white/[0.06]">
-                      <th className="text-left py-3 px-6 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                      <th className="text-left py-3 px-6 text-[11px] uppercase tracking-[0.18em] font-medium text-[#B8BCC6]/70">
                         Date & Heure
                       </th>
-                      <th className="text-left py-3 px-4 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                      <th className="text-left py-3 px-4 text-[11px] uppercase tracking-[0.18em] font-medium text-[#B8BCC6]/70">
                         Téléphone
                       </th>
-                      <th className="text-left py-3 px-4 text-[11px] font-medium text-muted-foreground uppercase tracking-wider hidden md:table-cell">
+                      <th className="text-left py-3 px-4 text-[11px] uppercase tracking-[0.18em] font-medium text-[#B8BCC6]/70 hidden md:table-cell">
                         Type
                       </th>
-                      <th className="text-left py-3 px-4 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                      <th className="text-left py-3 px-4 text-[11px] uppercase tracking-[0.18em] font-medium text-[#B8BCC6]/70">
                         Durée
                       </th>
-                      <th className="text-left py-3 px-4 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                      <th className="text-left py-3 px-4 text-[11px] uppercase tracking-[0.18em] font-medium text-[#B8BCC6]/70">
                         Statut
                       </th>
-                      <th className="text-left py-3 px-4 text-[11px] font-medium text-muted-foreground uppercase tracking-wider hidden lg:table-cell">
+                      <th className="text-left py-3 px-4 text-[11px] uppercase tracking-[0.18em] font-medium text-[#B8BCC6]/70 hidden lg:table-cell">
                         Détails RDV
                       </th>
-                      <th className="text-right py-3 px-6 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                      <th className="text-right py-3 px-6 text-[11px] uppercase tracking-[0.18em] font-medium text-[#B8BCC6]/70">
                         Action
                       </th>
                     </tr>
@@ -628,33 +628,33 @@ export default function Dashboard() {
                           data-testid={`call-row-${call.id}`}
                         >
                           <td className="py-5 px-6">
-                            <div className="text-[13px] font-medium">
+                            <div className="text-[14px] font-medium text-[#E3E4EA]">
                               {format(new Date(call.startTime), 'dd MMM yyyy', { locale: fr })}
                             </div>
-                            <div className="text-[12px] text-muted-foreground">
+                            <div className="text-[12px] leading-snug text-[#B8BCC6]/80">
                               {format(new Date(call.startTime), 'HH:mm', { locale: fr })}
                             </div>
                           </td>
                           <td className="py-5 px-4">
-                            <div className="text-[13px] font-mono text-foreground/80">{call.phoneNumber}</div>
+                            <div className="text-[14px] font-medium text-[#E3E4EA]">{call.phoneNumber}</div>
                           </td>
                           <td className="py-5 px-4 hidden md:table-cell">
                             {call.eventType ? (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-white/[0.06] text-foreground/70 border border-white/[0.08]">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium tracking-tight bg-white/[0.06] text-[#E3E4EA] border border-white/[0.08]">
                                 {call.eventType === 'reservation' ? 'Réservation' : 
                                  call.eventType === 'information' ? 'Info' :
                                  call.eventType === 'complaint' ? 'Réclamation' :
                                  call.eventType === 'other' ? 'Autre' : call.eventType}
                               </span>
                             ) : (
-                              <span className="text-[12px] text-muted-foreground">-</span>
+                              <span className="text-[13px] text-[#8E919B]">-</span>
                             )}
                           </td>
                           <td className="py-5 px-4">
-                            <div className="text-[13px] text-foreground/80">{formatDuration(call.duration)}</div>
+                            <div className="text-[14px] font-medium text-[#E3E4EA]">{formatDuration(call.duration)}</div>
                           </td>
                           <td className="py-5 px-4">
-                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border ${statusColors[call.status] || 'bg-muted text-muted-foreground border-white/[0.08]'}`}>
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12px] font-medium tracking-tight border ${statusColors[call.status] || 'bg-muted text-muted-foreground border-white/[0.08]'}`}>
                               <StatusIcon className="w-3 h-3" />
                               {config?.label || call.status}
                             </span>
@@ -662,7 +662,7 @@ export default function Dashboard() {
                           <td className="py-5 px-4 hidden lg:table-cell">
                             {(call.status === 'completed' || call.conversionResult === 'converted') && call.appointmentDate ? (
                               <div className="space-y-1.5">
-                                <div className="text-[12px] font-medium text-foreground/80">
+                                <div className="text-[14px] font-medium text-[#E3E4EA]">
                                   {format(new Date(call.appointmentDate), 'dd/MM HH:mm', { locale: fr })}
                                 </div>
                                 <div className="flex items-center gap-1.5">
@@ -714,15 +714,15 @@ export default function Dashboard() {
         <Dialog open={!!selectedCall} onOpenChange={() => setSelectedCall(null)}>
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" data-testid="dialog-call-detail">
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
+              <DialogTitle className="text-[24px] font-semibold tracking-tight text-white flex items-center gap-2">
                 Détail de l'appel
                 {selectedCall?.eventType && (
-                  <Badge variant="outline" className="text-xs font-normal">
+                  <Badge variant="outline" className="text-[12px] font-medium tracking-tight">
                     {selectedCall.eventType}
                   </Badge>
                 )}
               </DialogTitle>
-              <DialogDescription>
+              <DialogDescription className="text-[14px] leading-relaxed text-[#D6D7DD]">
                 Informations complètes sur cet appel
               </DialogDescription>
             </DialogHeader>
@@ -731,20 +731,20 @@ export default function Dashboard() {
                 {/* Basic Info Row */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div>
-                    <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                    <div className="text-[11px] uppercase tracking-[0.18em] font-medium text-[#B8BCC6]/70 mb-1">
                       Téléphone
                     </div>
-                    <div className="text-sm font-mono">{selectedCall.phoneNumber}</div>
+                    <div className="text-[16px] font-medium text-white">{selectedCall.phoneNumber}</div>
                   </div>
                   <div>
-                    <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                    <div className="text-[11px] uppercase tracking-[0.18em] font-medium text-[#B8BCC6]/70 mb-1">
                       Statut
                     </div>
                     {(() => {
                       const config = statusConfig[selectedCall.status as keyof typeof statusConfig];
                       const StatusIcon = config?.icon || Phone;
                       return (
-                        <Badge variant={config?.variant || "outline"} className="gap-1">
+                        <Badge variant={config?.variant || "outline"} className="gap-1 text-[12px] font-medium tracking-tight">
                           <StatusIcon className="w-3 h-3" />
                           {config?.label || selectedCall.status}
                         </Badge>
@@ -752,16 +752,16 @@ export default function Dashboard() {
                     })()}
                   </div>
                   <div>
-                    <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                    <div className="text-[11px] uppercase tracking-[0.18em] font-medium text-[#B8BCC6]/70 mb-1">
                       Durée
                     </div>
-                    <div className="text-sm">{formatDuration(selectedCall.duration)}</div>
+                    <div className="text-[16px] font-medium text-white">{formatDuration(selectedCall.duration)}</div>
                   </div>
                   <div>
-                    <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                    <div className="text-[11px] uppercase tracking-[0.18em] font-medium text-[#B8BCC6]/70 mb-1">
                       Conversion
                     </div>
-                    <Badge variant={selectedCall.conversionResult === 'converted' ? 'default' : 'secondary'}>
+                    <Badge variant={selectedCall.conversionResult === 'converted' ? 'default' : 'secondary'} className="text-[12px] font-medium tracking-tight">
                       {selectedCall.conversionResult === 'converted' ? 'Converti' : selectedCall.conversionResult || 'N/A'}
                     </Badge>
                   </div>
@@ -769,48 +769,48 @@ export default function Dashboard() {
 
                 {/* Client Info - if available */}
                 {(selectedCall.clientName || selectedCall.clientEmail || selectedCall.agencyName) && (
-                  <div className="bg-blue-500/5 border border-blue-500/20 rounded-lg p-4">
-                    <div className="text-xs text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
+                  <div className="bg-[#C8B88A]/5 border border-[#C8B88A]/20 rounded-lg p-4">
+                    <div className="text-[11px] uppercase tracking-[0.18em] font-medium text-[#B8BCC6]/70 mb-3 flex items-center gap-2">
                       <Activity className="w-3 h-3" />
                       Informations client
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                       {selectedCall.clientName && (
                         <div>
-                          <div className="text-xs text-muted-foreground mb-1">Nom</div>
-                          <div className="text-sm font-medium">{selectedCall.clientName}</div>
+                          <div className="text-[11px] uppercase tracking-[0.18em] font-medium text-[#B8BCC6]/70 mb-1">Nom</div>
+                          <div className="text-[16px] font-medium text-white">{selectedCall.clientName}</div>
                         </div>
                       )}
                       {selectedCall.clientEmail && (
                         <div>
-                          <div className="text-xs text-muted-foreground mb-1">Email</div>
-                          <div className="text-sm font-mono text-xs">{selectedCall.clientEmail}</div>
+                          <div className="text-[11px] uppercase tracking-[0.18em] font-medium text-[#B8BCC6]/70 mb-1">Email</div>
+                          <div className="text-[14px] font-medium text-[#E3E4EA]">{selectedCall.clientEmail}</div>
                         </div>
                       )}
                       {selectedCall.clientMood && (
                         <div>
-                          <div className="text-xs text-muted-foreground mb-1">Humeur</div>
-                          <Badge variant={selectedCall.clientMood === 'positif' ? 'default' : selectedCall.clientMood === 'négatif' ? 'destructive' : 'secondary'}>
+                          <div className="text-[11px] uppercase tracking-[0.18em] font-medium text-[#B8BCC6]/70 mb-1">Humeur</div>
+                          <Badge variant={selectedCall.clientMood === 'positif' ? 'default' : selectedCall.clientMood === 'négatif' ? 'destructive' : 'secondary'} className="text-[12px] font-medium tracking-tight">
                             {selectedCall.clientMood}
                           </Badge>
                         </div>
                       )}
                       {selectedCall.agencyName && (
                         <div>
-                          <div className="text-xs text-muted-foreground mb-1">Établissement</div>
-                          <div className="text-sm">{selectedCall.agencyName}</div>
+                          <div className="text-[11px] uppercase tracking-[0.18em] font-medium text-[#B8BCC6]/70 mb-1">Établissement</div>
+                          <div className="text-[16px] font-medium text-white">{selectedCall.agencyName}</div>
                         </div>
                       )}
                       {selectedCall.nbPersonnes && (
                         <div>
-                          <div className="text-xs text-muted-foreground mb-1">Nb personnes</div>
-                          <div className="text-sm font-medium">{selectedCall.nbPersonnes}</div>
+                          <div className="text-[11px] uppercase tracking-[0.18em] font-medium text-[#B8BCC6]/70 mb-1">Nb personnes</div>
+                          <div className="text-[16px] font-medium text-white">{selectedCall.nbPersonnes}</div>
                         </div>
                       )}
                       {selectedCall.serviceType && (
                         <div>
-                          <div className="text-xs text-muted-foreground mb-1">Type de service</div>
-                          <Badge variant="outline">{selectedCall.serviceType}</Badge>
+                          <div className="text-[11px] uppercase tracking-[0.18em] font-medium text-[#B8BCC6]/70 mb-1">Type de service</div>
+                          <Badge variant="outline" className="text-[12px] font-medium tracking-tight">{selectedCall.serviceType}</Badge>
                         </div>
                       )}
                     </div>
@@ -820,18 +820,18 @@ export default function Dashboard() {
                 {/* Timing Info */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                    <div className="text-[11px] uppercase tracking-[0.18em] font-medium text-[#B8BCC6]/70 mb-1">
                       Début d'appel
                     </div>
-                    <div className="text-sm">
+                    <div className="text-[16px] font-medium text-white">
                       {format(new Date(selectedCall.startTime), "dd MMMM yyyy 'à' HH:mm", { locale: fr })}
                     </div>
                   </div>
                   <div>
-                    <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                    <div className="text-[11px] uppercase tracking-[0.18em] font-medium text-[#B8BCC6]/70 mb-1">
                       Fin d'appel
                     </div>
-                    <div className="text-sm">
+                    <div className="text-[16px] font-medium text-white">
                       {selectedCall.endTime 
                         ? format(new Date(selectedCall.endTime), "dd MMMM yyyy 'à' HH:mm", { locale: fr })
                         : "En cours"}
@@ -842,12 +842,12 @@ export default function Dashboard() {
                 {/* Tags */}
                 {selectedCall.tags && selectedCall.tags.length > 0 && (
                   <div>
-                    <div className="text-xs text-muted-foreground uppercase tracking-wide mb-2">
+                    <div className="text-[11px] uppercase tracking-[0.18em] font-medium text-[#B8BCC6]/70 mb-2">
                       Tags
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {selectedCall.tags.map((tag, idx) => (
-                        <Badge key={idx} variant="outline" className="text-xs">
+                        <Badge key={idx} variant="outline" className="text-[11px] font-medium tracking-tight text-[#E3E4EA]">
                           {tag}
                         </Badge>
                       ))}
@@ -858,10 +858,10 @@ export default function Dashboard() {
                 {/* Summary */}
                 {selectedCall.summary && (
                   <div>
-                    <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                    <div className="text-[16px] font-medium tracking-tight text-white/90 mb-2">
                       Résumé IA de l'appel
                     </div>
-                    <div className="text-sm bg-muted p-4 rounded-lg">
+                    <div className="text-[15px] font-medium leading-relaxed text-[#E5E5E5] bg-muted p-4 rounded-lg">
                       {selectedCall.summary}
                     </div>
                   </div>
@@ -870,10 +870,10 @@ export default function Dashboard() {
                 {/* Transcript */}
                 {selectedCall.transcript && (
                   <div>
-                    <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                    <div className="text-[16px] font-medium tracking-tight text-white/90 mb-2">
                       Transcription complète
                     </div>
-                    <div className="text-xs bg-muted/50 p-4 rounded-lg max-h-40 overflow-y-auto font-mono whitespace-pre-wrap">
+                    <div className="font-mono text-[13px] leading-6 text-[#B8BCC6] bg-muted/50 p-4 rounded-lg max-h-40 overflow-y-auto whitespace-pre-wrap">
                       {selectedCall.transcript}
                     </div>
                   </div>
@@ -881,24 +881,24 @@ export default function Dashboard() {
 
                 {/* Appointment Info */}
                 {selectedCall.status === 'completed' && selectedCall.appointmentDate && (
-                  <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
+                  <div className="bg-[#C8B88A]/5 border border-[#C8B88A]/20 rounded-lg p-4">
                     <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                        <CheckCircle2 className="w-5 h-5 text-primary" />
+                      <div className="w-10 h-10 rounded-lg bg-[#C8B88A]/10 flex items-center justify-center shrink-0">
+                        <CheckCircle2 className="w-5 h-5 text-[#C8B88A]" />
                       </div>
                       <div className="flex-1">
-                        <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1.5">
+                        <div className="text-[11px] uppercase tracking-[0.18em] font-medium text-[#B8BCC6]/70 mb-1.5">
                           Date du rendez-vous
                         </div>
-                        <div className="text-base font-semibold">
+                        <div className="text-[18px] font-semibold text-white">
                           {format(new Date(selectedCall.appointmentDate), "EEEE dd MMMM yyyy 'à' HH:mm", { locale: fr })}
                         </div>
-                        <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-4 mt-2 text-[12px] leading-snug text-[#B8BCC6]/80">
                           {selectedCall.bookingDelayDays !== null && selectedCall.bookingDelayDays !== undefined && (
                             <span>Réservé {selectedCall.bookingDelayDays}j à l'avance</span>
                           )}
                           {selectedCall.isLastMinute && (
-                            <Badge variant="secondary" className="text-xs">Last minute</Badge>
+                            <Badge variant="secondary" className="text-[12px] font-medium tracking-tight">Last minute</Badge>
                           )}
                         </div>
                       </div>
@@ -911,36 +911,36 @@ export default function Dashboard() {
                   <div className="grid grid-cols-3 gap-4">
                     {selectedCall.bookingConfidence !== null && selectedCall.bookingConfidence !== undefined && (
                       <div>
-                        <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                        <div className="text-[11px] uppercase tracking-[0.18em] font-medium text-[#B8BCC6]/70 mb-1">
                           Confiance
                         </div>
                         <div className="flex items-center gap-2">
                           <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
                             <div 
-                              className="h-full bg-primary rounded-full transition-all"
+                              className="h-full bg-[#C8B88A] rounded-full transition-all"
                               style={{ width: `${selectedCall.bookingConfidence}%` }}
                             />
                           </div>
-                          <span className="text-xs font-medium">{selectedCall.bookingConfidence}%</span>
+                          <span className="text-[12px] font-medium text-white">{selectedCall.bookingConfidence}%</span>
                         </div>
                       </div>
                     )}
                     {selectedCall.callQuality && (
                       <div>
-                        <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                        <div className="text-[11px] uppercase tracking-[0.18em] font-medium text-[#B8BCC6]/70 mb-1">
                           Qualité
                         </div>
-                        <Badge variant={selectedCall.callQuality === 'fluide' ? 'default' : 'secondary'}>
+                        <Badge variant={selectedCall.callQuality === 'fluide' ? 'default' : 'secondary'} className="text-[12px] font-medium tracking-tight">
                           {selectedCall.callQuality}
                         </Badge>
                       </div>
                     )}
                     {selectedCall.disconnectionReason && (
                       <div>
-                        <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                        <div className="text-[11px] uppercase tracking-[0.18em] font-medium text-[#B8BCC6]/70 mb-1">
                           Fin d'appel
                         </div>
-                        <div className="text-xs text-muted-foreground">{selectedCall.disconnectionReason}</div>
+                        <div className="text-[14px] font-medium text-[#E3E4EA]">{selectedCall.disconnectionReason}</div>
                       </div>
                     )}
                   </div>
@@ -949,12 +949,12 @@ export default function Dashboard() {
                 {/* Keywords */}
                 {selectedCall.keywords && selectedCall.keywords.length > 0 && (
                   <div>
-                    <div className="text-xs text-muted-foreground uppercase tracking-wide mb-2">
+                    <div className="text-[11px] uppercase tracking-[0.18em] font-medium text-[#B8BCC6]/70 mb-2">
                       Mots-clés détectés
                     </div>
                     <div className="flex flex-wrap gap-1">
                       {selectedCall.keywords.map((kw, idx) => (
-                        <Badge key={idx} variant="secondary" className="text-xs">
+                        <Badge key={idx} variant="secondary" className="text-[11px] font-medium tracking-tight text-[#E3E4EA]">
                           {kw}
                         </Badge>
                       ))}
