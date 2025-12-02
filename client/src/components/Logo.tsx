@@ -1,5 +1,3 @@
-import { Phone } from "lucide-react";
-
 interface LogoProps {
   className?: string;
   showText?: boolean;
@@ -7,13 +5,10 @@ interface LogoProps {
 
 export function Logo({ className = "", showText = true }: LogoProps) {
   return (
-    <div className={`flex items-center gap-2 ${className}`}>
-      <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary">
-        <Phone className="w-6 h-6 text-primary-foreground" />
-      </div>
-      {showText && (
-        <span className="text-xl font-bold text-foreground">SpeedAI</span>
-      )}
+    <div className={`flex items-center ${className}`}>
+      <span className="text-[18px] font-semibold tracking-tight text-[#3A63F3] hover:opacity-90 transition-opacity duration-200">
+        SpeedAI
+      </span>
     </div>
   );
 }
