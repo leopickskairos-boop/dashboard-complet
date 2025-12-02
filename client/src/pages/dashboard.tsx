@@ -219,8 +219,8 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0B0C0D] to-[#0F1012] relative">
-      {/* AI Halo Effect */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-[#C8B88A]/20 blur-[120px] opacity-20 pointer-events-none" />
+      {/* Subtle neutral ambient glow - NO gold */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-white/5 blur-[120px] opacity-10 pointer-events-none" />
       
       <div className="max-w-screen-2xl mx-auto px-6 py-8 relative z-10">
         {/* Header - Premium Design */}
