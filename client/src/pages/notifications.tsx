@@ -146,8 +146,8 @@ export default function Notifications() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-[32px] font-semibold tracking-tight text-white" data-testid="text-page-title">Centre de notifications</h1>
-          <p className="text-[15px] font-medium leading-relaxed text-[#D6D7DD] mt-1">
+          <h1 className="text-3xl font-bold" data-testid="text-page-title">Centre de notifications</h1>
+          <p className="text-muted-foreground mt-1">
             Gérez vos notifications et préférences
           </p>
         </div>
@@ -165,18 +165,18 @@ export default function Notifications() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-[20px] font-semibold tracking-tight text-white flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2">
             <Filter className="h-5 w-5" />
             Filtres
           </CardTitle>
-          <CardDescription className="text-[14px] leading-relaxed text-[#D6D7DD]">
+          <CardDescription>
             Affinez vos notifications selon vos critères
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
-              <label className="text-[11px] uppercase tracking-[0.18em] font-medium text-[#B8BCC6]/70">Période</label>
+              <label className="text-sm font-medium">Période</label>
               <Select value={timeFilter} onValueChange={setTimeFilter}>
                 <SelectTrigger data-testid="select-time-filter">
                   <SelectValue />
@@ -193,7 +193,7 @@ export default function Notifications() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-[11px] uppercase tracking-[0.18em] font-medium text-[#B8BCC6]/70">Type</label>
+              <label className="text-sm font-medium">Type</label>
               <Select value={typeFilter} onValueChange={setTypeFilter}>
                 <SelectTrigger data-testid="select-type-filter">
                   <SelectValue />
@@ -214,7 +214,7 @@ export default function Notifications() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-[11px] uppercase tracking-[0.18em] font-medium text-[#B8BCC6]/70">Statut</label>
+              <label className="text-sm font-medium">Statut</label>
               <Select value={readFilter} onValueChange={setReadFilter}>
                 <SelectTrigger data-testid="select-read-filter">
                   <SelectValue />
@@ -232,15 +232,15 @@ export default function Notifications() {
 
       {isLoading ? (
         <Card>
-          <CardContent className="p-8 text-center text-[14px] font-medium text-[#B8BCC6]">
+          <CardContent className="p-8 text-center text-muted-foreground">
             Chargement des notifications...
           </CardContent>
         </Card>
       ) : notifications.length === 0 ? (
         <Card>
           <CardContent className="p-8 text-center">
-            <Bell className="h-12 w-12 mx-auto text-[#B8BCC6]/50 mb-4" />
-            <p className="text-[14px] font-medium text-[#B8BCC6]" data-testid="text-no-notifications">
+            <Bell className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <p className="text-muted-foreground" data-testid="text-no-notifications">
               Aucune notification trouvée
             </p>
           </CardContent>
@@ -272,18 +272,18 @@ export default function Notifications() {
                           )}
                         </div>
                         <h3 
-                          className="text-[18px] font-semibold tracking-tight text-white" 
+                          className="font-semibold text-lg" 
                           data-testid={`text-title-${notification.id}`}
                         >
                           {notification.title}
                         </h3>
                         <p 
-                          className="text-[14px] font-medium leading-relaxed text-[#D6D7DD] mt-1" 
+                          className="text-muted-foreground mt-1" 
                           data-testid={`text-message-${notification.id}`}
                         >
                           {notification.message}
                         </p>
-                        <p className="text-[12px] font-medium text-[#B8BCC6]/70 mt-2">
+                        <p className="text-xs text-muted-foreground mt-2">
                           {new Date(notification.createdAt).toLocaleString('fr-FR', {
                             day: 'numeric',
                             month: 'long',

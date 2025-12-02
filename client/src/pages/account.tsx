@@ -381,22 +381,22 @@ export default function Account() {
   return (
     <div className="container max-w-5xl mx-auto px-4 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
       {/* Breadcrumb Navigation */}
-      <nav className="flex items-center gap-1.5 sm:gap-2 text-[12px] sm:text-[13px] font-medium text-[#B8BCC6]/70" aria-label="Breadcrumb">
+      <nav className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground" aria-label="Breadcrumb">
         <Link href="/dashboard" data-testid="link-breadcrumb-dashboard">
-          <span className="hover:text-white flex items-center gap-1 cursor-pointer transition-colors">
+          <span className="hover:text-foreground flex items-center gap-1 cursor-pointer transition-colors">
             <Home className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             <span className="hidden sm:inline">Dashboard</span>
           </span>
         </Link>
         <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-        <span className="text-white font-medium">Mon compte</span>
+        <span className="text-foreground font-medium">Mon compte</span>
       </nav>
 
       {/* Header with back button */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex-1 min-w-0">
-          <h1 className="text-[28px] sm:text-[32px] font-semibold tracking-tight text-white">Mon compte</h1>
-          <p className="text-[14px] sm:text-[15px] font-medium leading-relaxed text-[#D6D7DD] mt-1.5 sm:mt-2 max-w-2xl">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Mon compte</h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-1.5 sm:mt-2 max-w-2xl">
             Gérez vos informations personnelles et votre abonnement
           </p>
         </div>
@@ -410,11 +410,11 @@ export default function Account() {
       {/* Account Information */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-[20px] font-semibold tracking-tight text-white flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2">
             <Mail className="h-5 w-5" />
             Informations du compte
           </CardTitle>
-          <CardDescription className="text-[14px] leading-relaxed text-[#D6D7DD]">
+          <CardDescription>
             Adresse email et statut de l'abonnement
           </CardDescription>
         </CardHeader>
@@ -423,8 +423,8 @@ export default function Account() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[11px] uppercase tracking-[0.18em] font-medium text-[#B8BCC6]/70">Adresse email</p>
-                <p className="text-[16px] font-medium text-white mt-1">{user?.email}</p>
+                <p className="text-sm font-medium">Adresse email</p>
+                <p className="text-sm text-muted-foreground">{user?.email}</p>
               </div>
               <Button
                 variant="outline"
@@ -508,7 +508,7 @@ export default function Account() {
           <div className="pt-4 border-t">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[11px] uppercase tracking-[0.18em] font-medium text-[#B8BCC6]/70">Statut de l'abonnement</p>
+                <p className="text-sm font-medium">Statut de l'abonnement</p>
                 <div className="mt-2">
                   {user?.subscriptionStatus === 'active' ? (
                     <Badge className="bg-green-500 hover:bg-green-600" data-testid="badge-subscription-active">
@@ -521,7 +521,7 @@ export default function Account() {
                   )}
                 </div>
                 {user?.subscriptionCurrentPeriodEnd && (
-                  <p className="text-[14px] font-medium text-[#D6D7DD] mt-2">
+                  <p className="text-sm text-muted-foreground mt-2">
                     Renouvellement le{' '}
                     {format(new Date(user.subscriptionCurrentPeriodEnd), 'dd MMMM yyyy', { locale: fr })}
                   </p>
@@ -535,11 +535,11 @@ export default function Account() {
       {/* Change Password */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-[20px] font-semibold tracking-tight text-white flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2">
             <Lock className="h-5 w-5" />
             Sécurité
           </CardTitle>
-          <CardDescription className="text-[14px] leading-relaxed text-[#D6D7DD]">
+          <CardDescription>
             Modifiez votre mot de passe
           </CardDescription>
         </CardHeader>
@@ -695,11 +695,11 @@ export default function Account() {
       {/* API Key Section */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-[20px] font-semibold tracking-tight text-white flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2">
             <Key className="h-5 w-5" />
             Clé API
           </CardTitle>
-          <CardDescription className="text-[14px] leading-relaxed text-[#D6D7DD]">
+          <CardDescription>
             Utilisez cette clé pour connecter SpeedAI à N8N ou d'autres services
           </CardDescription>
         </CardHeader>
@@ -909,11 +909,11 @@ export default function Account() {
       {/* Notification Preferences */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-[20px] font-semibold tracking-tight text-white flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2">
             <Bell className="h-5 w-5" />
             Préférences de notifications
           </CardTitle>
-          <CardDescription className="text-[14px] leading-relaxed text-[#D6D7DD]">
+          <CardDescription>
             Choisissez les notifications que vous souhaitez recevoir
           </CardDescription>
         </CardHeader>
@@ -1036,11 +1036,11 @@ export default function Account() {
       {user?.stripeCustomerId && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-[20px] font-semibold tracking-tight text-white flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2">
               <CreditCard className="h-5 w-5" />
               Méthode de paiement actuelle
             </CardTitle>
-            <CardDescription className="text-[14px] leading-relaxed text-[#D6D7DD]">
+            <CardDescription>
               Méthode utilisée pour le prélèvement mensuel de l'abonnement
             </CardDescription>
           </CardHeader>
@@ -1057,10 +1057,10 @@ export default function Account() {
                       <CreditCard className="h-6 w-6 text-primary" />
                     </div>
                     <div>
-                      <p className="text-[16px] font-medium text-white capitalize">
+                      <p className="font-medium capitalize">
                         {paymentMethod.brand} •••• {paymentMethod.last4}
                       </p>
-                      <p className="text-[14px] font-medium text-[#D6D7DD]">
+                      <p className="text-sm text-muted-foreground">
                         Expire le {String(paymentMethod.expMonth).padStart(2, '0')}/{paymentMethod.expYear}
                       </p>
                     </div>
@@ -1114,11 +1114,11 @@ export default function Account() {
       {/* Payment History */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-[20px] font-semibold tracking-tight text-white flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2">
             <CreditCard className="h-5 w-5" />
             Historique des paiements
           </CardTitle>
-          <CardDescription className="text-[14px] leading-relaxed text-[#D6D7DD]">
+          <CardDescription>
             Consultez vos dernières transactions
           </CardDescription>
         </CardHeader>
@@ -1170,11 +1170,11 @@ export default function Account() {
       {/* Monthly Reports */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-[20px] font-semibold tracking-tight text-white flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
             Rapports mensuels
           </CardTitle>
-          <CardDescription className="text-[14px] leading-relaxed text-[#D6D7DD]">
+          <CardDescription>
             Téléchargez vos rapports d'activité mensuels
           </CardDescription>
         </CardHeader>
@@ -1196,10 +1196,10 @@ export default function Account() {
                       <FileText className="h-6 w-6 text-primary" />
                     </div>
                     <div>
-                      <p className="text-[16px] font-medium text-white">
+                      <p className="font-medium">
                         Rapport {format(new Date(report.periodStart), 'MMMM yyyy', { locale: fr })}
                       </p>
-                      <p className="text-[14px] font-medium text-[#D6D7DD]">
+                      <p className="text-sm text-muted-foreground">
                         {format(new Date(report.periodStart), 'dd MMM', { locale: fr })} - {format(new Date(report.periodEnd), 'dd MMM yyyy', { locale: fr })}
                       </p>
                     </div>
@@ -1229,11 +1229,11 @@ export default function Account() {
       {/* Danger Zone */}
       <Card className="border-destructive">
         <CardHeader>
-          <CardTitle className="text-[20px] font-semibold tracking-tight text-destructive flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-destructive">
             <Trash2 className="h-5 w-5" />
             Zone de danger
           </CardTitle>
-          <CardDescription className="text-[14px] leading-relaxed text-[#D6D7DD]">
+          <CardDescription>
             Actions irréversibles
           </CardDescription>
         </CardHeader>
