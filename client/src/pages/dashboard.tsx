@@ -613,7 +613,7 @@ export default function Dashboard() {
                       };
                       
                       const statusColors: Record<string, string> = {
-                        completed: 'bg-primary/10 text-primary border-primary/20',
+                        completed: 'bg-[#C8B88A]/10 text-[#C8B88A] border-[#C8B88A]/20',
                         failed: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
                         canceled: 'bg-muted text-muted-foreground border-white/[0.08]',
                         no_answer: 'bg-muted text-muted-foreground border-white/[0.08]',
