@@ -78,8 +78,8 @@
 
   --font-sans: 'Inter Tight', Inter, system-ui, -apple-system, sans-serif;
   --font-serif: Georgia, serif;
-  --font-mono: Menlo, monospace;
-  --radius: .5rem; /* 8px */
+  --font-mono: 'SF Mono', Menlo, Monaco, 'Courier New', monospace;
+  --radius: .75rem; /* 12px - Premium rounded corners */
   --shadow-2xs: 0px 1px 2px 0px hsl(210 10% 15% / 0.05);
   --shadow-xs: 0px 1px 3px 0px hsl(210 10% 15% / 0.08);
   --shadow-sm: 0px 2px 4px 0px hsl(210 10% 15% / 0.06), 0px 1px 2px -1px hsl(210 10% 15% / 0.04);
