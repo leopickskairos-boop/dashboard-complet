@@ -449,75 +449,79 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* AI Insights & Trends Section - Premium Design */}
+        {/* AI Insights & Trends Section - Premium Glass Panel */}
         <div className="border-t border-white/5 pt-8 mb-12">
-          <Card className="relative overflow-hidden bg-[#111214] border border-white/5 rounded-xl shadow-[inset_0_0_12px_#00000050,_0_0_25px_-10px_#C8B88A20]">
-            <div className="absolute inset-0 bg-gradient-to-br from-[#C8B88A]/[0.04] via-transparent to-[#A89D78]/[0.02]" />
-            <CardHeader className="relative">
+          <div className="glass-panel-ai relative">
+            {/* Header */}
+            <div className="relative z-10 mb-6">
               <div className="flex items-center gap-4">
-                <div className="w-11 h-11 rounded-xl bg-[#C8B88A]/10 flex items-center justify-center">
-                  <Brain className="w-5 h-5 text-[#C8B88A] animate-glow" />
+                <div className="w-12 h-12 rounded-xl bg-[#7A8CFF]/10 flex items-center justify-center">
+                  <Brain className="w-6 h-6 ai-icon animate-pulse-slow-blue" />
                 </div>
                 <div>
-                  <CardTitle className="text-[20px] font-semibold text-white/95">Insights IA & Tendances</CardTitle>
-                  <CardDescription className="text-[13px] leading-relaxed text-white/60">
+                  <h2 className="text-[22px] font-semibold tracking-tight text-white drop-shadow-[0_0_10px_#7A8CFF20]">
+                    Insights IA & Tendances
+                  </h2>
+                  <p className="text-[13px] text-white/50 mt-1">
                     Recommandations intelligentes basées sur vos données réelles
-                  </CardDescription>
+                  </p>
                 </div>
               </div>
-            </CardHeader>
-          <CardContent className="relative">
-            {insightsLoading ? (
-              <div className="flex justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-primary" />
-              </div>
-            ) : aiInsights.length === 0 ? (
-              <div className="text-center py-12">
-                <Brain className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">Aucune donnée disponible pour générer des insights</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {aiInsights.map((insight, index) => {
-                  const Icon = iconMap[insight.icon] || Brain;
-                  const levelConfig = {
-                    good: { dot: 'bg-emerald-400', borderClass: 'border-white/5', bgClass: 'bg-[#131417]' },
-                    average: { dot: 'bg-amber-400', borderClass: 'border-white/5', bgClass: 'bg-[#131417]' },
-                    warning: { dot: 'bg-rose-400', borderClass: 'border-white/5', bgClass: 'bg-[#131417]' },
-                  };
-                  const config = insight.level ? levelConfig[insight.level as keyof typeof levelConfig] : { dot: 'bg-primary', borderClass: 'border-white/5', bgClass: 'bg-[#131417]' };
-                  
-                  return (
-                    <div 
-                      key={index}
-                      className={`group relative p-6 rounded-2xl ${config.bgClass} bg-gradient-to-br from-white/[0.02] to-transparent border ${config.borderClass} transition-all duration-200 hover:border-white/[0.12]`}
-                      data-testid={`recommendation-${index}`}
-                    >
-                      <div className="flex items-start gap-4">
-                        <div className="shrink-0">
-                          <div className="w-10 h-10 rounded-xl bg-white/[0.06] flex items-center justify-center">
-                            <Icon className="w-5 h-5 text-primary" />
+            </div>
+
+            {/* Content */}
+            <div className="relative z-10">
+              {insightsLoading ? (
+                <div className="flex justify-center py-12">
+                  <Loader2 className="w-8 h-8 animate-spin text-[#7A8CFF]" />
+                </div>
+              ) : aiInsights.length === 0 ? (
+                <div className="text-center py-12">
+                  <Brain className="w-12 h-12 text-[#7A8CFF]/40 mx-auto mb-4" />
+                  <p className="text-white/40">Aucune donnée disponible pour générer des insights</p>
+                </div>
+              ) : (
+                <div className="flex flex-col md:flex-row gap-4 items-stretch">
+                  {aiInsights.map((insight, index) => {
+                    const Icon = iconMap[insight.icon] || Brain;
+                    const levelConfig = {
+                      good: { dot: 'bg-[#6BDFA3]', labelClass: 'success-label' },
+                      average: { dot: 'bg-[#C8B88A]', labelClass: 'business-label' },
+                      warning: { dot: 'bg-rose-400', labelClass: 'ai-label' },
+                    };
+                    const config = insight.level ? levelConfig[insight.level as keyof typeof levelConfig] : { dot: 'bg-[#7A8CFF]', labelClass: 'ai-label' };
+                    
+                    return (
+                      <div 
+                        key={index}
+                        className="ai-capsule flex-1 w-full"
+                        data-testid={`recommendation-${index}`}
+                      >
+                        <div className="flex items-start gap-4">
+                          <div className="shrink-0">
+                            <div className="w-10 h-10 rounded-xl bg-[#7A8CFF]/10 flex items-center justify-center">
+                              <Icon className="w-5 h-5 ai-icon animate-pulse-slow-blue" />
+                            </div>
                           </div>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-2">
-                            <div className={`w-2 h-2 rounded-full ${config.dot}`} />
-                            <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">
-                              {insight.type === 'performance' ? 'Performance' : 'Business'}
-                            </span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-2">
+                              <div className={`w-2 h-2 rounded-full ${config.dot}`} />
+                              <span className={config.labelClass}>
+                                {insight.type === 'performance' ? 'Performance' : 'Business'}
+                              </span>
+                            </div>
+                            <p className="text-[14px] text-white leading-relaxed mt-1">
+                              {insight.text}
+                            </p>
                           </div>
-                          <p className="text-[13px] text-foreground/80 leading-relaxed">
-                            {insight.text}
-                          </p>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-          </Card>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Calls List Section - Premium Design */}
