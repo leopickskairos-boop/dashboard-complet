@@ -258,15 +258,14 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-12">
             {/* Total Calls - Clickable */}
             <Card 
-              className="group relative overflow-hidden cursor-pointer transition-all duration-200 hover:shadow-lg hover:shadow-primary/5 border-white/[0.06]" 
+              className="group relative overflow-hidden cursor-pointer bg-[#131417] bg-gradient-to-br from-white/[0.02] to-transparent shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] transition-all duration-200 ease-out hover:translate-y-[-2px] hover:shadow-[0_4px_18px_rgba(0,0,0,0.35)]" 
               onClick={() => setChartDialog('total')}
               data-testid="card-total-calls"
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-              <CardContent className="relative p-6">
+              <CardContent className="relative p-7">
                 <div className="flex items-start justify-between mb-5">
-                  <div className="w-11 h-11 rounded-xl bg-white/[0.06] flex items-center justify-center">
-                    <Phone className="w-5 h-5 text-primary" />
+                  <div className="p-2 rounded-xl bg-white/5 flex items-center justify-center">
+                    <Phone className="w-5 h-5 text-primary transition-opacity duration-150 hover:opacity-80" />
                   </div>
                   <div className="flex items-center gap-2">
                     <Button
@@ -277,7 +276,7 @@ export default function Dashboard() {
                         setAnalyticsMetric('volume');
                       }}
                       data-testid="button-analyze-volume"
-                      className="h-7 px-2 gap-1 opacity-60 hover:opacity-100"
+                      className="h-7 px-2 gap-1 opacity-60 hover:opacity-100 transition-all duration-150 active:scale-95"
                     >
                       <Brain className="w-3 h-3" />
                       <span className="text-xs">Analyser</span>
@@ -288,11 +287,11 @@ export default function Dashboard() {
                   Total des appels
                 </div>
                 <div className="flex items-end justify-between">
-                  <div className="text-[28px] font-bold tracking-tight" data-testid="stat-total-calls">
+                  <div className="text-[28px] font-semibold tracking-tight" data-testid="stat-total-calls">
                     {stats?.totalCalls || 0}
                   </div>
                   <div className="flex items-center gap-1 text-emerald-400 text-xs font-medium">
-                    <TrendingUp className="w-3.5 h-3.5" />
+                    <TrendingUp className="w-3.5 h-3.5 transition-opacity duration-150 hover:opacity-80" />
                     <span>+12%</span>
                   </div>
                 </div>
@@ -300,18 +299,18 @@ export default function Dashboard() {
             </Card>
 
             {/* Active Calls - Not Clickable */}
-            <Card className="relative overflow-hidden border-white/[0.06]" data-testid="card-active-calls">
-              <CardContent className="relative p-6">
+            <Card className="relative overflow-hidden bg-[#131417] bg-gradient-to-br from-white/[0.02] to-transparent shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] transition-all duration-200 ease-out hover:translate-y-[-2px] hover:shadow-[0_4px_18px_rgba(0,0,0,0.35)]" data-testid="card-active-calls">
+              <CardContent className="relative p-7">
                 <div className="flex items-start justify-between mb-5">
-                  <div className="w-11 h-11 rounded-xl bg-white/[0.06] flex items-center justify-center">
-                    <Activity className="w-5 h-5 text-violet-400" />
+                  <div className="p-2 rounded-xl bg-white/5 flex items-center justify-center">
+                    <Activity className="w-5 h-5 text-violet-400 transition-opacity duration-150 hover:opacity-80" />
                   </div>
                 </div>
                 <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-2 font-medium">
                   Appels actifs
                 </div>
                 <div className="flex items-end justify-between">
-                  <div className="text-[28px] font-bold tracking-tight" data-testid="stat-active-calls">
+                  <div className="text-[28px] font-semibold tracking-tight" data-testid="stat-active-calls">
                     {stats?.activeCalls || 0}
                   </div>
                   <div className="text-xs text-muted-foreground">En cours</div>
@@ -321,15 +320,14 @@ export default function Dashboard() {
 
             {/* Conversion Rate - Clickable */}
             <Card 
-              className="group relative overflow-hidden cursor-pointer transition-all duration-200 hover:shadow-lg hover:shadow-primary/5 border-white/[0.06]" 
+              className="group relative overflow-hidden cursor-pointer bg-[#131417] bg-gradient-to-br from-white/[0.02] to-transparent shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] transition-all duration-200 ease-out hover:translate-y-[-2px] hover:shadow-[0_4px_18px_rgba(0,0,0,0.35)]" 
               onClick={() => setChartDialog('conversion')}
               data-testid="card-conversion-rate"
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-              <CardContent className="relative p-6">
+              <CardContent className="relative p-7">
                 <div className="flex items-start justify-between mb-5">
-                  <div className="w-11 h-11 rounded-xl bg-white/[0.06] flex items-center justify-center">
-                    <TrendingUp className="w-5 h-5 text-emerald-400" />
+                  <div className="p-2 rounded-xl bg-white/5 flex items-center justify-center">
+                    <TrendingUp className="w-5 h-5 text-emerald-400 transition-opacity duration-150 hover:opacity-80" />
                   </div>
                   <div className="flex items-center gap-2">
                     <Button
@@ -340,7 +338,7 @@ export default function Dashboard() {
                         setAnalyticsMetric('conversion');
                       }}
                       data-testid="button-analyze-conversion"
-                      className="h-7 px-2 gap-1 opacity-60 hover:opacity-100"
+                      className="h-7 px-2 gap-1 opacity-60 hover:opacity-100 transition-all duration-150 active:scale-95"
                     >
                       <Brain className="w-3 h-3" />
                       <span className="text-xs">Analyser</span>
@@ -351,11 +349,11 @@ export default function Dashboard() {
                   Taux de conversion
                 </div>
                 <div className="flex items-end justify-between">
-                  <div className="text-[28px] font-bold tracking-tight" data-testid="stat-conversion-rate">
+                  <div className="text-[28px] font-semibold tracking-tight" data-testid="stat-conversion-rate">
                     {stats?.conversionRate || 0}%
                   </div>
                   <div className="flex items-center gap-1 text-rose-400 text-xs font-medium">
-                    <TrendingDown className="w-3.5 h-3.5" />
+                    <TrendingDown className="w-3.5 h-3.5 transition-opacity duration-150 hover:opacity-80" />
                     <span>-3%</span>
                   </div>
                 </div>
@@ -364,15 +362,14 @@ export default function Dashboard() {
 
             {/* Average Duration - Clickable */}
             <Card 
-              className="group relative overflow-hidden cursor-pointer transition-all duration-200 hover:shadow-lg hover:shadow-primary/5 border-white/[0.06]" 
+              className="group relative overflow-hidden cursor-pointer bg-[#131417] bg-gradient-to-br from-white/[0.02] to-transparent shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] transition-all duration-200 ease-out hover:translate-y-[-2px] hover:shadow-[0_4px_18px_rgba(0,0,0,0.35)]" 
               onClick={() => setChartDialog('duration')}
               data-testid="card-average-duration"
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-              <CardContent className="relative p-6">
+              <CardContent className="relative p-7">
                 <div className="flex items-start justify-between mb-5">
-                  <div className="w-11 h-11 rounded-xl bg-white/[0.06] flex items-center justify-center">
-                    <Clock className="w-5 h-5 text-cyan-400" />
+                  <div className="p-2 rounded-xl bg-white/5 flex items-center justify-center">
+                    <Clock className="w-5 h-5 text-cyan-400 transition-opacity duration-150 hover:opacity-80" />
                   </div>
                   <div className="flex items-center gap-2">
                     <Button
@@ -383,7 +380,7 @@ export default function Dashboard() {
                         setAnalyticsMetric('duration');
                       }}
                       data-testid="button-analyze-duration"
-                      className="h-7 px-2 gap-1 opacity-60 hover:opacity-100"
+                      className="h-7 px-2 gap-1 opacity-60 hover:opacity-100 transition-all duration-150 active:scale-95"
                     >
                       <Brain className="w-3 h-3" />
                       <span className="text-xs">Analyser</span>
@@ -394,11 +391,11 @@ export default function Dashboard() {
                   Durée moyenne
                 </div>
                 <div className="flex items-end justify-between">
-                  <div className="text-[28px] font-bold tracking-tight" data-testid="stat-average-duration">
+                  <div className="text-[28px] font-semibold tracking-tight" data-testid="stat-average-duration">
                     {formatDuration(stats?.averageDuration)}
                   </div>
                   <div className="flex items-center gap-1 text-emerald-400 text-xs font-medium">
-                    <TrendingUp className="w-3.5 h-3.5" />
+                    <TrendingUp className="w-3.5 h-3.5 transition-opacity duration-150 hover:opacity-80" />
                     <span>+8%</span>
                   </div>
                 </div>
@@ -406,18 +403,18 @@ export default function Dashboard() {
             </Card>
 
             {/* Hours Saved - Not Clickable */}
-            <Card className="relative overflow-hidden border-white/[0.06]" data-testid="card-hours-saved">
-              <CardContent className="relative p-6">
+            <Card className="relative overflow-hidden bg-[#131417] bg-gradient-to-br from-white/[0.02] to-transparent shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] transition-all duration-200 ease-out hover:translate-y-[-2px] hover:shadow-[0_4px_18px_rgba(0,0,0,0.35)]" data-testid="card-hours-saved">
+              <CardContent className="relative p-7">
                 <div className="flex items-start justify-between mb-5">
-                  <div className="w-11 h-11 rounded-xl bg-white/[0.06] flex items-center justify-center">
-                    <Timer className="w-5 h-5 text-emerald-400" />
+                  <div className="p-2 rounded-xl bg-white/5 flex items-center justify-center">
+                    <Timer className="w-5 h-5 text-emerald-400 transition-opacity duration-150 hover:opacity-80" />
                   </div>
                 </div>
                 <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-2 font-medium">
                   Heures économisées
                 </div>
                 <div className="flex items-end justify-between">
-                  <div className="text-[28px] font-bold tracking-tight" data-testid="stat-hours-saved">
+                  <div className="text-[28px] font-semibold tracking-tight" data-testid="stat-hours-saved">
                     {formatHours(stats?.hoursSaved)}
                   </div>
                   <div className="text-xs text-muted-foreground">Ce mois</div>
@@ -426,22 +423,22 @@ export default function Dashboard() {
             </Card>
 
             {/* Estimated Revenue - Not Clickable */}
-            <Card className="relative overflow-hidden border-white/[0.06]" data-testid="card-estimated-revenue">
-              <CardContent className="relative p-6">
+            <Card className="relative overflow-hidden bg-[#131417] bg-gradient-to-br from-white/[0.02] to-transparent shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] transition-all duration-200 ease-out hover:translate-y-[-2px] hover:shadow-[0_4px_18px_rgba(0,0,0,0.35)]" data-testid="card-estimated-revenue">
+              <CardContent className="relative p-7">
                 <div className="flex items-start justify-between mb-5">
-                  <div className="w-11 h-11 rounded-xl bg-white/[0.06] flex items-center justify-center">
-                    <Euro className="w-5 h-5 text-amber-400" />
+                  <div className="p-2 rounded-xl bg-white/5 flex items-center justify-center">
+                    <Euro className="w-5 h-5 text-amber-400 transition-opacity duration-150 hover:opacity-80" />
                   </div>
                 </div>
                 <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-2 font-medium">
                   Revenus estimés
                 </div>
                 <div className="flex items-end justify-between">
-                  <div className="text-[28px] font-bold tracking-tight" data-testid="stat-estimated-revenue">
+                  <div className="text-[28px] font-semibold tracking-tight" data-testid="stat-estimated-revenue">
                     {formatCurrency(stats?.estimatedRevenue)}
                   </div>
                   <div className="flex items-center gap-1 text-emerald-400 text-xs font-medium">
-                    <TrendingUp className="w-3.5 h-3.5" />
+                    <TrendingUp className="w-3.5 h-3.5 transition-opacity duration-150 hover:opacity-80" />
                   </div>
                 </div>
               </CardContent>
