@@ -524,14 +524,14 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Calls List Section - Premium Design */}
+        {/* Calls List Section - Premium Table Block Design */}
         <div className="border-t border-white/5 pt-8">
-          <Card className="bg-[#111214] border border-white/5 rounded-xl shadow-[inset_0_0_12px_#00000050,_0_0_25px_-10px_#C8B88A20]">
+          <Card className="bg-table-block border border-[#C8B88A]/10 rounded-xl shadow-[inset_0_0_12px_#00000050] overflow-hidden light-line-business">
             <CardHeader className="pb-4">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
-                  <CardTitle className="text-[20px] font-semibold text-white/95">Liste des appels</CardTitle>
-                  <CardDescription className="text-[13px] leading-relaxed text-white/60">
+                  <CardTitle className="text-[20px] font-semibold text-white tracking-tight">Liste des appels</CardTitle>
+                  <CardDescription className="text-[13px] leading-relaxed text-[#9BA0A8]">
                     Historique de tous vos appels enregistrés
                   </CardDescription>
                 </div>

@@ -42,7 +42,7 @@ export function AppSidebar() {
   });
 
   return (
-    <Sidebar>
+    <Sidebar className="bg-sidebar-gradient border-r border-[#C8B88A]/10">
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupContent>
