@@ -51,12 +51,12 @@ export function AppSidebar() {
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild isActive={location === item.url}>
                     <Link href={item.url} data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
-                      <item.icon />
-                      <span>{item.title}</span>
+                      <item.icon className="w-4 h-4" />
+                      <span className="text-[14px] font-medium tracking-tight">{item.title}</span>
                       {item.showBadge && unreadCount && unreadCount > 0 && (
                         <Badge 
                           variant="destructive" 
-                          className="ml-auto h-5 min-w-5 px-1 flex items-center justify-center text-xs"
+                          className="ml-auto h-5 min-w-5 px-1 flex items-center justify-center text-[11px] font-semibold tracking-tight"
                           data-testid="badge-unread-count"
                         >
                           {unreadCount > 99 ? '99+' : unreadCount}
@@ -71,8 +71,8 @@ export function AppSidebar() {
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={location === "/admin"}>
                     <Link href="/admin" data-testid="link-administration">
-                      <Shield />
-                      <span>Administration</span>
+                      <Shield className="w-4 h-4" />
+                      <span className="text-[14px] font-medium tracking-tight">Administration</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
