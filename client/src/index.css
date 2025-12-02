@@ -76,7 +76,7 @@
   --chart-4: 33 94% 46%;
   --chart-5: 340 82% 44%;
 
-  --font-sans: Inter, system-ui, -apple-system, sans-serif;
+  --font-sans: 'Inter Tight', Inter, system-ui, -apple-system, sans-serif;
   --font-serif: Georgia, serif;
   --font-mono: Menlo, monospace;
   --radius: .5rem; /* 8px */
@@ -123,76 +123,77 @@
 }
 
 .dark {
-  --button-outline: rgba(255,255,255, .10);
-  --badge-outline: rgba(255,255,255, .05);
+  --button-outline: rgba(255,255,255, .08);
+  --badge-outline: rgba(255,255,255, .06);
 
   --opaque-button-border-intensity: 9;  /* In terms of percentages */
 
   /* Backgrounds applied on top of other backgrounds when hovered/active */
-  --elevate-1: rgba(255,255,255, .04);
-  --elevate-2: rgba(255,255,255, .09);
+  --elevate-1: rgba(255,255,255, .03);
+  --elevate-2: rgba(255,255,255, .07);
 
-  --background: 0 0% 4%;
+  /* Premium Dark Palette - SpeedAI */
+  --background: 225 20% 4%;  /* #0B0C0F */
 
-  --foreground: 0 0% 95%;
+  --foreground: 220 10% 94%;
 
-  --border: 0 0% 15%;
+  --border: 220 10% 12%;  /* rgba(255,255,255,0.06) equivalent */
 
-  --card: 0 0% 6%;
+  --card: 224 14% 8%;  /* #131417 */
 
-  --card-foreground: 0 0% 92%;
+  --card-foreground: 220 10% 92%;
 
-  --card-border: 0 0% 12%;
+  --card-border: 220 10% 14%;
 
-  --sidebar: 0 0% 5%;
+  --sidebar: 224 15% 7%;  /* #111216 */
 
-  --sidebar-foreground: 0 0% 90%;
+  --sidebar-foreground: 220 10% 90%;
 
-  --sidebar-border: 0 0% 14%;
+  --sidebar-border: 220 10% 12%;
 
-  --sidebar-primary: 217 91% 50%;
+  --sidebar-primary: 227 88% 59%;  /* #3A63F3 - Bleu AI Premium */
 
-  --sidebar-primary-foreground: 0 0% 98%;
+  --sidebar-primary-foreground: 0 0% 100%;
 
-  --sidebar-accent: 0 0% 10%;
+  --sidebar-accent: 220 9% 11%;  /* #1A1C20 */
 
-  --sidebar-accent-foreground: 0 0% 88%;
+  --sidebar-accent-foreground: 220 10% 88%;
 
-  --sidebar-ring: 217 91% 50%;
+  --sidebar-ring: 227 88% 59%;
 
-  --popover: 0 0% 7%;
+  --popover: 224 14% 8%;
 
-  --popover-foreground: 0 0% 90%;
+  --popover-foreground: 220 10% 90%;
 
-  --popover-border: 0 0% 15%;
+  --popover-border: 220 10% 14%;
 
-  --primary: 217 91% 50%;
+  --primary: 227 88% 59%;  /* #3A63F3 - Bleu AI Premium */
 
-  --primary-foreground: 0 0% 98%;
+  --primary-foreground: 0 0% 100%;
 
-  --secondary: 0 0% 12%;
+  --secondary: 220 9% 11%;  /* #1A1C20 */
 
-  --secondary-foreground: 0 0% 88%;
+  --secondary-foreground: 220 10% 88%;
 
-  --muted: 0 0% 10%;
+  --muted: 224 14% 10%;
 
-  --muted-foreground: 0 0% 65%;
+  --muted-foreground: 220 8% 55%;
 
-  --accent: 0 0% 10%;
+  --accent: 220 9% 11%;  /* #1A1C20 */
 
-  --accent-foreground: 0 0% 86%;
+  --accent-foreground: 220 10% 86%;
 
-  --destructive: 0 65% 55%;
+  --destructive: 0 60% 57%;  /* #D45050 */
 
-  --destructive-foreground: 0 10% 98%;
+  --destructive-foreground: 0 0% 100%;
 
-  --input: 210 8% 30%;
-  --ring: 217 91% 50%;
-  --chart-1: 217 91% 65%;
-  --chart-2: 142 76% 65%;
-  --chart-3: 262 83% 70%;
-  --chart-4: 33 94% 65%;
-  --chart-5: 340 82% 65%;
+  --input: 220 10% 18%;
+  --ring: 227 88% 59%;
+  --chart-1: 227 88% 59%;  /* Bleu AI Premium */
+  --chart-2: 142 70% 50%;
+  --chart-3: 262 75% 60%;
+  --chart-4: 33 90% 55%;
+  --chart-5: 340 75% 55%;
 
   --shadow-2xs: 0px 1px 2px 0px hsl(210 10% 0% / 0.20);
   --shadow-xs: 0px 1px 3px 0px hsl(210 10% 0% / 0.25);
