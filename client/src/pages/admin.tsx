@@ -375,28 +375,24 @@ export default function AdminPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        {u.accountStatus === 'trial' || u.accountStatus === 'expired' ? (
-                          <Select
-                            value={u.plan || "none"}
-                            onValueChange={(plan) => {
-                              const planValue = plan === "none" ? null : plan;
-                              assignPlanMutation.mutate({ userId: u.id, plan: planValue });
-                            }}
-                            disabled={assignPlanMutation.isPending}
-                          >
-                            <SelectTrigger className="w-40" data-testid={`select-plan-${u.id}`}>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="none">Aucun</SelectItem>
-                              <SelectItem value="basic">Basic (400€)</SelectItem>
-                              <SelectItem value="standard">Standard (800€)</SelectItem>
-                              <SelectItem value="premium">Premium (1000€)</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        ) : (
-                          <span className="text-sm">{getPlanName(u.plan)}</span>
-                        )}
+                        <Select
+                          value={u.plan || "none"}
+                          onValueChange={(plan) => {
+                            const planValue = plan === "none" ? null : plan;
+                            assignPlanMutation.mutate({ userId: u.id, plan: planValue });
+                          }}
+                          disabled={assignPlanMutation.isPending || u.id === user?.id}
+                        >
+                          <SelectTrigger className="w-40" data-testid={`select-plan-${u.id}`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Aucun</SelectItem>
+                            <SelectItem value="basic">Basic (400€)</SelectItem>
+                            <SelectItem value="standard">Standard (800€)</SelectItem>
+                            <SelectItem value="premium">Premium (1000€)</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </TableCell>
                       <TableCell>{getAccountStatusBadge(u.accountStatus)}</TableCell>
                       <TableCell>{getHealthBadge(u.healthStatus)}</TableCell>
