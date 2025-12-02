@@ -222,8 +222,8 @@ export default function Dashboard() {
       <div className="max-w-screen-2xl mx-auto px-6 py-8">
         {/* Header - Premium Design */}
         <div className="mb-10">
-          <h1 className="text-3xl font-semibold tracking-tight mb-1.5">Dashboard</h1>
-          <p className="text-[15px] text-muted-foreground">
+          <h1 className="text-[28px] font-semibold tracking-tight text-white mb-1.5">Dashboard</h1>
+          <p className="text-[14px] leading-relaxed text-[#D6D7DD]">
             Vue d'ensemble de votre activité
           </p>
         </div>
@@ -283,15 +283,15 @@ export default function Dashboard() {
                     </Button>
                   </div>
                 </div>
-                <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-2 font-medium">
+                <div className="text-[11px] uppercase tracking-[0.18em] font-medium text-[#B8BCC6]/70 mb-2">
                   Total des appels
                 </div>
                 <div className="flex items-end justify-between">
-                  <div className="text-[28px] font-semibold tracking-tight" data-testid="stat-total-calls">
+                  <div className="text-[28px] font-semibold tracking-tight text-white" data-testid="stat-total-calls">
                     {stats?.totalCalls || 0}
                   </div>
-                  <div className="flex items-center gap-1 text-emerald-400 text-xs font-medium">
-                    <TrendingUp className="w-3.5 h-3.5 transition-opacity duration-150 hover:opacity-80" />
+                  <div className="flex items-center gap-1 text-[12px] font-medium text-[#B8BCC6]/85">
+                    <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
                     <span>+12%</span>
                   </div>
                 </div>
@@ -306,14 +306,14 @@ export default function Dashboard() {
                     <Activity className="w-5 h-5 text-[#C8B88A] transition-opacity duration-150 hover:opacity-80" />
                   </div>
                 </div>
-                <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-2 font-medium">
+                <div className="text-[11px] uppercase tracking-[0.18em] font-medium text-[#B8BCC6]/70 mb-2">
                   Appels actifs
                 </div>
                 <div className="flex items-end justify-between">
-                  <div className="text-[28px] font-semibold tracking-tight" data-testid="stat-active-calls">
+                  <div className="text-[28px] font-semibold tracking-tight text-white" data-testid="stat-active-calls">
                     {stats?.activeCalls || 0}
                   </div>
-                  <div className="text-xs text-muted-foreground">En cours</div>
+                  <div className="text-[12px] font-medium text-[#B8BCC6]/85">En cours</div>
                 </div>
               </CardContent>
             </Card>
@@ -345,15 +345,15 @@ export default function Dashboard() {
                     </Button>
                   </div>
                 </div>
-                <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-2 font-medium">
+                <div className="text-[11px] uppercase tracking-[0.18em] font-medium text-[#B8BCC6]/70 mb-2">
                   Taux de conversion
                 </div>
                 <div className="flex items-end justify-between">
-                  <div className="text-[28px] font-semibold tracking-tight" data-testid="stat-conversion-rate">
+                  <div className="text-[28px] font-semibold tracking-tight text-white" data-testid="stat-conversion-rate">
                     {stats?.conversionRate || 0}%
                   </div>
-                  <div className="flex items-center gap-1 text-rose-400 text-xs font-medium">
-                    <TrendingDown className="w-3.5 h-3.5 transition-opacity duration-150 hover:opacity-80" />
+                  <div className="flex items-center gap-1 text-[12px] font-medium text-[#B8BCC6]/85">
+                    <TrendingDown className="w-3.5 h-3.5 text-rose-400" />
                     <span>-3%</span>
                   </div>
                 </div>
@@ -387,15 +387,15 @@ export default function Dashboard() {
                     </Button>
                   </div>
                 </div>
-                <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-2 font-medium">
+                <div className="text-[11px] uppercase tracking-[0.18em] font-medium text-[#B8BCC6]/70 mb-2">
                   Durée moyenne
                 </div>
                 <div className="flex items-end justify-between">
-                  <div className="text-[28px] font-semibold tracking-tight" data-testid="stat-average-duration">
+                  <div className="text-[28px] font-semibold tracking-tight text-white" data-testid="stat-average-duration">
                     {formatDuration(stats?.averageDuration)}
                   </div>
-                  <div className="flex items-center gap-1 text-emerald-400 text-xs font-medium">
-                    <TrendingUp className="w-3.5 h-3.5 transition-opacity duration-150 hover:opacity-80" />
+                  <div className="flex items-center gap-1 text-[12px] font-medium text-[#B8BCC6]/85">
+                    <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
                     <span>+8%</span>
                   </div>
                 </div>
@@ -410,14 +410,14 @@ export default function Dashboard() {
                     <Timer className="w-5 h-5 text-[#C8B88A] transition-opacity duration-150 hover:opacity-80" />
                   </div>
                 </div>
-                <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-2 font-medium">
+                <div className="text-[11px] uppercase tracking-[0.18em] font-medium text-[#B8BCC6]/70 mb-2">
                   Heures économisées
                 </div>
                 <div className="flex items-end justify-between">
-                  <div className="text-[28px] font-semibold tracking-tight" data-testid="stat-hours-saved">
+                  <div className="text-[28px] font-semibold tracking-tight text-white" data-testid="stat-hours-saved">
                     {formatHours(stats?.hoursSaved)}
                   </div>
-                  <div className="text-xs text-muted-foreground">Ce mois</div>
+                  <div className="text-[12px] font-medium text-[#B8BCC6]/85">Ce mois</div>
                 </div>
               </CardContent>
             </Card>
@@ -430,15 +430,15 @@ export default function Dashboard() {
                     <Euro className="w-5 h-5 text-[#C8B88A] transition-opacity duration-150 hover:opacity-80" />
                   </div>
                 </div>
-                <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-2 font-medium">
+                <div className="text-[11px] uppercase tracking-[0.18em] font-medium text-[#B8BCC6]/70 mb-2">
                   Revenus estimés
                 </div>
                 <div className="flex items-end justify-between">
-                  <div className="text-[28px] font-semibold tracking-tight" data-testid="stat-estimated-revenue">
+                  <div className="text-[28px] font-semibold tracking-tight text-white" data-testid="stat-estimated-revenue">
                     {formatCurrency(stats?.estimatedRevenue)}
                   </div>
-                  <div className="flex items-center gap-1 text-[#C8B88A] text-xs font-medium">
-                    <TrendingUp className="w-3.5 h-3.5 transition-opacity duration-150 hover:opacity-80" />
+                  <div className="flex items-center gap-1 text-[12px] font-medium text-[#B8BCC6]/85">
+                    <TrendingUp className="w-3.5 h-3.5 text-[#C8B88A]" />
                   </div>
                 </div>
               </CardContent>

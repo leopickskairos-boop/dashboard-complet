@@ -1,0 +1,95 @@
+Ne modifie pas la structure HTML/JSX ni la logique de l’application. Ne touche pas aux données ni aux routes. Ta mission est UNIQUEMENT de refondre la typographie de toute l’app SpeedAI (dashboard, tableaux, listes, pages annexes, modales/popups, onglets de détails comme “Détail de l’appel”, etc.) pour obtenir un rendu premium, B2B, consulting, cohérent partout.
+	1.	Police globale
+– Utilise comme police principale :
+font-family: “Inter Tight”, “Inter”, system-ui, -apple-system, BlinkMacSystemFont, “Segoe UI”, sans-serif;
+– Si Inter Tight n’est pas déjà utilisée, configure-la (import ou classe globale) puis applique-la au body / root layout pour qu’elle soit la typo par défaut de toute l’app.
+	2.	Règles typographiques globales
+Met en place un système typographique uniforme et applique-le dans tous les composants (dashboard, tables, cartes, formulaires, modals, popups, panneaux latéraux, etc.) :
+
+a. Titres de page (H1) – ex : “Dashboard”, “Détail de l’appel”, “Mon compte”
+Classes Tailwind à utiliser :
+text-[28px] font-semibold tracking-tight text-white
+Appliquer à tous les titres principaux en haut de page.
+
+b. Sous-titres de section (H2) – ex : “Informations du compte”, “Informations client”, “Clé API”, “Notifications IA et Tendances”
+Classes :
+text-[20px] font-semibold tracking-tight text-white/95
+
+c. Titres de sous-blocs (H3) – ex : “Résumé IA de l’appel”, “Transcription complète”, “Tags”, “Historique des paiements”
+Classes :
+text-[16px] font-medium tracking-tight text-white/90
+
+d. Labels (tous les intitulés de champs / colonnes / métadonnées) – ex : “Téléphone”, “Statut”, “Durée”, “Conversion”, “Nom”, “Humeur”, “Établissement”, “Date & heure”, “Type”, “Début d’appel”, “Fin d’appel”, etc.
+Remplace les styles actuels par un style label premium, en uppercase :
+text-[11px] uppercase tracking-[0.18em] font-medium text-[#B8BCC6]/70
+Applique cette classe à tous les labels de données dans :
+– les cards KPI
+– les tableaux (entêtes de colonnes)
+– les blocs d’infos dans la modale de détail d’appel
+– les sections “Informations client”, “Clé API”, “Préférences de notifications”, etc.
+
+e. Valeurs de données importantes – ex : numéro de téléphone, durée, statut, conversion, nom du client, établissement, nombre de personnes, type de service, dates, montants, email, etc.
+Classes :
+text-[16px] font-medium text-white
+Si la valeur est critique / clé (ex : conversion “Converti”, montant, statut principal) :
+text-[18px] font-semibold text-white
+
+f. Paragraphe standard – ex : descriptions sous les titres, textes explicatifs, phrases dans les popups, description des sections, messages d’état.
+Classes :
+text-[14px] leading-relaxed text-[#D6D7DD]
+
+g. Texte secondaire (légendes, petites notes, infos secondaires, tooltips)
+Classes :
+text-[12px] leading-snug text-[#B8BCC6]/80
+	3.	Tableaux (liste des appels, historique, etc.)
+– En-têtes de colonnes : utiliser le style label uppercase :
+text-[11px] uppercase tracking-[0.18em] font-medium text-[#B8BCC6]/70
+– Contenu de cellules :
+text-[14px] font-medium text-[#E3E4EA]
+– Informations moins importantes (ex : tirets “-”, placeholders, valeurs non renseignées) :
+text-[13px] text-[#8E919B]
+	4.	KPI Cards (TOTAL DES APPELS, DURÉE MOYENNE, HEURES ÉCONOMISÉES, REVENUS ESTIMÉS, TAUX DE CONVERSION)
+– Label du KPI (ex : “TOTAL DES APPELS”) :
+text-[11px] uppercase tracking-[0.18em] font-medium text-[#B8BCC6]/70
+– Valeur du KPI :
+text-[28px] font-semibold tracking-tight text-white
+– Texte de trend (+12 % vs période précédente) :
+text-[12px] font-medium text-[#B8BCC6]/85
+	5.	Badges / Tags / Statuts (dans la modale et dans la liste)
+Ex : “Rendez-vous pris”, “Converti”, “positif”, “dîner”, “réservation”, “restaurant”, “dîner” (tags en bas de la modale).
+– Texte du badge :
+text-[12px] font-medium tracking-tight
+– Statuts principaux (ex : badge “Rendez-vous pris”, “Converti”) : conserve tes couleurs mais applique la typo ci-dessus.
+– Tags simples (réservation, restaurant, dîner) :
+text-[11px] font-medium tracking-tight text-[#E3E4EA]
+	6.	Résumé IA et textes d’IA
+Ex : “Le client a réservé une table pour deux personnes pour un dîner.”
+– Classes :
+text-[15px] font-medium leading-relaxed text-[#E5E5E5]
+	7.	Bloc transcription complète (modale de détail d’appel)
+– Utiliser une police monospace ou un style “log” tout en restant clean :
+font-mono text-[13px] leading-6 text-[#B8BCC6]
+– Garde le fond actuel mais assure-toi que la lisibilité est optimale via le line-height.
+	8.	Navigation latérale (Dashboard, Notifications, Mon compte)
+– Libellé des items de menu :
+text-[14px] font-medium tracking-tight text-[#B8BCC6]
+– Item actif :
+text-[14px] font-semibold text-white
+	9.	Boutons (CTA, “Enregistrer les préférences”, etc.)
+– Texte de bouton :
+text-[14px] font-medium tracking-tight
+– Toujours en casse normale (pas uppercase) pour garder un côté humain.
+	10.	Popups / Modales / Overlays (comme “Détail de l’appel”)
+Applique les règles suivantes à tous les textes présents dans les modales :
+– Titre de la modale : style H1 ou H2 selon la hiérarchie (ici “Détail de l’appel” → H1 : text-[24/28px] font-semibold tracking-tight)
+– Labels (Téléphone, Statut, Durée, Conversion, Nom, Humeur, Nb personnes, Type de service, Début d’appel, Fin d’appel, Tags, Résumé IA, Transcription complète) : style label uppercase
+– Valeurs : style “valeur importante” (text-[16px] font-medium text-white)
+– Badges : style badges ci-dessus
+– Résumé IA : style paragraphe IA
+– Transcription : style monospace ci-dessus
+	11.	Cohérence globale
+– Vérifie que toutes les anciennes classes typographiques (text-sm, text-base, text-lg, font-light, etc.) sont remplacées par le système défini ci-dessus.
+– Harmonise toutes les pages : Dashboard, Notifications, Mon compte, modales, détails d’appel, listes, formulaires.
+– Ne laisse aucun endroit où la typographie semble plus petite/plus fade que le reste.
+
+En résumé : ta mission est de mettre en place et d’appliquer ce système typographique premium (Inter Tight partout, hiérarchie H1/H2/H3, labels uppercase très espacés, valeurs plus grandes et nettes, paragraphes lisibles, monospace pour la transcription) sur toute l’application, sans changer la structure ni la logique du code.
