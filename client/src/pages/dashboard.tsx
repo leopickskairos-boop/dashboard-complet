@@ -218,12 +218,15 @@ export default function Dashboard() {
   }));
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-screen-2xl mx-auto px-6 py-8">
+    <div className="min-h-screen bg-gradient-to-b from-[#0B0C0D] to-[#0F1012] relative">
+      {/* AI Halo Effect */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-[#C8B88A]/20 blur-[120px] opacity-20 pointer-events-none" />
+      
+      <div className="max-w-screen-2xl mx-auto px-6 py-8 relative z-10">
         {/* Header - Premium Design */}
         <div className="mb-10">
-          <h1 className="text-3xl font-semibold tracking-tight mb-1.5">Dashboard</h1>
-          <p className="text-[15px] text-muted-foreground">
+          <h1 className="text-[28px] font-semibold tracking-tight text-white mb-1.5">Dashboard</h1>
+          <p className="text-[13px] leading-relaxed text-white/60">
             Vue d'ensemble de votre activité
           </p>
         </div>
@@ -258,14 +261,14 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-12">
             {/* Total Calls - Clickable */}
             <Card 
-              className="group relative overflow-hidden cursor-pointer bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] transition-all duration-200 ease-out hover:translate-y-[-2px] hover:shadow-[0_0_16px_rgba(200,184,138,0.15)]" 
+              className="premium-card group cursor-pointer bg-[#111214] border border-white/5 rounded-xl shadow-[inset_0_0_12px_#00000050,_0_0_25px_-10px_#C8B88A20] transition-all duration-200 ease-out hover:translate-y-[-2px] hover:shadow-[inset_0_0_12px_#00000050,_0_0_30px_-8px_#C8B88A30]" 
               onClick={() => setChartDialog('total')}
               data-testid="card-total-calls"
             >
               <CardContent className="relative p-7">
                 <div className="flex items-start justify-between mb-5">
                   <div className="p-2 rounded-xl bg-white/5 flex items-center justify-center">
-                    <Phone className="w-5 h-5 text-[#C8B88A] transition-opacity duration-150 hover:opacity-80" />
+                    <Phone className="w-5 h-5 text-[#C8B88A] animate-glow" />
                   </div>
                   <div className="flex items-center gap-2">
                     <Button
@@ -283,15 +286,15 @@ export default function Dashboard() {
                     </Button>
                   </div>
                 </div>
-                <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-2 font-medium">
+                <div className="text-[11px] text-[#B8BCC6]/70 uppercase tracking-wider mb-2 font-medium">
                   Total des appels
                 </div>
                 <div className="flex items-end justify-between">
-                  <div className="text-[28px] font-semibold tracking-tight" data-testid="stat-total-calls">
+                  <div className="text-[32px] font-semibold text-white" data-testid="stat-total-calls">
                     {stats?.totalCalls || 0}
                   </div>
-                  <div className="flex items-center gap-1 text-emerald-400 text-xs font-medium">
-                    <TrendingUp className="w-3.5 h-3.5 transition-opacity duration-150 hover:opacity-80" />
+                  <div className="flex items-center gap-1 text-[12px] text-[#C8B88A] font-medium">
+                    <TrendingUp className="w-3.5 h-3.5" />
                     <span>+12%</span>
                   </div>
                 </div>
@@ -299,35 +302,35 @@ export default function Dashboard() {
             </Card>
 
             {/* Active Calls - Not Clickable */}
-            <Card className="relative overflow-hidden bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] transition-all duration-200 ease-out hover:translate-y-[-2px] hover:shadow-[0_0_16px_rgba(200,184,138,0.15)]" data-testid="card-active-calls">
+            <Card className="premium-card bg-[#111214] border border-white/5 rounded-xl shadow-[inset_0_0_12px_#00000050,_0_0_25px_-10px_#C8B88A20] transition-all duration-200 ease-out hover:translate-y-[-2px] hover:shadow-[inset_0_0_12px_#00000050,_0_0_30px_-8px_#C8B88A30]" data-testid="card-active-calls">
               <CardContent className="relative p-7">
                 <div className="flex items-start justify-between mb-5">
                   <div className="p-2 rounded-xl bg-white/5 flex items-center justify-center">
-                    <Activity className="w-5 h-5 text-[#C8B88A] transition-opacity duration-150 hover:opacity-80" />
+                    <Activity className="w-5 h-5 text-[#C8B88A] animate-glow" />
                   </div>
                 </div>
-                <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-2 font-medium">
+                <div className="text-[11px] text-[#B8BCC6]/70 uppercase tracking-wider mb-2 font-medium">
                   Appels actifs
                 </div>
                 <div className="flex items-end justify-between">
-                  <div className="text-[28px] font-semibold tracking-tight" data-testid="stat-active-calls">
+                  <div className="text-[32px] font-semibold text-white" data-testid="stat-active-calls">
                     {stats?.activeCalls || 0}
                   </div>
-                  <div className="text-xs text-muted-foreground">En cours</div>
+                  <div className="text-[12px] text-white/60">En cours</div>
                 </div>
               </CardContent>
             </Card>
 
             {/* Conversion Rate - Clickable */}
             <Card 
-              className="group relative overflow-hidden cursor-pointer bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] transition-all duration-200 ease-out hover:translate-y-[-2px] hover:shadow-[0_0_16px_rgba(200,184,138,0.15)]" 
+              className="premium-card group cursor-pointer bg-[#111214] border border-white/5 rounded-xl shadow-[inset_0_0_12px_#00000050,_0_0_25px_-10px_#C8B88A20] transition-all duration-200 ease-out hover:translate-y-[-2px] hover:shadow-[inset_0_0_12px_#00000050,_0_0_30px_-8px_#C8B88A30]" 
               onClick={() => setChartDialog('conversion')}
               data-testid="card-conversion-rate"
             >
               <CardContent className="relative p-7">
                 <div className="flex items-start justify-between mb-5">
                   <div className="p-2 rounded-xl bg-white/5 flex items-center justify-center">
-                    <TrendingUp className="w-5 h-5 text-[#C8B88A] transition-opacity duration-150 hover:opacity-80" />
+                    <TrendingUp className="w-5 h-5 text-[#C8B88A] animate-glow" />
                   </div>
                   <div className="flex items-center gap-2">
                     <Button
@@ -345,15 +348,15 @@ export default function Dashboard() {
                     </Button>
                   </div>
                 </div>
-                <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-2 font-medium">
+                <div className="text-[11px] text-[#B8BCC6]/70 uppercase tracking-wider mb-2 font-medium">
                   Taux de conversion
                 </div>
                 <div className="flex items-end justify-between">
-                  <div className="text-[28px] font-semibold tracking-tight" data-testid="stat-conversion-rate">
+                  <div className="text-[32px] font-semibold text-white" data-testid="stat-conversion-rate">
                     {stats?.conversionRate || 0}%
                   </div>
-                  <div className="flex items-center gap-1 text-rose-400 text-xs font-medium">
-                    <TrendingDown className="w-3.5 h-3.5 transition-opacity duration-150 hover:opacity-80" />
+                  <div className="flex items-center gap-1 text-[12px] text-[#C8B88A] font-medium">
+                    <TrendingDown className="w-3.5 h-3.5" />
                     <span>-3%</span>
                   </div>
                 </div>
@@ -362,14 +365,14 @@ export default function Dashboard() {
 
             {/* Average Duration - Clickable */}
             <Card 
-              className="group relative overflow-hidden cursor-pointer bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] transition-all duration-200 ease-out hover:translate-y-[-2px] hover:shadow-[0_0_16px_rgba(200,184,138,0.15)]" 
+              className="premium-card group cursor-pointer bg-[#111214] border border-white/5 rounded-xl shadow-[inset_0_0_12px_#00000050,_0_0_25px_-10px_#C8B88A20] transition-all duration-200 ease-out hover:translate-y-[-2px] hover:shadow-[inset_0_0_12px_#00000050,_0_0_30px_-8px_#C8B88A30]" 
               onClick={() => setChartDialog('duration')}
               data-testid="card-average-duration"
             >
               <CardContent className="relative p-7">
                 <div className="flex items-start justify-between mb-5">
                   <div className="p-2 rounded-xl bg-white/5 flex items-center justify-center">
-                    <Clock className="w-5 h-5 text-[#C8B88A] transition-opacity duration-150 hover:opacity-80" />
+                    <Clock className="w-5 h-5 text-[#C8B88A] animate-glow" />
                   </div>
                   <div className="flex items-center gap-2">
                     <Button
@@ -387,15 +390,15 @@ export default function Dashboard() {
                     </Button>
                   </div>
                 </div>
-                <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-2 font-medium">
+                <div className="text-[11px] text-[#B8BCC6]/70 uppercase tracking-wider mb-2 font-medium">
                   Durée moyenne
                 </div>
                 <div className="flex items-end justify-between">
-                  <div className="text-[28px] font-semibold tracking-tight" data-testid="stat-average-duration">
+                  <div className="text-[32px] font-semibold text-white" data-testid="stat-average-duration">
                     {formatDuration(stats?.averageDuration)}
                   </div>
-                  <div className="flex items-center gap-1 text-emerald-400 text-xs font-medium">
-                    <TrendingUp className="w-3.5 h-3.5 transition-opacity duration-150 hover:opacity-80" />
+                  <div className="flex items-center gap-1 text-[12px] text-[#C8B88A] font-medium">
+                    <TrendingUp className="w-3.5 h-3.5" />
                     <span>+8%</span>
                   </div>
                 </div>
@@ -403,42 +406,42 @@ export default function Dashboard() {
             </Card>
 
             {/* Hours Saved - Not Clickable */}
-            <Card className="relative overflow-hidden bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] transition-all duration-200 ease-out hover:translate-y-[-2px] hover:shadow-[0_0_16px_rgba(200,184,138,0.15)]" data-testid="card-hours-saved">
+            <Card className="premium-card bg-[#111214] border border-white/5 rounded-xl shadow-[inset_0_0_12px_#00000050,_0_0_25px_-10px_#C8B88A20] transition-all duration-200 ease-out hover:translate-y-[-2px] hover:shadow-[inset_0_0_12px_#00000050,_0_0_30px_-8px_#C8B88A30]" data-testid="card-hours-saved">
               <CardContent className="relative p-7">
                 <div className="flex items-start justify-between mb-5">
                   <div className="p-2 rounded-xl bg-white/5 flex items-center justify-center">
-                    <Timer className="w-5 h-5 text-[#C8B88A] transition-opacity duration-150 hover:opacity-80" />
+                    <Timer className="w-5 h-5 text-[#C8B88A] animate-glow" />
                   </div>
                 </div>
-                <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-2 font-medium">
+                <div className="text-[11px] text-[#B8BCC6]/70 uppercase tracking-wider mb-2 font-medium">
                   Heures économisées
                 </div>
                 <div className="flex items-end justify-between">
-                  <div className="text-[28px] font-semibold tracking-tight" data-testid="stat-hours-saved">
+                  <div className="text-[32px] font-semibold text-white" data-testid="stat-hours-saved">
                     {formatHours(stats?.hoursSaved)}
                   </div>
-                  <div className="text-xs text-muted-foreground">Ce mois</div>
+                  <div className="text-[12px] text-white/60">Ce mois</div>
                 </div>
               </CardContent>
             </Card>
 
             {/* Estimated Revenue - Not Clickable */}
-            <Card className="relative overflow-hidden bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] transition-all duration-200 ease-out hover:translate-y-[-2px] hover:shadow-[0_0_16px_rgba(200,184,138,0.15)]" data-testid="card-estimated-revenue">
+            <Card className="premium-card bg-[#111214] border border-white/5 rounded-xl shadow-[inset_0_0_12px_#00000050,_0_0_25px_-10px_#C8B88A20] transition-all duration-200 ease-out hover:translate-y-[-2px] hover:shadow-[inset_0_0_12px_#00000050,_0_0_30px_-8px_#C8B88A30]" data-testid="card-estimated-revenue">
               <CardContent className="relative p-7">
                 <div className="flex items-start justify-between mb-5">
                   <div className="p-2 rounded-xl bg-white/5 flex items-center justify-center">
-                    <Euro className="w-5 h-5 text-[#C8B88A] transition-opacity duration-150 hover:opacity-80" />
+                    <Euro className="w-5 h-5 text-[#C8B88A] animate-glow" />
                   </div>
                 </div>
-                <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-2 font-medium">
+                <div className="text-[11px] text-[#B8BCC6]/70 uppercase tracking-wider mb-2 font-medium">
                   Revenus estimés
                 </div>
                 <div className="flex items-end justify-between">
-                  <div className="text-[28px] font-semibold tracking-tight" data-testid="stat-estimated-revenue">
+                  <div className="text-[32px] font-semibold text-white" data-testid="stat-estimated-revenue">
                     {formatCurrency(stats?.estimatedRevenue)}
                   </div>
-                  <div className="flex items-center gap-1 text-[#C8B88A] text-xs font-medium">
-                    <TrendingUp className="w-3.5 h-3.5 transition-opacity duration-150 hover:opacity-80" />
+                  <div className="flex items-center gap-1 text-[12px] text-[#C8B88A] font-medium">
+                    <TrendingUp className="w-3.5 h-3.5" />
                   </div>
                 </div>
               </CardContent>
