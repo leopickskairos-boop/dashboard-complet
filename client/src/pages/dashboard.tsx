@@ -252,23 +252,23 @@ export default function Dashboard() {
           </Select>
         </div>
 
-        {/* KPI Cards Grid - Premium Design */}
+        {/* KPI Cards Grid - Premium Dual-Accent Design */}
         {statsLoading ? (
           <div className="flex justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-12">
-            {/* Total Calls - Clickable */}
+            {/* Total Calls - Business Gold - Clickable */}
             <Card 
-              className="premium-card group cursor-pointer bg-[#111214] border border-white/5 rounded-xl shadow-[inset_0_0_12px_#00000050,_0_0_25px_-10px_#C8B88A20] transition-all duration-200 ease-out hover:translate-y-[-2px] hover:shadow-[inset_0_0_12px_#00000050,_0_0_30px_-8px_#C8B88A30]" 
+              className="light-line-business group cursor-pointer bg-kpi-gradient border border-[#C8B88A]/10 rounded-xl shadow-[inset_0_0_12px_#00000050] transition-all duration-200 ease-out hover:translate-y-[-2px] hover-glow-business overflow-hidden" 
               onClick={() => setChartDialog('total')}
               data-testid="card-total-calls"
             >
               <CardContent className="relative p-7">
                 <div className="flex items-start justify-between mb-5">
-                  <div className="p-2 rounded-xl bg-white/5 flex items-center justify-center">
-                    <Phone className="w-5 h-5 text-[#C8B88A] animate-glow" />
+                  <div className="p-2 rounded-xl bg-[#C8B88A]/10 flex items-center justify-center">
+                    <Phone className="w-5 h-5 text-[#C8B88A] animate-pulse-slow-gold" />
                   </div>
                   <div className="flex items-center gap-2">
                     <Button
@@ -281,19 +281,19 @@ export default function Dashboard() {
                       data-testid="button-analyze-volume"
                       className="h-7 px-2 gap-1 opacity-60 hover:opacity-100 transition-all duration-150 active:scale-95"
                     >
-                      <Brain className="w-3 h-3" />
+                      <Brain className="w-3 h-3 text-[#7A8CFF]" />
                       <span className="text-xs">Analyser</span>
                     </Button>
                   </div>
                 </div>
-                <div className="text-[11px] text-[#B8BCC6]/70 uppercase tracking-wider mb-2 font-medium">
+                <div className="business-label mb-2">
                   Total des appels
                 </div>
                 <div className="flex items-end justify-between">
                   <div className="text-[32px] font-semibold text-white" data-testid="stat-total-calls">
                     {stats?.totalCalls || 0}
                   </div>
-                  <div className="flex items-center gap-1 text-[12px] text-[#C8B88A] font-medium">
+                  <div className="flex items-center gap-1 text-[12px] text-[#6BDFA3] font-medium">
                     <TrendingUp className="w-3.5 h-3.5" />
                     <span>+12%</span>
                   </div>
@@ -301,15 +301,15 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            {/* Active Calls - Not Clickable */}
-            <Card className="premium-card bg-[#111214] border border-white/5 rounded-xl shadow-[inset_0_0_12px_#00000050,_0_0_25px_-10px_#C8B88A20] transition-all duration-200 ease-out hover:translate-y-[-2px] hover:shadow-[inset_0_0_12px_#00000050,_0_0_30px_-8px_#C8B88A30]" data-testid="card-active-calls">
+            {/* Active Calls - Business Gold */}
+            <Card className="light-line-business bg-kpi-gradient border border-[#C8B88A]/10 rounded-xl shadow-[inset_0_0_12px_#00000050] transition-all duration-200 ease-out hover:translate-y-[-2px] hover-glow-business overflow-hidden" data-testid="card-active-calls">
               <CardContent className="relative p-7">
                 <div className="flex items-start justify-between mb-5">
-                  <div className="p-2 rounded-xl bg-white/5 flex items-center justify-center">
-                    <Activity className="w-5 h-5 text-[#C8B88A] animate-glow" />
+                  <div className="p-2 rounded-xl bg-[#C8B88A]/10 flex items-center justify-center">
+                    <Activity className="w-5 h-5 text-[#C8B88A] animate-pulse-slow-gold" />
                   </div>
                 </div>
-                <div className="text-[11px] text-[#B8BCC6]/70 uppercase tracking-wider mb-2 font-medium">
+                <div className="business-label mb-2">
                   Appels actifs
                 </div>
                 <div className="flex items-end justify-between">
@@ -321,16 +321,16 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            {/* Conversion Rate - Clickable */}
+            {/* Conversion Rate - Success Green - Clickable */}
             <Card 
-              className="premium-card group cursor-pointer bg-[#111214] border border-white/5 rounded-xl shadow-[inset_0_0_12px_#00000050,_0_0_25px_-10px_#C8B88A20] transition-all duration-200 ease-out hover:translate-y-[-2px] hover:shadow-[inset_0_0_12px_#00000050,_0_0_30px_-8px_#C8B88A30]" 
+              className="light-line-success group cursor-pointer bg-kpi-gradient border border-[#6BDFA3]/10 rounded-xl shadow-[inset_0_0_12px_#00000050] transition-all duration-200 ease-out hover:translate-y-[-2px] hover-glow-success overflow-hidden" 
               onClick={() => setChartDialog('conversion')}
               data-testid="card-conversion-rate"
             >
               <CardContent className="relative p-7">
                 <div className="flex items-start justify-between mb-5">
-                  <div className="p-2 rounded-xl bg-white/5 flex items-center justify-center">
-                    <TrendingUp className="w-5 h-5 text-[#C8B88A] animate-glow" />
+                  <div className="p-2 rounded-xl bg-[#6BDFA3]/10 flex items-center justify-center">
+                    <TrendingUp className="w-5 h-5 text-[#6BDFA3] animate-pulse-slow-green" />
                   </div>
                   <div className="flex items-center gap-2">
                     <Button
@@ -343,12 +343,12 @@ export default function Dashboard() {
                       data-testid="button-analyze-conversion"
                       className="h-7 px-2 gap-1 opacity-60 hover:opacity-100 transition-all duration-150 active:scale-95"
                     >
-                      <Brain className="w-3 h-3" />
+                      <Brain className="w-3 h-3 text-[#7A8CFF]" />
                       <span className="text-xs">Analyser</span>
                     </Button>
                   </div>
                 </div>
-                <div className="text-[11px] text-[#B8BCC6]/70 uppercase tracking-wider mb-2 font-medium">
+                <div className="success-label mb-2">
                   Taux de conversion
                 </div>
                 <div className="flex items-end justify-between">
@@ -363,16 +363,16 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            {/* Average Duration - Clickable */}
+            {/* Average Duration - AI Blue - Clickable */}
             <Card 
-              className="premium-card group cursor-pointer bg-[#111214] border border-white/5 rounded-xl shadow-[inset_0_0_12px_#00000050,_0_0_25px_-10px_#C8B88A20] transition-all duration-200 ease-out hover:translate-y-[-2px] hover:shadow-[inset_0_0_12px_#00000050,_0_0_30px_-8px_#C8B88A30]" 
+              className="light-line-insights group cursor-pointer bg-kpi-gradient border border-[#7A8CFF]/10 rounded-xl shadow-[inset_0_0_12px_#00000050] transition-all duration-200 ease-out hover:translate-y-[-2px] hover-glow-insights overflow-hidden" 
               onClick={() => setChartDialog('duration')}
               data-testid="card-average-duration"
             >
               <CardContent className="relative p-7">
                 <div className="flex items-start justify-between mb-5">
-                  <div className="p-2 rounded-xl bg-white/5 flex items-center justify-center">
-                    <Clock className="w-5 h-5 text-[#C8B88A] animate-glow" />
+                  <div className="p-2 rounded-xl bg-[#7A8CFF]/10 flex items-center justify-center">
+                    <Clock className="w-5 h-5 text-[#7A8CFF] animate-pulse-slow-blue" />
                   </div>
                   <div className="flex items-center gap-2">
                     <Button
@@ -385,19 +385,19 @@ export default function Dashboard() {
                       data-testid="button-analyze-duration"
                       className="h-7 px-2 gap-1 opacity-60 hover:opacity-100 transition-all duration-150 active:scale-95"
                     >
-                      <Brain className="w-3 h-3" />
+                      <Brain className="w-3 h-3 text-[#7A8CFF]" />
                       <span className="text-xs">Analyser</span>
                     </Button>
                   </div>
                 </div>
-                <div className="text-[11px] text-[#B8BCC6]/70 uppercase tracking-wider mb-2 font-medium">
+                <div className="ai-label mb-2">
                   Durée moyenne
                 </div>
                 <div className="flex items-end justify-between">
                   <div className="text-[32px] font-semibold text-white" data-testid="stat-average-duration">
                     {formatDuration(stats?.averageDuration)}
                   </div>
-                  <div className="flex items-center gap-1 text-[12px] text-[#C8B88A] font-medium">
+                  <div className="flex items-center gap-1 text-[12px] text-[#6BDFA3] font-medium">
                     <TrendingUp className="w-3.5 h-3.5" />
                     <span>+8%</span>
                   </div>
@@ -405,15 +405,15 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            {/* Hours Saved - Not Clickable */}
-            <Card className="premium-card bg-[#111214] border border-white/5 rounded-xl shadow-[inset_0_0_12px_#00000050,_0_0_25px_-10px_#C8B88A20] transition-all duration-200 ease-out hover:translate-y-[-2px] hover:shadow-[inset_0_0_12px_#00000050,_0_0_30px_-8px_#C8B88A30]" data-testid="card-hours-saved">
+            {/* Hours Saved - AI Blue */}
+            <Card className="light-line-insights bg-kpi-gradient border border-[#7A8CFF]/10 rounded-xl shadow-[inset_0_0_12px_#00000050] transition-all duration-200 ease-out hover:translate-y-[-2px] hover-glow-insights overflow-hidden" data-testid="card-hours-saved">
               <CardContent className="relative p-7">
                 <div className="flex items-start justify-between mb-5">
-                  <div className="p-2 rounded-xl bg-white/5 flex items-center justify-center">
-                    <Timer className="w-5 h-5 text-[#C8B88A] animate-glow" />
+                  <div className="p-2 rounded-xl bg-[#7A8CFF]/10 flex items-center justify-center">
+                    <Timer className="w-5 h-5 text-[#7A8CFF] animate-pulse-slow-blue" />
                   </div>
                 </div>
-                <div className="text-[11px] text-[#B8BCC6]/70 uppercase tracking-wider mb-2 font-medium">
+                <div className="ai-label mb-2">
                   Heures économisées
                 </div>
                 <div className="flex items-end justify-between">
@@ -425,22 +425,22 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            {/* Estimated Revenue - Not Clickable */}
-            <Card className="premium-card bg-[#111214] border border-white/5 rounded-xl shadow-[inset_0_0_12px_#00000050,_0_0_25px_-10px_#C8B88A20] transition-all duration-200 ease-out hover:translate-y-[-2px] hover:shadow-[inset_0_0_12px_#00000050,_0_0_30px_-8px_#C8B88A30]" data-testid="card-estimated-revenue">
+            {/* Estimated Revenue - Success Green */}
+            <Card className="light-line-success bg-kpi-gradient border border-[#6BDFA3]/10 rounded-xl shadow-[inset_0_0_12px_#00000050] transition-all duration-200 ease-out hover:translate-y-[-2px] hover-glow-success overflow-hidden" data-testid="card-estimated-revenue">
               <CardContent className="relative p-7">
                 <div className="flex items-start justify-between mb-5">
-                  <div className="p-2 rounded-xl bg-white/5 flex items-center justify-center">
-                    <Euro className="w-5 h-5 text-[#C8B88A] animate-glow" />
+                  <div className="p-2 rounded-xl bg-[#6BDFA3]/10 flex items-center justify-center">
+                    <Euro className="w-5 h-5 text-[#6BDFA3] animate-pulse-slow-green" />
                   </div>
                 </div>
-                <div className="text-[11px] text-[#B8BCC6]/70 uppercase tracking-wider mb-2 font-medium">
+                <div className="success-label mb-2">
                   Revenus estimés
                 </div>
                 <div className="flex items-end justify-between">
                   <div className="text-[32px] font-semibold text-white" data-testid="stat-estimated-revenue">
                     {formatCurrency(stats?.estimatedRevenue)}
                   </div>
-                  <div className="flex items-center gap-1 text-[12px] text-[#C8B88A] font-medium">
+                  <div className="flex items-center gap-1 text-[12px] text-[#6BDFA3] font-medium">
                     <TrendingUp className="w-3.5 h-3.5" />
                   </div>
                 </div>
