@@ -218,15 +218,12 @@ export default function Dashboard() {
   }));
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0B0C0D] to-[#0F1012] relative">
-      {/* Subtle neutral ambient glow - NO gold */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-white/5 blur-[120px] opacity-10 pointer-events-none" />
-      
-      <div className="max-w-screen-2xl mx-auto px-6 py-8 relative z-10">
+    <div className="min-h-screen bg-background">
+      <div className="max-w-screen-2xl mx-auto px-6 py-8">
         {/* Header - Premium Design */}
         <div className="mb-10">
-          <h1 className="text-[28px] font-semibold tracking-tight text-white mb-1.5">Dashboard</h1>
-          <p className="text-[13px] leading-relaxed text-white/60">
+          <h1 className="text-3xl font-semibold tracking-tight mb-1.5">Dashboard</h1>
+          <p className="text-[15px] text-muted-foreground">
             Vue d'ensemble de votre activité
           </p>
         </div>
@@ -252,23 +249,23 @@ export default function Dashboard() {
           </Select>
         </div>
 
-        {/* KPI Cards Grid - Green Accent + Micro Gold Variations */}
+        {/* KPI Cards Grid - Premium Design */}
         {statsLoading ? (
           <div className="flex justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-[#6BDFA3]" />
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-12">
-            {/* Total Calls - Green KPI - Clickable */}
+            {/* Total Calls - Clickable */}
             <Card 
-              className="kpi-card-shimmer group cursor-pointer bg-[#111214] border border-white/5 rounded-2xl shadow-[0_0_25px_-10px_#000] transition-all duration-200 ease-out hover:translate-y-[-2px] hover-glow-kpi overflow-hidden" 
+              className="group relative overflow-hidden cursor-pointer bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] transition-all duration-200 ease-out hover:translate-y-[-2px] hover:shadow-[0_0_16px_rgba(200,184,138,0.15)]" 
               onClick={() => setChartDialog('total')}
               data-testid="card-total-calls"
             >
               <CardContent className="relative p-7">
                 <div className="flex items-start justify-between mb-5">
-                  <div className="p-2 rounded-xl bg-[#6BDFA3]/10 flex items-center justify-center">
-                    <Phone className="w-5 h-5 text-[#6BDFA3] animate-pulse-slow-green" />
+                  <div className="p-2 rounded-xl bg-white/5 flex items-center justify-center">
+                    <Phone className="w-5 h-5 text-[#C8B88A] transition-opacity duration-150 hover:opacity-80" />
                   </div>
                   <div className="flex items-center gap-2">
                     <Button
@@ -281,56 +278,56 @@ export default function Dashboard() {
                       data-testid="button-analyze-volume"
                       className="h-7 px-2 gap-1 opacity-60 hover:opacity-100 transition-all duration-150 active:scale-95"
                     >
-                      <Brain className="w-3 h-3 text-[#A39BFF]" />
+                      <Brain className="w-3 h-3" />
                       <span className="text-xs">Analyser</span>
                     </Button>
                   </div>
                 </div>
-                <div className="kpi-label mb-2">
+                <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-2 font-medium">
                   Total des appels
                 </div>
                 <div className="flex items-end justify-between">
-                  <div className="text-[32px] font-semibold text-white" data-testid="stat-total-calls">
+                  <div className="text-[28px] font-semibold tracking-tight" data-testid="stat-total-calls">
                     {stats?.totalCalls || 0}
                   </div>
-                  <div className="flex items-center gap-1 micro-gold-variation">
-                    <TrendingUp className="w-3.5 h-3.5" />
+                  <div className="flex items-center gap-1 text-emerald-400 text-xs font-medium">
+                    <TrendingUp className="w-3.5 h-3.5 transition-opacity duration-150 hover:opacity-80" />
                     <span>+12%</span>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Active Calls - Green KPI */}
-            <Card className="kpi-card-shimmer bg-[#111214] border border-white/5 rounded-2xl shadow-[0_0_25px_-10px_#000] transition-all duration-200 ease-out hover:translate-y-[-2px] hover-glow-kpi overflow-hidden" data-testid="card-active-calls">
+            {/* Active Calls - Not Clickable */}
+            <Card className="relative overflow-hidden bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] transition-all duration-200 ease-out hover:translate-y-[-2px] hover:shadow-[0_0_16px_rgba(200,184,138,0.15)]" data-testid="card-active-calls">
               <CardContent className="relative p-7">
                 <div className="flex items-start justify-between mb-5">
-                  <div className="p-2 rounded-xl bg-[#6BDFA3]/10 flex items-center justify-center">
-                    <Activity className="w-5 h-5 text-[#6BDFA3] animate-pulse-slow-green" />
+                  <div className="p-2 rounded-xl bg-white/5 flex items-center justify-center">
+                    <Activity className="w-5 h-5 text-[#C8B88A] transition-opacity duration-150 hover:opacity-80" />
                   </div>
                 </div>
-                <div className="kpi-label mb-2">
+                <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-2 font-medium">
                   Appels actifs
                 </div>
                 <div className="flex items-end justify-between">
-                  <div className="text-[32px] font-semibold text-white" data-testid="stat-active-calls">
+                  <div className="text-[28px] font-semibold tracking-tight" data-testid="stat-active-calls">
                     {stats?.activeCalls || 0}
                   </div>
-                  <div className="text-[12px] text-white/60">En cours</div>
+                  <div className="text-xs text-muted-foreground">En cours</div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Conversion Rate - Green KPI - Clickable */}
+            {/* Conversion Rate - Clickable */}
             <Card 
-              className="kpi-card-shimmer group cursor-pointer bg-[#111214] border border-white/5 rounded-2xl shadow-[0_0_25px_-10px_#000] transition-all duration-200 ease-out hover:translate-y-[-2px] hover-glow-kpi overflow-hidden" 
+              className="group relative overflow-hidden cursor-pointer bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] transition-all duration-200 ease-out hover:translate-y-[-2px] hover:shadow-[0_0_16px_rgba(200,184,138,0.15)]" 
               onClick={() => setChartDialog('conversion')}
               data-testid="card-conversion-rate"
             >
               <CardContent className="relative p-7">
                 <div className="flex items-start justify-between mb-5">
-                  <div className="p-2 rounded-xl bg-[#6BDFA3]/10 flex items-center justify-center">
-                    <TrendingUp className="w-5 h-5 text-[#6BDFA3] animate-pulse-slow-green" />
+                  <div className="p-2 rounded-xl bg-white/5 flex items-center justify-center">
+                    <TrendingUp className="w-5 h-5 text-[#C8B88A] transition-opacity duration-150 hover:opacity-80" />
                   </div>
                   <div className="flex items-center gap-2">
                     <Button
@@ -343,36 +340,36 @@ export default function Dashboard() {
                       data-testid="button-analyze-conversion"
                       className="h-7 px-2 gap-1 opacity-60 hover:opacity-100 transition-all duration-150 active:scale-95"
                     >
-                      <Brain className="w-3 h-3 text-[#A39BFF]" />
+                      <Brain className="w-3 h-3" />
                       <span className="text-xs">Analyser</span>
                     </Button>
                   </div>
                 </div>
-                <div className="kpi-label mb-2">
+                <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-2 font-medium">
                   Taux de conversion
                 </div>
                 <div className="flex items-end justify-between">
-                  <div className="text-[32px] font-semibold text-white" data-testid="stat-conversion-rate">
+                  <div className="text-[28px] font-semibold tracking-tight" data-testid="stat-conversion-rate">
                     {stats?.conversionRate || 0}%
                   </div>
-                  <div className="flex items-center gap-1 micro-gold-variation">
-                    <TrendingDown className="w-3.5 h-3.5" />
+                  <div className="flex items-center gap-1 text-rose-400 text-xs font-medium">
+                    <TrendingDown className="w-3.5 h-3.5 transition-opacity duration-150 hover:opacity-80" />
                     <span>-3%</span>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Average Duration - Green KPI - Clickable */}
+            {/* Average Duration - Clickable */}
             <Card 
-              className="kpi-card-shimmer group cursor-pointer bg-[#111214] border border-white/5 rounded-2xl shadow-[0_0_25px_-10px_#000] transition-all duration-200 ease-out hover:translate-y-[-2px] hover-glow-kpi overflow-hidden" 
+              className="group relative overflow-hidden cursor-pointer bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] transition-all duration-200 ease-out hover:translate-y-[-2px] hover:shadow-[0_0_16px_rgba(200,184,138,0.15)]" 
               onClick={() => setChartDialog('duration')}
               data-testid="card-average-duration"
             >
               <CardContent className="relative p-7">
                 <div className="flex items-start justify-between mb-5">
-                  <div className="p-2 rounded-xl bg-[#6BDFA3]/10 flex items-center justify-center">
-                    <Clock className="w-5 h-5 text-[#6BDFA3] animate-pulse-slow-green" />
+                  <div className="p-2 rounded-xl bg-white/5 flex items-center justify-center">
+                    <Clock className="w-5 h-5 text-[#C8B88A] transition-opacity duration-150 hover:opacity-80" />
                   </div>
                   <div className="flex items-center gap-2">
                     <Button
@@ -385,63 +382,63 @@ export default function Dashboard() {
                       data-testid="button-analyze-duration"
                       className="h-7 px-2 gap-1 opacity-60 hover:opacity-100 transition-all duration-150 active:scale-95"
                     >
-                      <Brain className="w-3 h-3 text-[#A39BFF]" />
+                      <Brain className="w-3 h-3" />
                       <span className="text-xs">Analyser</span>
                     </Button>
                   </div>
                 </div>
-                <div className="kpi-label mb-2">
+                <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-2 font-medium">
                   Durée moyenne
                 </div>
                 <div className="flex items-end justify-between">
-                  <div className="text-[32px] font-semibold text-white" data-testid="stat-average-duration">
+                  <div className="text-[28px] font-semibold tracking-tight" data-testid="stat-average-duration">
                     {formatDuration(stats?.averageDuration)}
                   </div>
-                  <div className="flex items-center gap-1 micro-gold-variation">
-                    <TrendingUp className="w-3.5 h-3.5" />
+                  <div className="flex items-center gap-1 text-emerald-400 text-xs font-medium">
+                    <TrendingUp className="w-3.5 h-3.5 transition-opacity duration-150 hover:opacity-80" />
                     <span>+8%</span>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Hours Saved - Green KPI */}
-            <Card className="kpi-card-shimmer bg-[#111214] border border-white/5 rounded-2xl shadow-[0_0_25px_-10px_#000] transition-all duration-200 ease-out hover:translate-y-[-2px] hover-glow-kpi overflow-hidden" data-testid="card-hours-saved">
+            {/* Hours Saved - Not Clickable */}
+            <Card className="relative overflow-hidden bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] transition-all duration-200 ease-out hover:translate-y-[-2px] hover:shadow-[0_0_16px_rgba(200,184,138,0.15)]" data-testid="card-hours-saved">
               <CardContent className="relative p-7">
                 <div className="flex items-start justify-between mb-5">
-                  <div className="p-2 rounded-xl bg-[#6BDFA3]/10 flex items-center justify-center">
-                    <Timer className="w-5 h-5 text-[#6BDFA3] animate-pulse-slow-green" />
+                  <div className="p-2 rounded-xl bg-white/5 flex items-center justify-center">
+                    <Timer className="w-5 h-5 text-[#C8B88A] transition-opacity duration-150 hover:opacity-80" />
                   </div>
                 </div>
-                <div className="kpi-label mb-2">
+                <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-2 font-medium">
                   Heures économisées
                 </div>
                 <div className="flex items-end justify-between">
-                  <div className="text-[32px] font-semibold text-white" data-testid="stat-hours-saved">
+                  <div className="text-[28px] font-semibold tracking-tight" data-testid="stat-hours-saved">
                     {formatHours(stats?.hoursSaved)}
                   </div>
-                  <div className="text-[12px] text-white/60">Ce mois</div>
+                  <div className="text-xs text-muted-foreground">Ce mois</div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Estimated Revenue - Green KPI */}
-            <Card className="kpi-card-shimmer bg-[#111214] border border-white/5 rounded-2xl shadow-[0_0_25px_-10px_#000] transition-all duration-200 ease-out hover:translate-y-[-2px] hover-glow-kpi overflow-hidden" data-testid="card-estimated-revenue">
+            {/* Estimated Revenue - Not Clickable */}
+            <Card className="relative overflow-hidden bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] transition-all duration-200 ease-out hover:translate-y-[-2px] hover:shadow-[0_0_16px_rgba(200,184,138,0.15)]" data-testid="card-estimated-revenue">
               <CardContent className="relative p-7">
                 <div className="flex items-start justify-between mb-5">
-                  <div className="p-2 rounded-xl bg-[#6BDFA3]/10 flex items-center justify-center">
-                    <Euro className="w-5 h-5 text-[#6BDFA3] animate-pulse-slow-green" />
+                  <div className="p-2 rounded-xl bg-white/5 flex items-center justify-center">
+                    <Euro className="w-5 h-5 text-[#C8B88A] transition-opacity duration-150 hover:opacity-80" />
                   </div>
                 </div>
-                <div className="kpi-label mb-2">
+                <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-2 font-medium">
                   Revenus estimés
                 </div>
                 <div className="flex items-end justify-between">
-                  <div className="text-[32px] font-semibold text-white" data-testid="stat-estimated-revenue">
+                  <div className="text-[28px] font-semibold tracking-tight" data-testid="stat-estimated-revenue">
                     {formatCurrency(stats?.estimatedRevenue)}
                   </div>
-                  <div className="flex items-center gap-1 micro-gold-variation">
-                    <TrendingUp className="w-3.5 h-3.5" />
+                  <div className="flex items-center gap-1 text-[#C8B88A] text-xs font-medium">
+                    <TrendingUp className="w-3.5 h-3.5 transition-opacity duration-150 hover:opacity-80" />
                   </div>
                 </div>
               </CardContent>
@@ -449,92 +446,85 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* AI Insights & Trends Section - Violet Theme + Micro Gold Divider */}
-        <div className="border-t border-white/5 pt-8 mb-12">
-          <div className="ai-section-container ai-section-divider relative p-6">
-            {/* Header */}
-            <div className="relative z-10 mb-6">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-[#A39BFF]/10 flex items-center justify-center">
-                  <Brain className="w-6 h-6 text-[#A39BFF] animate-pulse-slow-violet" />
-                </div>
-                <div>
-                  <h2 className="text-[22px] font-semibold tracking-tight text-white">
-                    Insights IA & Tendances
-                  </h2>
-                  <p className="text-[13px] text-white/50 mt-1">
-                    Recommandations intelligentes basées sur vos données réelles
-                  </p>
-                </div>
+        {/* AI Insights & Trends Section - Premium Design */}
+        <Card className="mb-12 relative overflow-hidden border-[#C8B88A]/10">
+          <div className="absolute inset-0 bg-gradient-to-br from-[#C8B88A]/[0.04] via-transparent to-[#A89D78]/[0.02]" />
+          <CardHeader className="relative">
+            <div className="flex items-center gap-4">
+              <div className="w-11 h-11 rounded-xl bg-[#C8B88A]/10 flex items-center justify-center">
+                <Brain className="w-5 h-5 text-[#C8B88A]" />
+              </div>
+              <div>
+                <CardTitle className="text-lg font-semibold tracking-tight">Insights IA & Tendances</CardTitle>
+                <CardDescription className="text-[13px]">
+                  Recommandations intelligentes basées sur vos données réelles
+                </CardDescription>
               </div>
             </div>
-
-            {/* Content */}
-            <div className="relative z-10">
-              {insightsLoading ? (
-                <div className="flex justify-center py-12">
-                  <Loader2 className="w-8 h-8 animate-spin text-[#A39BFF]" />
-                </div>
-              ) : aiInsights.length === 0 ? (
-                <div className="text-center py-12">
-                  <Brain className="w-12 h-12 text-[#A39BFF]/40 mx-auto mb-4" />
-                  <p className="text-white/40">Aucune donnée disponible pour générer des insights</p>
-                </div>
-              ) : (
-                <div className="flex flex-col md:flex-row gap-4 items-stretch">
-                  {aiInsights.map((insight, index) => {
-                    const Icon = iconMap[insight.icon] || Brain;
-                    const levelConfig = {
-                      good: { dot: 'bg-[#6BDFA3]', labelClass: 'text-[#6BDFA3] text-[11px] uppercase tracking-wider font-medium' },
-                      average: { dot: 'bg-[#A39BFF]', labelClass: 'text-[#A39BFF] text-[11px] uppercase tracking-wider font-medium' },
-                      warning: { dot: 'bg-rose-400', labelClass: 'text-rose-400 text-[11px] uppercase tracking-wider font-medium' },
-                    };
-                    const config = insight.level ? levelConfig[insight.level as keyof typeof levelConfig] : { dot: 'bg-[#A39BFF]', labelClass: 'text-[#A39BFF] text-[11px] uppercase tracking-wider font-medium' };
-                    
-                    return (
-                      <div 
-                        key={index}
-                        className="ai-insight-card flex-1 w-full p-5 hover-glow-violet"
-                        data-testid={`recommendation-${index}`}
-                      >
-                        <div className="flex items-start gap-4">
-                          <div className="shrink-0">
-                            <div className="w-10 h-10 rounded-xl bg-[#A39BFF]/10 flex items-center justify-center">
-                              <Icon className="w-5 h-5 text-[#A39BFF] animate-pulse-slow-violet" />
-                            </div>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-2">
-                              <div className={`w-2 h-2 rounded-full ${config.dot}`} />
-                              <span className={config.labelClass}>
-                                {insight.type === 'performance' ? 'Performance' : 'Business'}
-                              </span>
-                            </div>
-                            <p className="text-[14px] text-white leading-relaxed mt-1">
-                              {insight.text}
-                            </p>
+          </CardHeader>
+          <CardContent className="relative">
+            {insightsLoading ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              </div>
+            ) : aiInsights.length === 0 ? (
+              <div className="text-center py-12">
+                <Brain className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">Aucune donnée disponible pour générer des insights</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {aiInsights.map((insight, index) => {
+                  const Icon = iconMap[insight.icon] || Brain;
+                  const levelConfig = {
+                    good: { dot: 'bg-emerald-400', borderClass: 'border-white/5', bgClass: 'bg-[#131417]' },
+                    average: { dot: 'bg-amber-400', borderClass: 'border-white/5', bgClass: 'bg-[#131417]' },
+                    warning: { dot: 'bg-rose-400', borderClass: 'border-white/5', bgClass: 'bg-[#131417]' },
+                  };
+                  const config = insight.level ? levelConfig[insight.level as keyof typeof levelConfig] : { dot: 'bg-primary', borderClass: 'border-white/5', bgClass: 'bg-[#131417]' };
+                  
+                  return (
+                    <div 
+                      key={index}
+                      className={`group relative p-6 rounded-2xl ${config.bgClass} bg-gradient-to-br from-white/[0.02] to-transparent border ${config.borderClass} transition-all duration-200 hover:border-white/[0.12]`}
+                      data-testid={`recommendation-${index}`}
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className="shrink-0">
+                          <div className="w-10 h-10 rounded-xl bg-white/[0.06] flex items-center justify-center">
+                            <Icon className="w-5 h-5 text-primary" />
                           </div>
                         </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className={`w-2 h-2 rounded-full ${config.dot}`} />
+                            <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">
+                              {insight.type === 'performance' ? 'Performance' : 'Business'}
+                            </span>
+                          </div>
+                          <p className="text-[13px] text-foreground/80 leading-relaxed">
+                            {insight.text}
+                          </p>
+                        </div>
                       </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-        {/* Calls List Section - Neutral Table Block */}
-        <div className="border-t border-white/5 pt-8">
-          <Card className="bg-[#111214] border border-white/5 rounded-2xl shadow-[0_0_25px_-10px_#000] overflow-hidden">
-            <CardHeader className="pb-4">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div>
-                  <CardTitle className="text-[20px] font-semibold text-white tracking-tight">Liste des appels</CardTitle>
-                  <CardDescription className="text-[13px] leading-relaxed text-[#9BA0A8]">
-                    Historique de tous vos appels enregistrés
-                  </CardDescription>
-                </div>
+        {/* Calls List Section - Premium Design */}
+        <Card className="border-white/[0.06]">
+          <CardHeader className="pb-4">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
+                <CardTitle className="text-lg font-semibold tracking-tight">Liste des appels</CardTitle>
+                <CardDescription className="text-[13px]">
+                  Historique de tous vos appels enregistrés
+                </CardDescription>
+              </div>
               <div className="flex flex-col sm:flex-row gap-2">
                 <Select value={callsTimeFilter} onValueChange={setCallsTimeFilter}>
                   <SelectTrigger className="w-full sm:w-[160px] h-9 text-[13px]" data-testid="select-calls-time-filter">
@@ -633,7 +623,7 @@ export default function Dashboard() {
                       return (
                         <tr 
                           key={call.id} 
-                          className={`border-b border-white/[0.04] transition-all duration-200 hover:bg-white/[0.03] hover:shadow-[0_0_10px_rgba(200,184,138,0.08)] backdrop-blur-[2px] ${index % 2 === 0 ? 'bg-transparent' : 'bg-white/[0.01]'} ${isMobile ? 'cursor-pointer' : ''}`}
+                          className={`border-b border-white/[0.04] transition-colors duration-150 hover:bg-[#1A1C20] ${index % 2 === 0 ? 'bg-transparent' : 'bg-white/[0.01]'} ${isMobile ? 'cursor-pointer' : ''}`}
                           onClick={handleRowClick}
                           data-testid={`call-row-${call.id}`}
                         >
@@ -718,12 +708,11 @@ export default function Dashboard() {
               </div>
             )}
           </CardContent>
-          </Card>
-        </div>
+        </Card>
 
         {/* Call Detail Dialog - Enriched with N8N data */}
         <Dialog open={!!selectedCall} onOpenChange={() => setSelectedCall(null)}>
-          <DialogContent className="premium-modal max-w-3xl max-h-[90vh] overflow-y-auto bg-[#111214] border border-white/10 rounded-2xl shadow-[0_0_40px_-10px_#000]" data-testid="dialog-call-detail">
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" data-testid="dialog-call-detail">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 Détail de l'appel
@@ -996,7 +985,7 @@ export default function Dashboard() {
 
         {/* Chart Dialogs */}
         <Dialog open={chartDialog === 'total'} onOpenChange={() => setChartDialog(null)}>
-          <DialogContent className="premium-modal max-w-3xl bg-[#111214] border border-white/10 rounded-2xl shadow-[0_0_40px_-10px_#000]" data-testid="dialog-chart-total">
+          <DialogContent className="max-w-3xl" data-testid="dialog-chart-total">
             <DialogHeader>
               <DialogTitle>Total des appels</DialogTitle>
               <DialogDescription>
@@ -1023,7 +1012,7 @@ export default function Dashboard() {
         </Dialog>
 
         <Dialog open={chartDialog === 'conversion'} onOpenChange={() => setChartDialog(null)}>
-          <DialogContent className="premium-modal max-w-3xl bg-[#111214] border border-white/10 rounded-2xl shadow-[0_0_40px_-10px_#000]" data-testid="dialog-chart-conversion">
+          <DialogContent className="max-w-3xl" data-testid="dialog-chart-conversion">
             <DialogHeader>
               <DialogTitle>Taux de conversion</DialogTitle>
               <DialogDescription>
@@ -1050,7 +1039,7 @@ export default function Dashboard() {
         </Dialog>
 
         <Dialog open={chartDialog === 'duration'} onOpenChange={() => setChartDialog(null)}>
-          <DialogContent className="premium-modal max-w-3xl bg-[#111214] border border-white/10 rounded-2xl shadow-[0_0_40px_-10px_#000]" data-testid="dialog-chart-duration">
+          <DialogContent className="max-w-3xl" data-testid="dialog-chart-duration">
             <DialogHeader>
               <DialogTitle>Durée moyenne des appels</DialogTitle>
               <DialogDescription>
