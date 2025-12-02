@@ -690,7 +690,7 @@ export default function Dashboard() {
                                 e.stopPropagation();
                                 setSelectedCall(call);
                               }}
-                              className={`${isMobile ? 'hidden' : ''} h-8 px-3 text-[12px] text-muted-foreground hover:text-foreground`}
+                              className={`${isMobile ? 'hidden' : ''} h-8 px-3 text-[12px] text-muted-foreground hover:text-foreground transition-all duration-150 active:scale-95`}
                               data-testid={`button-view-call-${call.id}`}
                             >
                               <Eye className="w-3.5 h-3.5 mr-1.5" />
