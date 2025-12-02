@@ -566,115 +566,117 @@
   opacity: 0.8;
 }
 
-/* AI Icon Animation - Blue pulse */
-@keyframes pulse-slow-blue {
-  0% { opacity: 0.6; filter: drop-shadow(0 0 2px rgba(122, 140, 255, 0.2)); }
-  50% { opacity: 1; filter: drop-shadow(0 0 6px rgba(122, 140, 255, 0.4)); }
-  100% { opacity: 0.6; filter: drop-shadow(0 0 2px rgba(122, 140, 255, 0.2)); }
-}
+/* ============================================
+   NEW COLOR SYSTEM - STRICT RULES
+   Primary KPI: #6BDFA3 (green)
+   Primary AI: #A39BFF (violet)
+   Micro Gold: #C8B88A (ONLY for tiny accents)
+   ============================================ */
 
-.animate-pulse-slow-blue {
-  animation: pulse-slow-blue 3s ease-in-out infinite;
-}
-
-/* Gold Business Pulse Animation */
-@keyframes pulse-slow-gold {
-  0% { opacity: 0.6; filter: drop-shadow(0 0 2px rgba(200, 184, 138, 0.2)); }
-  50% { opacity: 1; filter: drop-shadow(0 0 6px rgba(200, 184, 138, 0.4)); }
-  100% { opacity: 0.6; filter: drop-shadow(0 0 2px rgba(200, 184, 138, 0.2)); }
-}
-
-.animate-pulse-slow-gold {
-  animation: pulse-slow-gold 3s ease-in-out infinite;
-}
-
-/* Green Success Pulse Animation */
+/* Green KPI Icon Pulse Animation */
 @keyframes pulse-slow-green {
-  0% { opacity: 0.6; filter: drop-shadow(0 0 2px rgba(107, 223, 163, 0.2)); }
+  0% { opacity: 0.7; filter: drop-shadow(0 0 2px rgba(107, 223, 163, 0.2)); }
   50% { opacity: 1; filter: drop-shadow(0 0 6px rgba(107, 223, 163, 0.4)); }
-  100% { opacity: 0.6; filter: drop-shadow(0 0 2px rgba(107, 223, 163, 0.2)); }
+  100% { opacity: 0.7; filter: drop-shadow(0 0 2px rgba(107, 223, 163, 0.2)); }
 }
 
 .animate-pulse-slow-green {
   animation: pulse-slow-green 3s ease-in-out infinite;
 }
 
-/* Border System by Type */
-.border-business {
-  border-color: rgba(200, 184, 138, 0.1);
+/* Violet AI Icon Pulse Animation */
+@keyframes pulse-slow-violet {
+  0% { opacity: 0.7; filter: drop-shadow(0 0 2px rgba(163, 155, 255, 0.2)); }
+  50% { opacity: 1; filter: drop-shadow(0 0 6px rgba(163, 155, 255, 0.4)); }
+  100% { opacity: 0.7; filter: drop-shadow(0 0 2px rgba(163, 155, 255, 0.2)); }
 }
 
-.border-insights {
-  border-color: rgba(122, 140, 255, 0.1);
+.animate-pulse-slow-violet {
+  animation: pulse-slow-violet 3s ease-in-out infinite;
 }
 
-.border-success {
-  border-color: rgba(107, 223, 163, 0.1);
+/* MICRO Gold Spark Animation - ONLY for tiny icons <16px */
+@keyframes micro-gold {
+  0% { opacity: 0.4; }
+  50% { opacity: 0.7; }
+  100% { opacity: 0.4; }
 }
 
-/* Hover Glow System by Type */
-.hover-glow-business:hover {
-  box-shadow: 0 0 18px rgba(200, 184, 138, 0.3);
+.golden-micro {
+  color: #C8B88A;
+  opacity: 0.5;
+  animation: micro-gold 5s ease-in-out infinite;
 }
 
-.hover-glow-insights:hover {
-  box-shadow: 0 0 18px rgba(122, 140, 255, 0.3);
+/* Hover Glow - Green for KPI cards */
+.hover-glow-kpi:hover {
+  box-shadow: 0 0 18px rgba(107, 223, 163, 0.2);
 }
 
-.hover-glow-success:hover {
-  box-shadow: 0 0 18px rgba(107, 223, 163, 0.3);
+/* Hover Glow - Violet for AI section */
+.hover-glow-violet:hover {
+  box-shadow: 0 0 18px rgba(163, 155, 255, 0.25);
 }
 
-/* Light Line System - Bottom Gradient */
-.light-line-business {
+/* Micro Gold Table Row Hover - ONLY usage */
+.hover-gold-micro:hover {
+  box-shadow: 0 0 8px rgba(200, 184, 138, 0.08);
+}
+
+/* KPI Card - Micro gold bottom shimmer line */
+.kpi-card-shimmer {
   position: relative;
 }
 
-.light-line-business::after {
+.kpi-card-shimmer::after {
   content: "";
   position: absolute;
   bottom: 0;
   left: 0;
   width: 100%;
   height: 1px;
-  background: linear-gradient(to right, transparent, rgba(200, 184, 138, 0.2), transparent);
+  background: linear-gradient(to right, transparent, rgba(200, 184, 138, 0.15), transparent);
 }
 
-.light-line-insights {
+/* AI Section - Micro gold top divider (ONLY gold allowed here) */
+.ai-section-divider {
   position: relative;
 }
 
-.light-line-insights::after {
+.ai-section-divider::before {
   content: "";
   position: absolute;
-  bottom: 0;
+  top: 0;
   left: 0;
   width: 100%;
   height: 1px;
-  background: linear-gradient(to right, transparent, rgba(122, 140, 255, 0.25), transparent);
+  background: linear-gradient(to right, transparent, rgba(200, 184, 138, 0.10), transparent);
 }
 
-.light-line-success {
-  position: relative;
+/* AI Insight Card Styling - Violet accent */
+.ai-insight-card {
+  background: #0F1012;
+  border: 1px solid rgba(163, 155, 255, 0.10);
+  border-radius: 1rem;
+  transition: all 0.2s ease-out;
 }
 
-.light-line-success::after {
-  content: "";
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  height: 1px;
-  background: linear-gradient(to right, transparent, rgba(107, 223, 163, 0.25), transparent);
+.ai-insight-card:hover {
+  box-shadow: 0 0 20px rgba(163, 155, 255, 0.15);
+  border-color: rgba(163, 155, 255, 0.2);
 }
 
-/* Gradient Backgrounds by Block */
+/* AI Section Container - Violet theme */
+.ai-section-container {
+  background: rgba(17, 18, 20, 0.7);
+  border: 1px solid rgba(163, 155, 255, 0.10);
+  border-radius: 1rem;
+  backdrop-filter: blur(8px);
+}
+
+/* Gradient Backgrounds */
 .bg-kpi-gradient {
   background: linear-gradient(to bottom, #151618, #0F1012);
-}
-
-.bg-insights-gradient {
-  background: linear-gradient(to bottom right, #111214, #090A0C);
 }
 
 .bg-table-block {
@@ -685,41 +687,29 @@
   background: linear-gradient(to bottom, #131416, #0E0F10);
 }
 
-/* Neon blue glow for AI accent */
-.neon-blue {
-  filter: drop-shadow(0 0 8px rgba(122, 140, 255, 0.6)) 
-          drop-shadow(0 0 12px rgba(122, 140, 255, 0.4));
-}
-
-/* Neon green glow for success accent */
-.neon-success {
-  filter: drop-shadow(0 0 8px rgba(107, 223, 163, 0.6)) 
-          drop-shadow(0 0 12px rgba(107, 223, 163, 0.4));
-}
-
-/* AI Label Styling */
-.ai-label {
-  color: #7A8CFF;
+/* KPI Label - Neutral subtle styling */
+.kpi-label {
+  color: rgba(184, 188, 198, 0.7);
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   font-weight: 500;
 }
 
-/* Business Label Styling */
-.business-label {
-  color: #C8B88A;
+/* Micro Gold Variation Text - ONLY for +12% type values */
+.micro-gold-variation {
+  color: rgba(200, 184, 138, 0.7);
   font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
   font-weight: 500;
+  letter-spacing: 0.02em;
 }
 
-/* Success Label Styling */
-.success-label {
+/* Violet AI Icon */
+.ai-icon-violet {
+  color: #A39BFF;
+}
+
+/* Green KPI Icon */
+.kpi-icon-green {
   color: #6BDFA3;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-weight: 500;
 }

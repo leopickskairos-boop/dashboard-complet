@@ -1,5 +1,3 @@
-import { Brain } from "lucide-react";
-
 interface LogoProps {
   className?: string;
   showText?: boolean;
@@ -7,14 +5,10 @@ interface LogoProps {
 
 export function Logo({ className = "", showText = true }: LogoProps) {
   return (
-    <div className={`flex items-center gap-2.5 ${className}`}>
-      {/* IA Symbol */}
-      <div className="rounded-md bg-gradient-to-br from-[#C8B88A]/20 to-[#C8B88A]/5 p-2 shadow-[0_0_20px_-8px_#C8B88A]">
-        <Brain className="w-4 h-4 text-[#C8B88A]" />
-      </div>
-      {/* Wordmark */}
+    <div className={`flex items-center ${className}`}>
+      {/* Wordmark with micro gold shimmer - NO icon */}
       {showText && (
-        <span className="text-[20px] font-semibold tracking-tight text-[#C8B88A] drop-shadow-[0_0_12px_rgba(200,184,138,0.25)] hover:opacity-90 transition-opacity duration-200">
+        <span className="relative text-[18px] font-semibold tracking-tight text-white/90 after:absolute after:top-1/2 after:-translate-y-1/2 after:left-0 after:w-[60px] after:h-[20px] after:bg-[#C8B88A]/10 after:blur-[20px] after:opacity-20 after:-z-10">
           SpeedAI
         </span>
       )}

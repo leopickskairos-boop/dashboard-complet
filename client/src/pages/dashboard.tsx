@@ -252,23 +252,23 @@ export default function Dashboard() {
           </Select>
         </div>
 
-        {/* KPI Cards Grid - Premium Dual-Accent Design */}
+        {/* KPI Cards Grid - Green Accent + Micro Gold Variations */}
         {statsLoading ? (
           <div className="flex justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            <Loader2 className="w-8 h-8 animate-spin text-[#6BDFA3]" />
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-12">
-            {/* Total Calls - Business Gold - Clickable */}
+            {/* Total Calls - Green KPI - Clickable */}
             <Card 
-              className="light-line-business group cursor-pointer bg-kpi-gradient border border-[#C8B88A]/10 rounded-xl shadow-[inset_0_0_12px_#00000050] transition-all duration-200 ease-out hover:translate-y-[-2px] hover-glow-business overflow-hidden" 
+              className="kpi-card-shimmer group cursor-pointer bg-[#111214] border border-white/5 rounded-2xl shadow-[0_0_25px_-10px_#000] transition-all duration-200 ease-out hover:translate-y-[-2px] hover-glow-kpi overflow-hidden" 
               onClick={() => setChartDialog('total')}
               data-testid="card-total-calls"
             >
               <CardContent className="relative p-7">
                 <div className="flex items-start justify-between mb-5">
-                  <div className="p-2 rounded-xl bg-[#C8B88A]/10 flex items-center justify-center">
-                    <Phone className="w-5 h-5 text-[#C8B88A] animate-pulse-slow-gold" />
+                  <div className="p-2 rounded-xl bg-[#6BDFA3]/10 flex items-center justify-center">
+                    <Phone className="w-5 h-5 text-[#6BDFA3] animate-pulse-slow-green" />
                   </div>
                   <div className="flex items-center gap-2">
                     <Button
@@ -281,19 +281,19 @@ export default function Dashboard() {
                       data-testid="button-analyze-volume"
                       className="h-7 px-2 gap-1 opacity-60 hover:opacity-100 transition-all duration-150 active:scale-95"
                     >
-                      <Brain className="w-3 h-3 text-[#7A8CFF]" />
+                      <Brain className="w-3 h-3 text-[#A39BFF]" />
                       <span className="text-xs">Analyser</span>
                     </Button>
                   </div>
                 </div>
-                <div className="business-label mb-2">
+                <div className="kpi-label mb-2">
                   Total des appels
                 </div>
                 <div className="flex items-end justify-between">
                   <div className="text-[32px] font-semibold text-white" data-testid="stat-total-calls">
                     {stats?.totalCalls || 0}
                   </div>
-                  <div className="flex items-center gap-1 text-[12px] text-[#6BDFA3] font-medium">
+                  <div className="flex items-center gap-1 micro-gold-variation">
                     <TrendingUp className="w-3.5 h-3.5" />
                     <span>+12%</span>
                   </div>
@@ -301,15 +301,15 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            {/* Active Calls - Business Gold */}
-            <Card className="light-line-business bg-kpi-gradient border border-[#C8B88A]/10 rounded-xl shadow-[inset_0_0_12px_#00000050] transition-all duration-200 ease-out hover:translate-y-[-2px] hover-glow-business overflow-hidden" data-testid="card-active-calls">
+            {/* Active Calls - Green KPI */}
+            <Card className="kpi-card-shimmer bg-[#111214] border border-white/5 rounded-2xl shadow-[0_0_25px_-10px_#000] transition-all duration-200 ease-out hover:translate-y-[-2px] hover-glow-kpi overflow-hidden" data-testid="card-active-calls">
               <CardContent className="relative p-7">
                 <div className="flex items-start justify-between mb-5">
-                  <div className="p-2 rounded-xl bg-[#C8B88A]/10 flex items-center justify-center">
-                    <Activity className="w-5 h-5 text-[#C8B88A] animate-pulse-slow-gold" />
+                  <div className="p-2 rounded-xl bg-[#6BDFA3]/10 flex items-center justify-center">
+                    <Activity className="w-5 h-5 text-[#6BDFA3] animate-pulse-slow-green" />
                   </div>
                 </div>
-                <div className="business-label mb-2">
+                <div className="kpi-label mb-2">
                   Appels actifs
                 </div>
                 <div className="flex items-end justify-between">
@@ -321,9 +321,9 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            {/* Conversion Rate - Success Green - Clickable */}
+            {/* Conversion Rate - Green KPI - Clickable */}
             <Card 
-              className="light-line-success group cursor-pointer bg-kpi-gradient border border-[#6BDFA3]/10 rounded-xl shadow-[inset_0_0_12px_#00000050] transition-all duration-200 ease-out hover:translate-y-[-2px] hover-glow-success overflow-hidden" 
+              className="kpi-card-shimmer group cursor-pointer bg-[#111214] border border-white/5 rounded-2xl shadow-[0_0_25px_-10px_#000] transition-all duration-200 ease-out hover:translate-y-[-2px] hover-glow-kpi overflow-hidden" 
               onClick={() => setChartDialog('conversion')}
               data-testid="card-conversion-rate"
             >
@@ -343,19 +343,19 @@ export default function Dashboard() {
                       data-testid="button-analyze-conversion"
                       className="h-7 px-2 gap-1 opacity-60 hover:opacity-100 transition-all duration-150 active:scale-95"
                     >
-                      <Brain className="w-3 h-3 text-[#7A8CFF]" />
+                      <Brain className="w-3 h-3 text-[#A39BFF]" />
                       <span className="text-xs">Analyser</span>
                     </Button>
                   </div>
                 </div>
-                <div className="success-label mb-2">
+                <div className="kpi-label mb-2">
                   Taux de conversion
                 </div>
                 <div className="flex items-end justify-between">
                   <div className="text-[32px] font-semibold text-white" data-testid="stat-conversion-rate">
                     {stats?.conversionRate || 0}%
                   </div>
-                  <div className="flex items-center gap-1 text-[12px] text-[#C8B88A] font-medium">
+                  <div className="flex items-center gap-1 micro-gold-variation">
                     <TrendingDown className="w-3.5 h-3.5" />
                     <span>-3%</span>
                   </div>
@@ -363,16 +363,16 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            {/* Average Duration - AI Blue - Clickable */}
+            {/* Average Duration - Green KPI - Clickable */}
             <Card 
-              className="light-line-insights group cursor-pointer bg-kpi-gradient border border-[#7A8CFF]/10 rounded-xl shadow-[inset_0_0_12px_#00000050] transition-all duration-200 ease-out hover:translate-y-[-2px] hover-glow-insights overflow-hidden" 
+              className="kpi-card-shimmer group cursor-pointer bg-[#111214] border border-white/5 rounded-2xl shadow-[0_0_25px_-10px_#000] transition-all duration-200 ease-out hover:translate-y-[-2px] hover-glow-kpi overflow-hidden" 
               onClick={() => setChartDialog('duration')}
               data-testid="card-average-duration"
             >
               <CardContent className="relative p-7">
                 <div className="flex items-start justify-between mb-5">
-                  <div className="p-2 rounded-xl bg-[#7A8CFF]/10 flex items-center justify-center">
-                    <Clock className="w-5 h-5 text-[#7A8CFF] animate-pulse-slow-blue" />
+                  <div className="p-2 rounded-xl bg-[#6BDFA3]/10 flex items-center justify-center">
+                    <Clock className="w-5 h-5 text-[#6BDFA3] animate-pulse-slow-green" />
                   </div>
                   <div className="flex items-center gap-2">
                     <Button
@@ -385,19 +385,19 @@ export default function Dashboard() {
                       data-testid="button-analyze-duration"
                       className="h-7 px-2 gap-1 opacity-60 hover:opacity-100 transition-all duration-150 active:scale-95"
                     >
-                      <Brain className="w-3 h-3 text-[#7A8CFF]" />
+                      <Brain className="w-3 h-3 text-[#A39BFF]" />
                       <span className="text-xs">Analyser</span>
                     </Button>
                   </div>
                 </div>
-                <div className="ai-label mb-2">
+                <div className="kpi-label mb-2">
                   Durée moyenne
                 </div>
                 <div className="flex items-end justify-between">
                   <div className="text-[32px] font-semibold text-white" data-testid="stat-average-duration">
                     {formatDuration(stats?.averageDuration)}
                   </div>
-                  <div className="flex items-center gap-1 text-[12px] text-[#6BDFA3] font-medium">
+                  <div className="flex items-center gap-1 micro-gold-variation">
                     <TrendingUp className="w-3.5 h-3.5" />
                     <span>+8%</span>
                   </div>
@@ -405,15 +405,15 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            {/* Hours Saved - AI Blue */}
-            <Card className="light-line-insights bg-kpi-gradient border border-[#7A8CFF]/10 rounded-xl shadow-[inset_0_0_12px_#00000050] transition-all duration-200 ease-out hover:translate-y-[-2px] hover-glow-insights overflow-hidden" data-testid="card-hours-saved">
+            {/* Hours Saved - Green KPI */}
+            <Card className="kpi-card-shimmer bg-[#111214] border border-white/5 rounded-2xl shadow-[0_0_25px_-10px_#000] transition-all duration-200 ease-out hover:translate-y-[-2px] hover-glow-kpi overflow-hidden" data-testid="card-hours-saved">
               <CardContent className="relative p-7">
                 <div className="flex items-start justify-between mb-5">
-                  <div className="p-2 rounded-xl bg-[#7A8CFF]/10 flex items-center justify-center">
-                    <Timer className="w-5 h-5 text-[#7A8CFF] animate-pulse-slow-blue" />
+                  <div className="p-2 rounded-xl bg-[#6BDFA3]/10 flex items-center justify-center">
+                    <Timer className="w-5 h-5 text-[#6BDFA3] animate-pulse-slow-green" />
                   </div>
                 </div>
-                <div className="ai-label mb-2">
+                <div className="kpi-label mb-2">
                   Heures économisées
                 </div>
                 <div className="flex items-end justify-between">
@@ -425,22 +425,22 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            {/* Estimated Revenue - Success Green */}
-            <Card className="light-line-success bg-kpi-gradient border border-[#6BDFA3]/10 rounded-xl shadow-[inset_0_0_12px_#00000050] transition-all duration-200 ease-out hover:translate-y-[-2px] hover-glow-success overflow-hidden" data-testid="card-estimated-revenue">
+            {/* Estimated Revenue - Green KPI */}
+            <Card className="kpi-card-shimmer bg-[#111214] border border-white/5 rounded-2xl shadow-[0_0_25px_-10px_#000] transition-all duration-200 ease-out hover:translate-y-[-2px] hover-glow-kpi overflow-hidden" data-testid="card-estimated-revenue">
               <CardContent className="relative p-7">
                 <div className="flex items-start justify-between mb-5">
                   <div className="p-2 rounded-xl bg-[#6BDFA3]/10 flex items-center justify-center">
                     <Euro className="w-5 h-5 text-[#6BDFA3] animate-pulse-slow-green" />
                   </div>
                 </div>
-                <div className="success-label mb-2">
+                <div className="kpi-label mb-2">
                   Revenus estimés
                 </div>
                 <div className="flex items-end justify-between">
                   <div className="text-[32px] font-semibold text-white" data-testid="stat-estimated-revenue">
                     {formatCurrency(stats?.estimatedRevenue)}
                   </div>
-                  <div className="flex items-center gap-1 text-[12px] text-[#6BDFA3] font-medium">
+                  <div className="flex items-center gap-1 micro-gold-variation">
                     <TrendingUp className="w-3.5 h-3.5" />
                   </div>
                 </div>
@@ -449,17 +449,17 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* AI Insights & Trends Section - Premium Glass Panel */}
+        {/* AI Insights & Trends Section - Violet Theme + Micro Gold Divider */}
         <div className="border-t border-white/5 pt-8 mb-12">
-          <div className="glass-panel-ai relative">
+          <div className="ai-section-container ai-section-divider relative p-6">
             {/* Header */}
             <div className="relative z-10 mb-6">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-[#7A8CFF]/10 flex items-center justify-center">
-                  <Brain className="w-6 h-6 ai-icon animate-pulse-slow-blue" />
+                <div className="w-12 h-12 rounded-xl bg-[#A39BFF]/10 flex items-center justify-center">
+                  <Brain className="w-6 h-6 text-[#A39BFF] animate-pulse-slow-violet" />
                 </div>
                 <div>
-                  <h2 className="text-[22px] font-semibold tracking-tight text-white drop-shadow-[0_0_10px_#7A8CFF20]">
+                  <h2 className="text-[22px] font-semibold tracking-tight text-white">
                     Insights IA & Tendances
                   </h2>
                   <p className="text-[13px] text-white/50 mt-1">
@@ -473,11 +473,11 @@ export default function Dashboard() {
             <div className="relative z-10">
               {insightsLoading ? (
                 <div className="flex justify-center py-12">
-                  <Loader2 className="w-8 h-8 animate-spin text-[#7A8CFF]" />
+                  <Loader2 className="w-8 h-8 animate-spin text-[#A39BFF]" />
                 </div>
               ) : aiInsights.length === 0 ? (
                 <div className="text-center py-12">
-                  <Brain className="w-12 h-12 text-[#7A8CFF]/40 mx-auto mb-4" />
+                  <Brain className="w-12 h-12 text-[#A39BFF]/40 mx-auto mb-4" />
                   <p className="text-white/40">Aucune donnée disponible pour générer des insights</p>
                 </div>
               ) : (
@@ -485,22 +485,22 @@ export default function Dashboard() {
                   {aiInsights.map((insight, index) => {
                     const Icon = iconMap[insight.icon] || Brain;
                     const levelConfig = {
-                      good: { dot: 'bg-[#6BDFA3]', labelClass: 'success-label' },
-                      average: { dot: 'bg-[#C8B88A]', labelClass: 'business-label' },
-                      warning: { dot: 'bg-rose-400', labelClass: 'ai-label' },
+                      good: { dot: 'bg-[#6BDFA3]', labelClass: 'text-[#6BDFA3] text-[11px] uppercase tracking-wider font-medium' },
+                      average: { dot: 'bg-[#A39BFF]', labelClass: 'text-[#A39BFF] text-[11px] uppercase tracking-wider font-medium' },
+                      warning: { dot: 'bg-rose-400', labelClass: 'text-rose-400 text-[11px] uppercase tracking-wider font-medium' },
                     };
-                    const config = insight.level ? levelConfig[insight.level as keyof typeof levelConfig] : { dot: 'bg-[#7A8CFF]', labelClass: 'ai-label' };
+                    const config = insight.level ? levelConfig[insight.level as keyof typeof levelConfig] : { dot: 'bg-[#A39BFF]', labelClass: 'text-[#A39BFF] text-[11px] uppercase tracking-wider font-medium' };
                     
                     return (
                       <div 
                         key={index}
-                        className="ai-capsule flex-1 w-full"
+                        className="ai-insight-card flex-1 w-full p-5 hover-glow-violet"
                         data-testid={`recommendation-${index}`}
                       >
                         <div className="flex items-start gap-4">
                           <div className="shrink-0">
-                            <div className="w-10 h-10 rounded-xl bg-[#7A8CFF]/10 flex items-center justify-center">
-                              <Icon className="w-5 h-5 ai-icon animate-pulse-slow-blue" />
+                            <div className="w-10 h-10 rounded-xl bg-[#A39BFF]/10 flex items-center justify-center">
+                              <Icon className="w-5 h-5 text-[#A39BFF] animate-pulse-slow-violet" />
                             </div>
                           </div>
                           <div className="flex-1 min-w-0">
@@ -524,9 +524,9 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Calls List Section - Premium Table Block Design */}
+        {/* Calls List Section - Neutral Table Block */}
         <div className="border-t border-white/5 pt-8">
-          <Card className="bg-table-block border border-[#C8B88A]/10 rounded-xl shadow-[inset_0_0_12px_#00000050] overflow-hidden light-line-business">
+          <Card className="bg-[#111214] border border-white/5 rounded-2xl shadow-[0_0_25px_-10px_#000] overflow-hidden">
             <CardHeader className="pb-4">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
