@@ -450,21 +450,22 @@ export default function Dashboard() {
         )}
 
         {/* AI Insights & Trends Section - Premium Design */}
-        <Card className="mb-12 relative overflow-hidden border-[#C8B88A]/10">
-          <div className="absolute inset-0 bg-gradient-to-br from-[#C8B88A]/[0.04] via-transparent to-[#A89D78]/[0.02]" />
-          <CardHeader className="relative">
-            <div className="flex items-center gap-4">
-              <div className="w-11 h-11 rounded-xl bg-[#C8B88A]/10 flex items-center justify-center">
-                <Brain className="w-5 h-5 text-[#C8B88A]" />
+        <div className="border-t border-white/5 pt-8 mb-12">
+          <Card className="relative overflow-hidden bg-[#111214] border border-white/5 rounded-xl shadow-[inset_0_0_12px_#00000050,_0_0_25px_-10px_#C8B88A20]">
+            <div className="absolute inset-0 bg-gradient-to-br from-[#C8B88A]/[0.04] via-transparent to-[#A89D78]/[0.02]" />
+            <CardHeader className="relative">
+              <div className="flex items-center gap-4">
+                <div className="w-11 h-11 rounded-xl bg-[#C8B88A]/10 flex items-center justify-center">
+                  <Brain className="w-5 h-5 text-[#C8B88A] animate-glow" />
+                </div>
+                <div>
+                  <CardTitle className="text-[20px] font-semibold text-white/95">Insights IA & Tendances</CardTitle>
+                  <CardDescription className="text-[13px] leading-relaxed text-white/60">
+                    Recommandations intelligentes basées sur vos données réelles
+                  </CardDescription>
+                </div>
               </div>
-              <div>
-                <CardTitle className="text-lg font-semibold tracking-tight">Insights IA & Tendances</CardTitle>
-                <CardDescription className="text-[13px]">
-                  Recommandations intelligentes basées sur vos données réelles
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
+            </CardHeader>
           <CardContent className="relative">
             {insightsLoading ? (
               <div className="flex justify-center py-12">
@@ -516,18 +517,20 @@ export default function Dashboard() {
               </div>
             )}
           </CardContent>
-        </Card>
+          </Card>
+        </div>
 
         {/* Calls List Section - Premium Design */}
-        <Card className="border-white/[0.06]">
-          <CardHeader className="pb-4">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              <div>
-                <CardTitle className="text-lg font-semibold tracking-tight">Liste des appels</CardTitle>
-                <CardDescription className="text-[13px]">
-                  Historique de tous vos appels enregistrés
-                </CardDescription>
-              </div>
+        <div className="border-t border-white/5 pt-8">
+          <Card className="bg-[#111214] border border-white/5 rounded-xl shadow-[inset_0_0_12px_#00000050,_0_0_25px_-10px_#C8B88A20]">
+            <CardHeader className="pb-4">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                  <CardTitle className="text-[20px] font-semibold text-white/95">Liste des appels</CardTitle>
+                  <CardDescription className="text-[13px] leading-relaxed text-white/60">
+                    Historique de tous vos appels enregistrés
+                  </CardDescription>
+                </div>
               <div className="flex flex-col sm:flex-row gap-2">
                 <Select value={callsTimeFilter} onValueChange={setCallsTimeFilter}>
                   <SelectTrigger className="w-full sm:w-[160px] h-9 text-[13px]" data-testid="select-calls-time-filter">
@@ -626,7 +629,7 @@ export default function Dashboard() {
                       return (
                         <tr 
                           key={call.id} 
-                          className={`border-b border-white/[0.04] transition-colors duration-150 hover:bg-[#1A1C20] ${index % 2 === 0 ? 'bg-transparent' : 'bg-white/[0.01]'} ${isMobile ? 'cursor-pointer' : ''}`}
+                          className={`border-b border-white/[0.04] transition-all duration-200 hover:bg-white/[0.03] hover:shadow-[0_0_10px_rgba(200,184,138,0.08)] backdrop-blur-[2px] ${index % 2 === 0 ? 'bg-transparent' : 'bg-white/[0.01]'} ${isMobile ? 'cursor-pointer' : ''}`}
                           onClick={handleRowClick}
                           data-testid={`call-row-${call.id}`}
                         >
@@ -711,11 +714,12 @@ export default function Dashboard() {
               </div>
             )}
           </CardContent>
-        </Card>
+          </Card>
+        </div>
 
         {/* Call Detail Dialog - Enriched with N8N data */}
         <Dialog open={!!selectedCall} onOpenChange={() => setSelectedCall(null)}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" data-testid="dialog-call-detail">
+          <DialogContent className="premium-modal max-w-3xl max-h-[90vh] overflow-y-auto bg-[#111214] border border-white/10 rounded-2xl shadow-[0_0_40px_-10px_#000]" data-testid="dialog-call-detail">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 Détail de l'appel
@@ -988,7 +992,7 @@ export default function Dashboard() {
 
         {/* Chart Dialogs */}
         <Dialog open={chartDialog === 'total'} onOpenChange={() => setChartDialog(null)}>
-          <DialogContent className="max-w-3xl" data-testid="dialog-chart-total">
+          <DialogContent className="premium-modal max-w-3xl bg-[#111214] border border-white/10 rounded-2xl shadow-[0_0_40px_-10px_#000]" data-testid="dialog-chart-total">
             <DialogHeader>
               <DialogTitle>Total des appels</DialogTitle>
               <DialogDescription>
@@ -1015,7 +1019,7 @@ export default function Dashboard() {
         </Dialog>
 
         <Dialog open={chartDialog === 'conversion'} onOpenChange={() => setChartDialog(null)}>
-          <DialogContent className="max-w-3xl" data-testid="dialog-chart-conversion">
+          <DialogContent className="premium-modal max-w-3xl bg-[#111214] border border-white/10 rounded-2xl shadow-[0_0_40px_-10px_#000]" data-testid="dialog-chart-conversion">
             <DialogHeader>
               <DialogTitle>Taux de conversion</DialogTitle>
               <DialogDescription>
@@ -1042,7 +1046,7 @@ export default function Dashboard() {
         </Dialog>
 
         <Dialog open={chartDialog === 'duration'} onOpenChange={() => setChartDialog(null)}>
-          <DialogContent className="max-w-3xl" data-testid="dialog-chart-duration">
+          <DialogContent className="premium-modal max-w-3xl bg-[#111214] border border-white/10 rounded-2xl shadow-[0_0_40px_-10px_#000]" data-testid="dialog-chart-duration">
             <DialogHeader>
               <DialogTitle>Durée moyenne des appels</DialogTitle>
               <DialogDescription>
