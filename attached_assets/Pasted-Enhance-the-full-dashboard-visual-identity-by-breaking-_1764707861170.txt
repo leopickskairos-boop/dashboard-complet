@@ -1,0 +1,107 @@
+Enhance the full dashboard visual identity by breaking the monotony and introducing a premium dual-accent system, depth variations, and structured contrast. Do NOT modify logic or component structure.
+
+-----------------------------------------
+SECONDARY ACCENT COLOR (DISCREET, PREMIUM)
+-----------------------------------------
+Introduce a secondary accent color:
+#7A8CFF (soft midnight blue)
+
+Use it ONLY for:
+- insight icons
+- small indicators
+- occasional glow halos
+- dividers in the Insights section
+
+Replace some gold accents with blue to create hierarchy:
+Gold = business metrics
+Blue = AI / insights / intelligence
+Green = success
+
+-----------------------------------------
+GRADIENT REFINEMENT PER BLOCK
+-----------------------------------------
+KPI cards:
+gradient: bg-gradient-to-b from-[#151618] to-[#0F1012]
+
+Insight capsules:
+bg-gradient-to-br from-[#111214] to-[#090A0C]
+
+Table block:
+bg-[#0E0F11] (no gradient)
+
+Sidebar:
+slightly lighter gradient: from-[#131416] to-[#0E0F10]
+
+-----------------------------------------
+TEXTURE & BACKGROUND DEPTH
+-----------------------------------------
+Add a subtle blue halo behind the Insights section:
+after:absolute after:w-[700px] after:h-[280px] after:bg-[#7A8CFF]/10
+after:blur-[140px] after:opacity-20
+
+Add soft color-coded halos:
+Business = gold
+IA/Insights = blue
+Conversion/Success = soft green #6BDFA3 /10
+
+-----------------------------------------
+TYPOGRAPHIC CONTRAST SYSTEM
+-----------------------------------------
+Update text classes:
+
+Titles:
+text-white font-semibold tracking-tight
+
+Section subtitles:
+text-[#D6D6D6]/80 text-[13px]
+
+Descriptions:
+text-[#9BA0A8] text-[13px] leading-relaxed
+
+Insight labels:
+text-[#7A8CFF] uppercase text-[11px] font-medium tracking-wider
+
+-----------------------------------------
+CARD BORDER SYSTEM
+-----------------------------------------
+Apply different border colors depending on content type:
+
+Business KPI:
+border border-[#C8B88A]/10
+
+Insights:
+border border-[#7A8CFF]/10
+
+Success:
+border border-[#6BDFA3]/10
+
+This breaks visual monotony and adds instant context.
+
+-----------------------------------------
+LIGHT LINE SYSTEM
+-----------------------------------------
+Add a bottom glowing line to highlight card type:
+
+Business:
+from-transparent via-[#C8B88A]/20 to-transparent
+
+Insights:
+from-transparent via-[#7A8CFF]/25 to-transparent
+
+Success:
+from-transparent via-[#6BDFA3]/25 to-transparent
+
+-----------------------------------------
+MICRO INTERACTIONS
+-----------------------------------------
+On hover:
+hover:shadow-[0_0_18px_#7A8CFF30] for AI/insights
+hover:shadow-[0_0_18px_#C8B88A30] for business metrics
+
+-----------------------------------------
+DO NOT MODIFY:
+data logic,
+component hierarchy,
+API behavior.
+
+Apply ONLY visual design, contrast, gradients, glow, and color structure to break monotony while keeping the premium brand.

@@ -479,3 +479,247 @@
   filter: blur(80px);
   pointer-events: none;
 }
+
+/* ============================================
+   SPEEDAI DUAL-ACCENT PREMIUM SYSTEM
+   Gold #C8B88A = Business metrics
+   Blue #7A8CFF = AI/Insights
+   Green #6BDFA3 = Success/Conversion
+   ============================================ */
+
+/* AI Glass Panel Container */
+.glass-panel-ai {
+  position: relative;
+  background: rgba(17, 18, 20, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 1rem;
+  padding: 1.5rem 2rem;
+  box-shadow: 0 0 40px -8px #000, 0 0 25px -10px rgba(122, 140, 255, 0.1);
+  overflow: hidden;
+}
+
+/* Gold halo for glass panel */
+.glass-panel-ai::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 700px;
+  height: 260px;
+  background: rgba(122, 140, 255, 0.1);
+  filter: blur(140px);
+  opacity: 0.2;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Top gradient line for glass panel */
+.glass-panel-ai::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(122, 140, 255, 0.25), transparent);
+  z-index: 1;
+}
+
+/* AI Module Capsule Cards */
+.ai-capsule {
+  position: relative;
+  background: linear-gradient(to bottom right, rgba(17, 18, 20, 1), rgba(9, 10, 12, 1));
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border: 1px solid rgba(122, 140, 255, 0.1);
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+  box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.7), 0 0 20px -10px rgba(122, 140, 255, 0.2);
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.ai-capsule:hover {
+  box-shadow: 0 0 25px rgba(122, 140, 255, 0.2);
+  background: linear-gradient(to bottom right, rgba(19, 20, 22, 1), rgba(11, 12, 14, 1));
+}
+
+/* Vertical accent line for AI capsule */
+.ai-capsule::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 3px;
+  height: 100%;
+  background: rgba(122, 140, 255, 0.3);
+}
+
+/* AI Icon Styling */
+.ai-icon {
+  color: #7A8CFF;
+  width: 1.5rem;
+  height: 1.5rem;
+  opacity: 0.8;
+}
+
+/* AI Icon Animation - Blue pulse */
+@keyframes pulse-slow-blue {
+  0% { opacity: 0.6; filter: drop-shadow(0 0 2px rgba(122, 140, 255, 0.2)); }
+  50% { opacity: 1; filter: drop-shadow(0 0 6px rgba(122, 140, 255, 0.4)); }
+  100% { opacity: 0.6; filter: drop-shadow(0 0 2px rgba(122, 140, 255, 0.2)); }
+}
+
+.animate-pulse-slow-blue {
+  animation: pulse-slow-blue 3s ease-in-out infinite;
+}
+
+/* Gold Business Pulse Animation */
+@keyframes pulse-slow-gold {
+  0% { opacity: 0.6; filter: drop-shadow(0 0 2px rgba(200, 184, 138, 0.2)); }
+  50% { opacity: 1; filter: drop-shadow(0 0 6px rgba(200, 184, 138, 0.4)); }
+  100% { opacity: 0.6; filter: drop-shadow(0 0 2px rgba(200, 184, 138, 0.2)); }
+}
+
+.animate-pulse-slow-gold {
+  animation: pulse-slow-gold 3s ease-in-out infinite;
+}
+
+/* Green Success Pulse Animation */
+@keyframes pulse-slow-green {
+  0% { opacity: 0.6; filter: drop-shadow(0 0 2px rgba(107, 223, 163, 0.2)); }
+  50% { opacity: 1; filter: drop-shadow(0 0 6px rgba(107, 223, 163, 0.4)); }
+  100% { opacity: 0.6; filter: drop-shadow(0 0 2px rgba(107, 223, 163, 0.2)); }
+}
+
+.animate-pulse-slow-green {
+  animation: pulse-slow-green 3s ease-in-out infinite;
+}
+
+/* Border System by Type */
+.border-business {
+  border-color: rgba(200, 184, 138, 0.1);
+}
+
+.border-insights {
+  border-color: rgba(122, 140, 255, 0.1);
+}
+
+.border-success {
+  border-color: rgba(107, 223, 163, 0.1);
+}
+
+/* Hover Glow System by Type */
+.hover-glow-business:hover {
+  box-shadow: 0 0 18px rgba(200, 184, 138, 0.3);
+}
+
+.hover-glow-insights:hover {
+  box-shadow: 0 0 18px rgba(122, 140, 255, 0.3);
+}
+
+.hover-glow-success:hover {
+  box-shadow: 0 0 18px rgba(107, 223, 163, 0.3);
+}
+
+/* Light Line System - Bottom Gradient */
+.light-line-business {
+  position: relative;
+}
+
+.light-line-business::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(200, 184, 138, 0.2), transparent);
+}
+
+.light-line-insights {
+  position: relative;
+}
+
+.light-line-insights::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(122, 140, 255, 0.25), transparent);
+}
+
+.light-line-success {
+  position: relative;
+}
+
+.light-line-success::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(107, 223, 163, 0.25), transparent);
+}
+
+/* Gradient Backgrounds by Block */
+.bg-kpi-gradient {
+  background: linear-gradient(to bottom, #151618, #0F1012);
+}
+
+.bg-insights-gradient {
+  background: linear-gradient(to bottom right, #111214, #090A0C);
+}
+
+.bg-table-block {
+  background: #0E0F11;
+}
+
+.bg-sidebar-gradient {
+  background: linear-gradient(to bottom, #131416, #0E0F10);
+}
+
+/* Neon blue glow for AI accent */
+.neon-blue {
+  filter: drop-shadow(0 0 8px rgba(122, 140, 255, 0.6)) 
+          drop-shadow(0 0 12px rgba(122, 140, 255, 0.4));
+}
+
+/* Neon green glow for success accent */
+.neon-success {
+  filter: drop-shadow(0 0 8px rgba(107, 223, 163, 0.6)) 
+          drop-shadow(0 0 12px rgba(107, 223, 163, 0.4));
+}
+
+/* AI Label Styling */
+.ai-label {
+  color: #7A8CFF;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 500;
+}
+
+/* Business Label Styling */
+.business-label {
+  color: #C8B88A;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 500;
+}
+
+/* Success Label Styling */
+.success-label {
+  color: #6BDFA3;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 500;
+}
