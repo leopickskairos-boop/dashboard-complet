@@ -870,22 +870,6 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                {/* Tags */}
-                {selectedCall.tags && selectedCall.tags.length > 0 && (
-                  <div className="pb-4">
-                    <div className="text-[10px] text-[#9A9A9A] uppercase tracking-wider mb-2 font-medium">
-                      Tags
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedCall.tags.map((tag, idx) => (
-                        <Badge key={idx} className="text-[11px] rounded-full px-2.5 py-0.5 bg-white/5 text-[#F5F5F5] border-white/10 shadow-[0_2px_4px_rgba(0,0,0,0.15)]">
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
                 {/* Section 3: Résumé IA */}
                 {selectedCall.summary && (
                   <div className="bg-[#1A1C1F] border border-white/[0.06] rounded-xl p-5 shadow-[0_4px_12px_rgba(0,0,0,0.2)]">
@@ -971,24 +955,7 @@ export default function Dashboard() {
                   </div>
                 )}
 
-                {/* Section 6: Mots-clés détectés */}
-                {selectedCall.keywords && selectedCall.keywords.length > 0 && (
-                  <div className="pb-4">
-                    <div className="text-[11px] text-[#E8E8E8]/90 uppercase tracking-wider mb-3 font-medium flex items-center gap-2">
-                      <MessageSquare className="w-3.5 h-3.5 text-[#C8B88A]" />
-                      Mots-clés détectés
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedCall.keywords.map((kw, idx) => (
-                        <Badge key={idx} className="text-[11px] rounded-full px-2.5 py-0.5 bg-white/5 text-[#F5F5F5] border-white/10 shadow-[0_2px_4px_rgba(0,0,0,0.15)]">
-                          {kw}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Section 7: Transcription (Collapsible) */}
+                {/* Section 6: Transcription (Collapsible) */}
                 {selectedCall.transcript && (
                   <div className="border-t border-white/[0.04] pt-4">
                     <button
@@ -1007,7 +974,7 @@ export default function Dashboard() {
                       )}
                     </button>
                     {showTranscript && (
-                      <div className="mt-3 text-[12px] text-[#9A9A9A] p-4 rounded-lg border border-white/[0.04] max-h-48 overflow-y-auto font-mono whitespace-pre-wrap leading-relaxed">
+                      <div className="mt-3 text-[13px] text-[#9A9A9A] p-4 rounded-lg border border-white/[0.04] max-h-48 overflow-y-auto whitespace-pre-wrap leading-relaxed">
                         {selectedCall.transcript}
                       </div>
                     )}
