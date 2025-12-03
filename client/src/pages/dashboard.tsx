@@ -458,18 +458,17 @@ export default function Dashboard() {
         <div className="mb-12 mt-6 relative rounded-[14px] bg-gradient-to-b from-[#111111] to-[#151515] border border-white/[0.06] p-6 shadow-[0_4px_24px_rgba(0,0,0,0.35)]" data-testid="section-insights">
           
           {/* Premium Header */}
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between pb-4 mb-5 border-b border-white/[0.04]">
             <div className="flex items-center gap-4">
               <div className="w-[44px] h-[44px] rounded-xl flex items-center justify-center relative" style={{ background: 'radial-gradient(circle, rgba(140,120,255,0.15) 0%, transparent 70%)' }}>
                 <Brain className="w-6 h-6 text-violet-400" />
                 <div className="absolute inset-0 rounded-xl" style={{ boxShadow: '0 0 20px rgba(140,120,255,0.2)' }} />
               </div>
               <div>
-                <h2 className="text-[20px] font-semibold tracking-tight text-[#EDEDED] relative">
+                <h2 className="text-[20px] font-semibold tracking-tight text-[#EDEDED]">
                   Insights IA & Tendances
-                  <span className="absolute -bottom-1 left-0 w-full h-[1px] bg-[#C8B88A]/[0.08]" />
                 </h2>
-                <p className="text-[13px] text-[#A0A0A0] mt-1">
+                <p className="text-[13px] text-[#A0A0A0] mt-0.5">
                   Recommandations basées sur vos données en temps réel
                 </p>
               </div>
@@ -494,7 +493,7 @@ export default function Dashboard() {
           ) : (
             <div className="space-y-4">
               
-              {/* ZONE A: Hero Insight (First insight, dominant) */}
+              {/* ZONE A: Hero Insight (First insight, dominant) - ONLY this card gets glow */}
               {aiInsights[0] && (() => {
                 const heroInsight = aiInsights[0];
                 const HeroIcon = iconMap[heroInsight.icon] || Brain;
@@ -507,8 +506,10 @@ export default function Dashboard() {
                 
                 return (
                   <div 
-                    className="relative w-full min-h-[110px] p-6 rounded-2xl bg-gradient-to-br from-[#1A1A1E] to-[#141418] border border-[#C8B88A]/[0.08] shadow-[0_4px_16px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.02)]"
-                    style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.3), 0 0 1px rgba(200,184,138,0.15), inset 0 1px 0 rgba(255,255,255,0.02)' }}
+                    className="relative w-full p-7 rounded-xl bg-gradient-to-br from-[#1A1A1E] to-[#141418] border border-white/[0.07]"
+                    style={{ 
+                      boxShadow: '0 0 24px rgba(140,120,255,0.12), inset 0 0 0 1px rgba(255,215,150,0.10), 0 4px 12px rgba(0,0,0,0.25)'
+                    }}
                     data-testid="hero-insight"
                   >
                     <div className="flex items-start gap-5">
@@ -548,26 +549,41 @@ export default function Dashboard() {
                 );
               })()}
 
-              {/* ZONE B: Secondary Insights (Remaining insights, 3 columns) */}
+              {/* ZONE B: Secondary Insights (3 columns, equal width, NO glow) */}
               {aiInsights.length > 1 && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div 
+                  className="grid gap-4" 
+                  style={{ 
+                    gridTemplateColumns: 'repeat(3, 1fr)',
+                    gridAutoRows: '1fr'
+                  }}
+                >
                   {aiInsights.slice(1, 4).map((insight, index) => {
                     const Icon = iconMap[insight.icon] || Brain;
-                    const categoryConfig = {
-                      performance: { label: 'Performance', color: '#C8B88A', bgGlow: 'rgba(200,184,138,0.12)', dotColor: 'bg-[#C8B88A]' },
-                      business: { label: 'Business', color: '#34D399', bgGlow: 'rgba(52,211,153,0.12)', dotColor: 'bg-emerald-400' },
-                      ia: { label: 'IA', color: '#A78BFA', bgGlow: 'rgba(167,139,250,0.12)', dotColor: 'bg-violet-400' },
+                    
+                    const getCategoryConfig = (type: string, cardIndex: number) => {
+                      if (type === 'performance') {
+                        return { label: 'Performance', color: '#C8B88A', dotColor: 'bg-[#C8B88A]' };
+                      }
+                      if (type === 'ia') {
+                        return { label: 'IA', color: '#A78BFA', dotColor: 'bg-violet-400' };
+                      }
+                      if (cardIndex === 1) {
+                        return { label: 'Tendance', color: '#A78BFA', dotColor: 'bg-violet-400' };
+                      }
+                      return { label: 'Business', color: '#34D399', dotColor: 'bg-emerald-400' };
                     };
-                    const config = categoryConfig[insight.type as keyof typeof categoryConfig] || categoryConfig.business;
+                    
+                    const config = getCategoryConfig(insight.type, index);
                     
                     return (
                       <div 
                         key={index + 1}
-                        className="group relative p-5 rounded-xl bg-[#131316] border border-white/[0.05] transition-all duration-200 hover:translate-y-[-2px] hover:border-white/[0.08] hover:shadow-[0_8px_24px_rgba(0,0,0,0.4)]"
+                        className="group relative p-5 rounded-xl bg-[#131316] border border-white/[0.05] transition-all duration-200 hover:translate-y-[-2px] hover:border-white/[0.08]"
                         data-testid={`recommendation-${index + 1}`}
                       >
                         <div className="flex items-start gap-4">
-                          <div className="shrink-0 w-[36px] h-[36px] rounded-lg flex items-center justify-center" style={{ background: `radial-gradient(circle, ${config.bgGlow} 0%, transparent 70%)` }}>
+                          <div className="shrink-0 w-[36px] h-[36px] rounded-lg flex items-center justify-center bg-white/[0.04]">
                             <Icon className="w-[18px] h-[18px]" style={{ color: config.color }} />
                           </div>
                           <div className="flex-1 min-w-0">
