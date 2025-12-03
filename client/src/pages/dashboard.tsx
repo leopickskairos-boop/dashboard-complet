@@ -454,74 +454,148 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* AI Insights & Trends Section - Premium Design */}
-        <Card className="mb-12 relative overflow-hidden border-[#C8B88A]/10">
-          <div className="absolute inset-0 bg-gradient-to-br from-[#C8B88A]/[0.04] via-transparent to-[#A89D78]/[0.02]" />
-          <CardHeader className="relative">
+        {/* AI Insights & Trends Section - Premium Redesign */}
+        <div className="mb-12 mt-6 relative rounded-[14px] bg-gradient-to-b from-[#111111] to-[#151515] border border-white/[0.06] p-6 shadow-[0_4px_24px_rgba(0,0,0,0.35)]" data-testid="section-insights">
+          
+          {/* Premium Header */}
+          <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4">
-              <div className="w-11 h-11 rounded-xl bg-[#C8B88A]/10 flex items-center justify-center">
-                <Brain className="w-5 h-5 text-[#C8B88A]" />
+              <div className="w-[44px] h-[44px] rounded-xl flex items-center justify-center relative" style={{ background: 'radial-gradient(circle, rgba(140,120,255,0.15) 0%, transparent 70%)' }}>
+                <Brain className="w-6 h-6 text-violet-400" />
+                <div className="absolute inset-0 rounded-xl" style={{ boxShadow: '0 0 20px rgba(140,120,255,0.2)' }} />
               </div>
               <div>
-                <CardTitle className="text-lg font-semibold tracking-tight">Insights IA & Tendances</CardTitle>
-                <CardDescription className="text-[13px]">
-                  Recommandations intelligentes basées sur vos données réelles
-                </CardDescription>
+                <h2 className="text-[20px] font-semibold tracking-tight text-[#EDEDED] relative">
+                  Insights IA & Tendances
+                  <span className="absolute -bottom-1 left-0 w-full h-[1px] bg-[#C8B88A]/[0.08]" />
+                </h2>
+                <p className="text-[13px] text-[#A0A0A0] mt-1">
+                  Recommandations basées sur vos données en temps réel
+                </p>
               </div>
             </div>
-          </CardHeader>
-          <CardContent className="relative">
-            {insightsLoading ? (
-              <div className="flex justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            <button className="text-[12px] text-[#808080] hover:text-[#EDEDED] transition-colors font-medium" data-testid="button-voir-plus-insights">
+              Voir plus
+            </button>
+          </div>
+
+          {/* Insights Content */}
+          {insightsLoading ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-violet-400" />
+            </div>
+          ) : aiInsights.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center" style={{ background: 'radial-gradient(circle, rgba(140,120,255,0.12) 0%, transparent 70%)' }}>
+                <Brain className="w-8 h-8 text-[#606060]" />
               </div>
-            ) : aiInsights.length === 0 ? (
-              <div className="text-center py-12">
-                <Brain className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">Aucune donnée disponible pour générer des insights</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {aiInsights.map((insight, index) => {
-                  const Icon = iconMap[insight.icon] || Brain;
-                  const levelConfig = {
-                    good: { dot: 'bg-emerald-400', borderClass: 'border-white/5', bgClass: 'bg-[#131417]' },
-                    average: { dot: 'bg-amber-400', borderClass: 'border-white/5', bgClass: 'bg-[#131417]' },
-                    warning: { dot: 'bg-rose-400', borderClass: 'border-white/5', bgClass: 'bg-[#131417]' },
-                  };
-                  const config = insight.level ? levelConfig[insight.level as keyof typeof levelConfig] : { dot: 'bg-primary', borderClass: 'border-white/5', bgClass: 'bg-[#131417]' };
-                  
-                  return (
-                    <div 
-                      key={index}
-                      className={`group relative p-6 rounded-2xl ${config.bgClass} bg-gradient-to-br from-white/[0.02] to-transparent border ${config.borderClass} transition-all duration-200 hover:border-white/[0.12]`}
-                      data-testid={`recommendation-${index}`}
-                    >
-                      <div className="flex items-start gap-4">
-                        <div className="shrink-0">
-                          <div className="w-10 h-10 rounded-xl bg-white/[0.06] flex items-center justify-center">
-                            <Icon className="w-5 h-5 text-primary" />
-                          </div>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-2">
-                            <div className={`w-2 h-2 rounded-full ${config.dot}`} />
-                            <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">
-                              {insight.type === 'performance' ? 'Performance' : 'Business'}
+              <p className="text-[#808080] text-[14px]">Aucune donnée disponible pour générer des insights</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              
+              {/* ZONE A: Hero Insight (First insight, dominant) */}
+              {aiInsights[0] && (() => {
+                const heroInsight = aiInsights[0];
+                const HeroIcon = iconMap[heroInsight.icon] || Brain;
+                const categoryConfig = {
+                  performance: { label: 'Performance', color: '#C8B88A', bgGlow: 'rgba(200,184,138,0.12)', dotColor: 'bg-[#C8B88A]' },
+                  business: { label: 'Business', color: '#34D399', bgGlow: 'rgba(52,211,153,0.12)', dotColor: 'bg-emerald-400' },
+                  ia: { label: 'IA', color: '#A78BFA', bgGlow: 'rgba(167,139,250,0.12)', dotColor: 'bg-violet-400' },
+                };
+                const heroConfig = categoryConfig[heroInsight.type as keyof typeof categoryConfig] || categoryConfig.business;
+                
+                return (
+                  <div 
+                    className="relative w-full min-h-[110px] p-6 rounded-2xl bg-gradient-to-br from-[#1A1A1E] to-[#141418] border border-[#C8B88A]/[0.08] shadow-[0_4px_16px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.02)]"
+                    style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.3), 0 0 1px rgba(200,184,138,0.15), inset 0 1px 0 rgba(255,255,255,0.02)' }}
+                    data-testid="hero-insight"
+                  >
+                    <div className="flex items-start gap-5">
+                      <div className="shrink-0 w-[44px] h-[44px] rounded-xl flex items-center justify-center" style={{ background: `radial-gradient(circle, ${heroConfig.bgGlow} 0%, transparent 70%)` }}>
+                        <HeroIcon className="w-6 h-6" style={{ color: heroConfig.color }} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-3 mb-3">
+                          <span 
+                            className="text-[10px] uppercase tracking-wider font-semibold px-2.5 py-1 rounded-full"
+                            style={{ 
+                              backgroundColor: heroInsight.type === 'performance' ? 'rgba(200,184,138,0.12)' : heroInsight.type === 'ia' ? 'rgba(167,139,250,0.12)' : 'rgba(52,211,153,0.12)',
+                              color: heroConfig.color,
+                              border: `1px solid ${heroConfig.color}20`
+                            }}
+                          >
+                            {heroConfig.label}
+                          </span>
+                          {heroInsight.trend && (
+                            <span className="flex items-center gap-1 text-[12px] font-medium text-emerald-400">
+                              <TrendingUp className="w-3.5 h-3.5" />
+                              {heroInsight.trend}
                             </span>
-                          </div>
-                          <p className="text-[13px] text-foreground/80 leading-relaxed">
-                            {insight.text}
-                          </p>
+                          )}
                         </div>
+                        <p className="text-[15px] text-[#EDEDED] leading-relaxed font-medium">
+                          {heroInsight.text}
+                        </p>
+                        {heroInsight.metric && (
+                          <div className="mt-3 text-[20px] font-semibold text-white">
+                            {heroInsight.metric}
+                          </div>
+                        )}
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                  </div>
+                );
+              })()}
+
+              {/* ZONE B: Secondary Insights (Remaining insights, 3 columns) */}
+              {aiInsights.length > 1 && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {aiInsights.slice(1, 4).map((insight, index) => {
+                    const Icon = iconMap[insight.icon] || Brain;
+                    const categoryConfig = {
+                      performance: { label: 'Performance', color: '#C8B88A', bgGlow: 'rgba(200,184,138,0.12)', dotColor: 'bg-[#C8B88A]' },
+                      business: { label: 'Business', color: '#34D399', bgGlow: 'rgba(52,211,153,0.12)', dotColor: 'bg-emerald-400' },
+                      ia: { label: 'IA', color: '#A78BFA', bgGlow: 'rgba(167,139,250,0.12)', dotColor: 'bg-violet-400' },
+                    };
+                    const config = categoryConfig[insight.type as keyof typeof categoryConfig] || categoryConfig.business;
+                    
+                    return (
+                      <div 
+                        key={index + 1}
+                        className="group relative p-5 rounded-xl bg-[#131316] border border-white/[0.05] transition-all duration-200 hover:translate-y-[-2px] hover:border-white/[0.08] hover:shadow-[0_8px_24px_rgba(0,0,0,0.4)]"
+                        data-testid={`recommendation-${index + 1}`}
+                      >
+                        <div className="flex items-start gap-4">
+                          <div className="shrink-0 w-[36px] h-[36px] rounded-lg flex items-center justify-center" style={{ background: `radial-gradient(circle, ${config.bgGlow} 0%, transparent 70%)` }}>
+                            <Icon className="w-[18px] h-[18px]" style={{ color: config.color }} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-2">
+                              <div className={`w-[6px] h-[6px] rounded-full ${config.dotColor}`} />
+                              <span className="text-[10px] uppercase tracking-wider font-medium" style={{ color: config.color }}>
+                                {config.label}
+                              </span>
+                            </div>
+                            <p className="text-[13px] text-[#EDEDED]/80 leading-relaxed">
+                              {insight.text}
+                            </p>
+                            {insight.trend && (
+                              <div className="mt-2 flex items-center gap-1 text-[11px] font-medium text-emerald-400">
+                                <TrendingUp className="w-3 h-3" />
+                                {insight.trend}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* Calls List Section - Premium Design */}
         <Card className="border-white/[0.06]">
