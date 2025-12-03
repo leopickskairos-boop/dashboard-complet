@@ -454,11 +454,11 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* AI Insights & Trends Section - Premium Redesign */}
+        {/* AI Insights & Trends Section - Premium Consulting Style */}
         <div className="mb-12 mt-6 relative rounded-[14px] bg-gradient-to-b from-[#111111] to-[#151515] border border-white/[0.06] p-6 shadow-[0_4px_24px_rgba(0,0,0,0.35)]" data-testid="section-insights">
           
-          {/* Premium Header */}
-          <div className="flex items-center justify-between pb-4 mb-5 border-b border-white/[0.04]">
+          {/* Premium Header - No "Voir plus" */}
+          <div className="flex items-center pb-4 mb-5 border-b border-white/[0.04]">
             <div className="flex items-center gap-4">
               <div className="w-[44px] h-[44px] rounded-xl flex items-center justify-center relative" style={{ background: 'radial-gradient(circle, rgba(140,120,255,0.15) 0%, transparent 70%)' }}>
                 <Brain className="w-6 h-6 text-violet-400" />
@@ -473,9 +473,6 @@ export default function Dashboard() {
                 </p>
               </div>
             </div>
-            <button className="text-[12px] text-[#808080] hover:text-[#EDEDED] transition-colors font-medium" data-testid="button-voir-plus-insights">
-              Voir plus
-            </button>
           </div>
 
           {/* Insights Content */}
@@ -498,15 +495,14 @@ export default function Dashboard() {
                 const heroInsight = aiInsights[0];
                 const HeroIcon = iconMap[heroInsight.icon] || Brain;
                 const categoryConfig = {
-                  performance: { label: 'Performance', color: '#C8B88A', bgGlow: 'rgba(200,184,138,0.12)', dotColor: 'bg-[#C8B88A]' },
-                  business: { label: 'Business', color: '#34D399', bgGlow: 'rgba(52,211,153,0.12)', dotColor: 'bg-emerald-400' },
-                  ia: { label: 'IA', color: '#A78BFA', bgGlow: 'rgba(167,139,250,0.12)', dotColor: 'bg-violet-400' },
+                  performance: { label: 'Performance', color: '#C8B88A', bgGlow: 'rgba(200,184,138,0.12)' },
+                  business: { label: 'Business', color: '#34D399', bgGlow: 'rgba(52,211,153,0.12)' },
                 };
                 const heroConfig = categoryConfig[heroInsight.type as keyof typeof categoryConfig] || categoryConfig.business;
                 
                 return (
                   <div 
-                    className="relative w-full p-7 rounded-xl bg-gradient-to-br from-[#1A1A1E] to-[#141418] border border-white/[0.07]"
+                    className="relative w-full p-6 rounded-xl bg-gradient-to-br from-[#1A1A1E] to-[#141418] border border-white/[0.07]"
                     style={{ 
                       boxShadow: '0 0 24px rgba(140,120,255,0.12), inset 0 0 0 1px rgba(255,215,150,0.10), 0 4px 12px rgba(0,0,0,0.25)'
                     }}
@@ -521,94 +517,138 @@ export default function Dashboard() {
                           <span 
                             className="text-[10px] uppercase tracking-wider font-semibold px-2.5 py-1 rounded-full"
                             style={{ 
-                              backgroundColor: heroInsight.type === 'performance' ? 'rgba(200,184,138,0.12)' : heroInsight.type === 'ia' ? 'rgba(167,139,250,0.12)' : 'rgba(52,211,153,0.12)',
+                              backgroundColor: heroInsight.type === 'performance' ? 'rgba(200,184,138,0.12)' : 'rgba(52,211,153,0.12)',
                               color: heroConfig.color,
                               border: `1px solid ${heroConfig.color}20`
                             }}
                           >
                             {heroConfig.label}
                           </span>
-                          {heroInsight.trend && (
-                            <span className="flex items-center gap-1 text-[12px] font-medium text-emerald-400">
-                              <TrendingUp className="w-3.5 h-3.5" />
-                              {heroInsight.trend}
-                            </span>
-                          )}
                         </div>
                         <p className="text-[15px] text-[#EDEDED] leading-relaxed font-medium">
                           {heroInsight.text}
                         </p>
-                        {heroInsight.metric && (
-                          <div className="mt-3 text-[20px] font-semibold text-white">
-                            {heroInsight.metric}
-                          </div>
-                        )}
                       </div>
                     </div>
                   </div>
                 );
               })()}
 
-              {/* ZONE B: Secondary Insights (3 columns, equal width, NO glow) */}
-              {aiInsights.length > 1 && (
-                <div 
-                  className="grid gap-4" 
-                  style={{ 
-                    gridTemplateColumns: 'repeat(3, 1fr)',
-                    gridAutoRows: '1fr'
-                  }}
-                >
-                  {aiInsights.slice(1, 4).map((insight, index) => {
-                    const Icon = iconMap[insight.icon] || Brain;
-                    
-                    const getCategoryConfig = (type: string, cardIndex: number) => {
-                      if (type === 'performance') {
-                        return { label: 'Performance', color: '#C8B88A', dotColor: 'bg-[#C8B88A]' };
-                      }
-                      if (type === 'ia') {
-                        return { label: 'IA', color: '#A78BFA', dotColor: 'bg-violet-400' };
-                      }
-                      if (cardIndex === 1) {
-                        return { label: 'Tendance', color: '#A78BFA', dotColor: 'bg-violet-400' };
-                      }
-                      return { label: 'Business', color: '#34D399', dotColor: 'bg-emerald-400' };
-                    };
-                    
-                    const config = getCategoryConfig(insight.type, index);
-                    
-                    return (
-                      <div 
-                        key={index + 1}
-                        className="group relative p-5 rounded-xl bg-[#131316] border border-white/[0.05] transition-all duration-200 hover:translate-y-[-2px] hover:border-white/[0.08]"
-                        data-testid={`recommendation-${index + 1}`}
-                      >
-                        <div className="flex items-start gap-4">
-                          <div className="shrink-0 w-[36px] h-[36px] rounded-lg flex items-center justify-center bg-white/[0.04]">
-                            <Icon className="w-[18px] h-[18px]" style={{ color: config.color }} />
+              {/* ZONE B: Secondary Insights (3 columns: 2 insights + 1 chart card) */}
+              <div 
+                className="grid gap-4" 
+                style={{ 
+                  gridTemplateColumns: 'repeat(3, 1fr)',
+                  gridAutoRows: '1fr'
+                }}
+              >
+                {/* First 2 insight cards */}
+                {aiInsights.slice(1, 3).map((insight, index) => {
+                  const Icon = iconMap[insight.icon] || Brain;
+                  
+                  const getCategoryConfig = (type: string, cardIndex: number) => {
+                    if (type === 'performance') {
+                      return { label: 'Performance', color: '#C8B88A', dotColor: 'bg-[#C8B88A]' };
+                    }
+                    if (cardIndex === 1) {
+                      return { label: 'Tendance', color: '#A78BFA', dotColor: 'bg-violet-400' };
+                    }
+                    return { label: 'Business', color: '#34D399', dotColor: 'bg-emerald-400' };
+                  };
+                  
+                  const config = getCategoryConfig(insight.type, index);
+                  
+                  return (
+                    <div 
+                      key={index + 1}
+                      className="group relative p-5 rounded-xl bg-[#111216] border border-white/[0.05] transition-all duration-200 hover:translate-y-[-2px] hover:border-white/[0.08]"
+                      style={{ boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.5)' }}
+                      data-testid={`recommendation-${index + 1}`}
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className="shrink-0 w-[36px] h-[36px] rounded-lg flex items-center justify-center bg-white/[0.04]">
+                          <Icon className="w-[18px] h-[18px]" style={{ color: config.color }} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className={`w-[6px] h-[6px] rounded-full ${config.dotColor}`} />
+                            <span className="text-[10px] uppercase tracking-wider font-medium" style={{ color: config.color }}>
+                              {config.label}
+                            </span>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-2">
-                              <div className={`w-[6px] h-[6px] rounded-full ${config.dotColor}`} />
-                              <span className="text-[10px] uppercase tracking-wider font-medium" style={{ color: config.color }}>
-                                {config.label}
-                              </span>
-                            </div>
-                            <p className="text-[13px] text-[#EDEDED]/80 leading-relaxed">
-                              {insight.text}
-                            </p>
-                            {insight.trend && (
-                              <div className="mt-2 flex items-center gap-1 text-[11px] font-medium text-emerald-400">
-                                <TrendingUp className="w-3 h-3" />
-                                {insight.trend}
-                              </div>
-                            )}
-                          </div>
+                          <p className="text-[13px] text-[#EDEDED]/80 leading-relaxed">
+                            {insight.text}
+                          </p>
                         </div>
                       </div>
-                    );
-                  })}
+                    </div>
+                  );
+                })}
+
+                {/* NEW: Clients convertis chart card */}
+                <div 
+                  className="group relative p-5 rounded-xl bg-[#111216] border border-white/[0.05] flex flex-col"
+                  style={{ 
+                    boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.5), 0 4px 20px rgba(0,255,178,0.12)'
+                  }}
+                  data-testid="card-clients-convertis"
+                >
+                  {/* Card Header */}
+                  <div className="mb-3">
+                    <h3 className="text-[13px] font-medium text-[#EDEDED] tracking-tight">
+                      Clients convertis automatiquement
+                    </h3>
+                    <p className="text-[11px] text-[#A0A0A0] mt-0.5">
+                      Impact IA hebdomadaire
+                    </p>
+                  </div>
+
+                  {/* Mini Line Chart - Trade Republic Style */}
+                  <div className="flex-1 min-h-[60px] relative">
+                    <svg 
+                      viewBox="0 0 200 60" 
+                      className="w-full h-full"
+                      preserveAspectRatio="none"
+                    >
+                      <defs>
+                        <linearGradient id="chartGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                          <stop offset="0%" stopColor="#00FFB2" stopOpacity="0.15" />
+                          <stop offset="100%" stopColor="#00FFB2" stopOpacity="0.02" />
+                        </linearGradient>
+                        <filter id="glowFilter" x="-50%" y="-50%" width="200%" height="200%">
+                          <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+                          <feMerge>
+                            <feMergeNode in="coloredBlur"/>
+                            <feMergeNode in="SourceGraphic"/>
+                          </feMerge>
+                        </filter>
+                      </defs>
+                      {/* Gradient fill under curve */}
+                      <path 
+                        d="M 0,45 C 15,40 25,35 40,30 C 55,25 70,20 85,25 C 100,30 115,18 130,15 C 145,12 160,8 175,12 C 190,16 200,10 200,10 L 200,60 L 0,60 Z"
+                        fill="url(#chartGradient)"
+                      />
+                      {/* Smooth bezier curve line */}
+                      <path 
+                        d="M 0,45 C 15,40 25,35 40,30 C 55,25 70,20 85,25 C 100,30 115,18 130,15 C 145,12 160,8 175,12 C 190,16 200,10 200,10"
+                        fill="none"
+                        stroke="#00FFB2"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        opacity="0.8"
+                      />
+                      {/* Glow on peaks */}
+                      <circle cx="130" cy="15" r="3" fill="#00FFB2" filter="url(#glowFilter)" opacity="0.7" />
+                      <circle cx="175" cy="12" r="2.5" fill="#00FFB2" filter="url(#glowFilter)" opacity="0.5" />
+                    </svg>
+                  </div>
+
+                  {/* Business impact sentence */}
+                  <p className="text-[12px] text-[#A0A0A0] mt-3 leading-relaxed">
+                    Cette semaine, l'IA a converti <span className="text-[#00FFB2] font-semibold">12</span> nouveaux clients automatiquement.
+                  </p>
                 </div>
-              )}
+              </div>
             </div>
           )}
         </div>
