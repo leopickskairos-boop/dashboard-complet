@@ -25,7 +25,14 @@ import {
   Euro,
   Lightbulb,
   BarChart3,
-  Brain
+  Brain,
+  ChevronDown,
+  ChevronUp,
+  User,
+  FileText,
+  Sparkles,
+  Target,
+  MessageSquare
 } from "lucide-react";
 import { Line, LineChart, XAxis, YAxis, Tooltip, ResponsiveContainer, Bar, BarChart } from "recharts";
 import type { Call, PublicUser } from "@shared/schema";
@@ -80,6 +87,7 @@ export default function Dashboard() {
   const [chartDialog, setChartDialog] = useState<'total' | 'conversion' | 'duration' | null>(null);
   const [analyticsMetric, setAnalyticsMetric] = useState<'volume' | 'conversion' | 'timeslots' | 'duration' | null>(null);
   const [isMobile, setIsMobile] = useState<boolean>(false);
+  const [showTranscript, setShowTranscript] = useState<boolean>(false);
 
   // Fetch current user for trial countdown
   const { data: user } = useQuery<PublicUser>({
@@ -710,41 +718,52 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Call Detail Dialog - Enriched with N8N data */}
-        <Dialog open={!!selectedCall} onOpenChange={() => setSelectedCall(null)}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" data-testid="dialog-call-detail">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                Détail de l'appel
-                {selectedCall?.eventType && (
-                  <Badge variant="outline" className="text-xs font-normal">
-                    {selectedCall.eventType}
-                  </Badge>
-                )}
-              </DialogTitle>
-              <DialogDescription>
-                Informations complètes sur cet appel
-              </DialogDescription>
-            </DialogHeader>
+        {/* Call Detail Dialog - Premium Consulting Style */}
+        <Dialog open={!!selectedCall} onOpenChange={() => { setSelectedCall(null); setShowTranscript(false); }}>
+          <DialogContent 
+            className="max-w-2xl max-h-[90vh] overflow-y-auto p-0 border-[#C8B88A]/10 bg-gradient-to-b from-[#0E0E0F] to-[#121214] shadow-[0_8px_32px_rgba(0,0,0,0.5),0_0_1px_rgba(200,184,138,0.1)]" 
+            data-testid="dialog-call-detail"
+          >
+            {/* Header */}
+            <div className="px-6 pt-6 pb-4 border-b border-white/[0.06]">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-3 text-[#E8E8E8]/90">
+                  <div className="w-8 h-8 rounded-lg bg-[#C8B88A]/10 flex items-center justify-center">
+                    <Phone className="w-4 h-4 text-[#C8B88A]" />
+                  </div>
+                  Détail de l'appel
+                  {selectedCall?.eventType && (
+                    <Badge className="text-xs font-normal bg-[#C8B88A]/10 text-[#C8B88A] border-[#C8B88A]/20 shadow-[0_2px_4px_rgba(0,0,0,0.2)]">
+                      {selectedCall.eventType}
+                    </Badge>
+                  )}
+                </DialogTitle>
+                <DialogDescription className="text-[#9A9A9A] text-[13px]">
+                  Informations complètes sur cet appel
+                </DialogDescription>
+              </DialogHeader>
+            </div>
+
             {selectedCall && (
-              <div className="space-y-6">
-                {/* Basic Info Row */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="px-6 py-5 space-y-5">
+                
+                {/* Section 1: Informations principales */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pb-5 border-b border-white/[0.04]">
                   <div>
-                    <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                    <div className="text-[10px] text-[#9A9A9A] uppercase tracking-wider mb-1.5 font-medium">
                       Téléphone
                     </div>
-                    <div className="text-sm font-mono">{selectedCall.phoneNumber}</div>
+                    <div className="text-[14px] font-mono text-[#F5F5F5]">{selectedCall.phoneNumber}</div>
                   </div>
                   <div>
-                    <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                    <div className="text-[10px] text-[#9A9A9A] uppercase tracking-wider mb-1.5 font-medium">
                       Statut
                     </div>
                     {(() => {
                       const config = statusConfig[selectedCall.status as keyof typeof statusConfig];
                       const StatusIcon = config?.icon || Phone;
                       return (
-                        <Badge variant={config?.variant || "outline"} className="gap-1">
+                        <Badge className="gap-1.5 bg-[#C8B88A]/10 text-[#C8B88A] border-[#C8B88A]/20 shadow-[0_2px_4px_rgba(0,0,0,0.15)] rounded-full px-2.5 py-0.5">
                           <StatusIcon className="w-3 h-3" />
                           {config?.label || selectedCall.status}
                         </Badge>
@@ -752,86 +771,98 @@ export default function Dashboard() {
                     })()}
                   </div>
                   <div>
-                    <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                    <div className="text-[10px] text-[#9A9A9A] uppercase tracking-wider mb-1.5 font-medium">
                       Durée
                     </div>
-                    <div className="text-sm">{formatDuration(selectedCall.duration)}</div>
+                    <div className="text-[14px] text-[#F5F5F5] font-medium">{formatDuration(selectedCall.duration)}</div>
                   </div>
                   <div>
-                    <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                    <div className="text-[10px] text-[#9A9A9A] uppercase tracking-wider mb-1.5 font-medium">
                       Conversion
                     </div>
-                    <Badge variant={selectedCall.conversionResult === 'converted' ? 'default' : 'secondary'}>
+                    <Badge className={`rounded-full px-2.5 py-0.5 shadow-[0_2px_4px_rgba(0,0,0,0.15)] ${
+                      selectedCall.conversionResult === 'converted' 
+                        ? 'bg-[#C8B88A]/10 text-[#C8B88A] border-[#C8B88A]/20' 
+                        : 'bg-white/5 text-[#9A9A9A] border-white/10'
+                    }`}>
                       {selectedCall.conversionResult === 'converted' ? 'Converti' : selectedCall.conversionResult || 'N/A'}
                     </Badge>
                   </div>
                 </div>
 
-                {/* Client Info - if available */}
-                {(selectedCall.clientName || selectedCall.clientEmail || selectedCall.agencyName) && (
-                  <div className="bg-blue-500/5 border border-blue-500/20 rounded-lg p-4">
-                    <div className="text-xs text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
-                      <Activity className="w-3 h-3" />
+                {/* Section 2: Informations client */}
+                {(selectedCall.clientName || selectedCall.clientEmail || selectedCall.agencyName || selectedCall.clientMood || selectedCall.nbPersonnes || selectedCall.serviceType) && (
+                  <div className="bg-[#C8B88A]/[0.03] border border-[#C8B88A]/10 rounded-xl p-5">
+                    <div className="text-[11px] text-[#E8E8E8]/90 uppercase tracking-wider mb-4 font-medium flex items-center gap-2">
+                      <User className="w-3.5 h-3.5 text-[#C8B88A]" />
                       Informations client
                     </div>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
                       {selectedCall.clientName && (
                         <div>
-                          <div className="text-xs text-muted-foreground mb-1">Nom</div>
-                          <div className="text-sm font-medium">{selectedCall.clientName}</div>
-                        </div>
-                      )}
-                      {selectedCall.clientEmail && (
-                        <div>
-                          <div className="text-xs text-muted-foreground mb-1">Email</div>
-                          <div className="text-sm font-mono text-xs">{selectedCall.clientEmail}</div>
+                          <div className="text-[10px] text-[#9A9A9A] mb-1">Nom</div>
+                          <div className="text-[14px] font-medium text-[#F5F5F5]">{selectedCall.clientName}</div>
                         </div>
                       )}
                       {selectedCall.clientMood && (
                         <div>
-                          <div className="text-xs text-muted-foreground mb-1">Humeur</div>
-                          <Badge variant={selectedCall.clientMood === 'positif' ? 'default' : selectedCall.clientMood === 'négatif' ? 'destructive' : 'secondary'}>
+                          <div className="text-[10px] text-[#9A9A9A] mb-1">Humeur</div>
+                          <Badge className={`rounded-full px-2.5 py-0.5 shadow-[0_2px_4px_rgba(0,0,0,0.15)] ${
+                            selectedCall.clientMood === 'positif' 
+                              ? 'bg-[#C8B88A]/10 text-[#C8B88A] border-[#C8B88A]/20'
+                              : selectedCall.clientMood === 'négatif' 
+                                ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                                : 'bg-white/5 text-[#9A9A9A] border-white/10'
+                          }`}>
                             {selectedCall.clientMood}
                           </Badge>
                         </div>
                       )}
                       {selectedCall.agencyName && (
                         <div>
-                          <div className="text-xs text-muted-foreground mb-1">Établissement</div>
-                          <div className="text-sm">{selectedCall.agencyName}</div>
+                          <div className="text-[10px] text-[#9A9A9A] mb-1">Établissement</div>
+                          <div className="text-[14px] text-[#F5F5F5]">{selectedCall.agencyName}</div>
                         </div>
                       )}
                       {selectedCall.nbPersonnes && (
                         <div>
-                          <div className="text-xs text-muted-foreground mb-1">Nb personnes</div>
-                          <div className="text-sm font-medium">{selectedCall.nbPersonnes}</div>
+                          <div className="text-[10px] text-[#9A9A9A] mb-1">Nb personnes</div>
+                          <div className="text-[14px] font-medium text-[#F5F5F5]">{selectedCall.nbPersonnes}</div>
                         </div>
                       )}
                       {selectedCall.serviceType && (
                         <div>
-                          <div className="text-xs text-muted-foreground mb-1">Type de service</div>
-                          <Badge variant="outline">{selectedCall.serviceType}</Badge>
+                          <div className="text-[10px] text-[#9A9A9A] mb-1">Type de service</div>
+                          <Badge className="rounded-full px-2.5 py-0.5 bg-white/5 text-[#F5F5F5] border-white/10 shadow-[0_2px_4px_rgba(0,0,0,0.15)]">
+                            {selectedCall.serviceType}
+                          </Badge>
+                        </div>
+                      )}
+                      {selectedCall.clientEmail && (
+                        <div>
+                          <div className="text-[10px] text-[#9A9A9A] mb-1">Email</div>
+                          <div className="text-[12px] font-mono text-[#9A9A9A]">{selectedCall.clientEmail}</div>
                         </div>
                       )}
                     </div>
                   </div>
                 )}
 
-                {/* Timing Info */}
-                <div className="grid grid-cols-2 gap-4">
+                {/* Timing Info - Compact */}
+                <div className="grid grid-cols-2 gap-4 py-3 border-y border-white/[0.04]">
                   <div>
-                    <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                    <div className="text-[10px] text-[#9A9A9A] uppercase tracking-wider mb-1 font-medium">
                       Début d'appel
                     </div>
-                    <div className="text-sm">
+                    <div className="text-[13px] text-[#F5F5F5]">
                       {format(new Date(selectedCall.startTime), "dd MMMM yyyy 'à' HH:mm", { locale: fr })}
                     </div>
                   </div>
                   <div>
-                    <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                    <div className="text-[10px] text-[#9A9A9A] uppercase tracking-wider mb-1 font-medium">
                       Fin d'appel
                     </div>
-                    <div className="text-sm">
+                    <div className="text-[13px] text-[#F5F5F5]">
                       {selectedCall.endTime 
                         ? format(new Date(selectedCall.endTime), "dd MMMM yyyy 'à' HH:mm", { locale: fr })
                         : "En cours"}
@@ -841,13 +872,13 @@ export default function Dashboard() {
 
                 {/* Tags */}
                 {selectedCall.tags && selectedCall.tags.length > 0 && (
-                  <div>
-                    <div className="text-xs text-muted-foreground uppercase tracking-wide mb-2">
+                  <div className="pb-4">
+                    <div className="text-[10px] text-[#9A9A9A] uppercase tracking-wider mb-2 font-medium">
                       Tags
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {selectedCall.tags.map((tag, idx) => (
-                        <Badge key={idx} variant="outline" className="text-xs">
+                        <Badge key={idx} className="text-[11px] rounded-full px-2.5 py-0.5 bg-white/5 text-[#F5F5F5] border-white/10 shadow-[0_2px_4px_rgba(0,0,0,0.15)]">
                           {tag}
                         </Badge>
                       ))}
@@ -855,50 +886,39 @@ export default function Dashboard() {
                   </div>
                 )}
 
-                {/* Summary */}
+                {/* Section 3: Résumé IA */}
                 {selectedCall.summary && (
-                  <div>
-                    <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                  <div className="bg-[#1A1C1F] border border-white/[0.06] rounded-xl p-5 shadow-[0_4px_12px_rgba(0,0,0,0.2)]">
+                    <div className="text-[11px] text-[#E8E8E8]/90 uppercase tracking-wider mb-3 font-medium flex items-center gap-2">
+                      <Sparkles className="w-3.5 h-3.5 text-[#C8B88A]" />
                       Résumé IA de l'appel
                     </div>
-                    <div className="text-sm bg-muted p-4 rounded-lg">
+                    <p className="text-[14px] text-[#F5F5F5]/90 leading-relaxed">
                       {selectedCall.summary}
-                    </div>
+                    </p>
                   </div>
                 )}
 
-                {/* Transcript */}
-                {selectedCall.transcript && (
-                  <div>
-                    <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
-                      Transcription complète
-                    </div>
-                    <div className="text-xs bg-muted/50 p-4 rounded-lg max-h-40 overflow-y-auto font-mono whitespace-pre-wrap">
-                      {selectedCall.transcript}
-                    </div>
-                  </div>
-                )}
-
-                {/* Appointment Info */}
+                {/* Section 4: Date du rendez-vous - Highlighted */}
                 {selectedCall.status === 'completed' && selectedCall.appointmentDate && (
-                  <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                        <CheckCircle2 className="w-5 h-5 text-primary" />
+                  <div className="bg-gradient-to-r from-[#C8B88A]/[0.08] to-[#C8B88A]/[0.03] border border-[#C8B88A]/20 rounded-xl p-5 shadow-[0_4px_16px_rgba(200,184,138,0.08)]">
+                    <div className="flex items-start gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-[#C8B88A]/15 flex items-center justify-center shrink-0 shadow-[0_0_12px_rgba(200,184,138,0.15)]">
+                        <Calendar className="w-6 h-6 text-[#C8B88A]" />
                       </div>
                       <div className="flex-1">
-                        <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1.5">
+                        <div className="text-[10px] text-[#C8B88A]/80 uppercase tracking-wider mb-1.5 font-medium">
                           Date du rendez-vous
                         </div>
-                        <div className="text-base font-semibold">
+                        <div className="text-[17px] font-semibold text-[#F5F5F5] capitalize">
                           {format(new Date(selectedCall.appointmentDate), "EEEE dd MMMM yyyy 'à' HH:mm", { locale: fr })}
                         </div>
-                        <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-4 mt-2">
                           {selectedCall.bookingDelayDays !== null && selectedCall.bookingDelayDays !== undefined && (
-                            <span>Réservé {selectedCall.bookingDelayDays}j à l'avance</span>
+                            <span className="text-[12px] text-[#9A9A9A]">Réservé {selectedCall.bookingDelayDays}j à l'avance</span>
                           )}
                           {selectedCall.isLastMinute && (
-                            <Badge variant="secondary" className="text-xs">Last minute</Badge>
+                            <Badge className="text-[10px] rounded-full px-2 py-0.5 bg-amber-500/10 text-amber-400 border-amber-500/20">Last minute</Badge>
                           )}
                         </div>
                       </div>
@@ -906,55 +926,61 @@ export default function Dashboard() {
                   </div>
                 )}
 
-                {/* Call Quality Metrics */}
-                {(selectedCall.bookingConfidence || selectedCall.callQuality || selectedCall.disconnectionReason) && (
-                  <div className="grid grid-cols-3 gap-4">
+                {/* Section 5: Indicateurs IA */}
+                {(selectedCall.bookingConfidence !== null || selectedCall.callQuality || selectedCall.disconnectionReason) && (
+                  <div className="grid grid-cols-3 gap-4 py-4 border-y border-white/[0.04]">
                     {selectedCall.bookingConfidence !== null && selectedCall.bookingConfidence !== undefined && (
                       <div>
-                        <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                        <div className="text-[10px] text-[#9A9A9A] uppercase tracking-wider mb-2 font-medium flex items-center gap-1.5">
+                          <Target className="w-3 h-3 text-[#C8B88A]" />
                           Confiance
                         </div>
                         <div className="flex items-center gap-2">
-                          <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                          <div className="flex-1 h-2 bg-[#1A1C1F] rounded-full overflow-hidden">
                             <div 
-                              className="h-full bg-primary rounded-full transition-all"
+                              className="h-full rounded-full transition-all bg-gradient-to-r from-[#C8B88A] to-[#A89D78]"
                               style={{ width: `${selectedCall.bookingConfidence}%` }}
                             />
                           </div>
-                          <span className="text-xs font-medium">{selectedCall.bookingConfidence}%</span>
+                          <span className="text-[12px] font-medium text-[#F5F5F5]">{selectedCall.bookingConfidence}%</span>
                         </div>
                       </div>
                     )}
                     {selectedCall.callQuality && (
                       <div>
-                        <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                        <div className="text-[10px] text-[#9A9A9A] uppercase tracking-wider mb-2 font-medium">
                           Qualité
                         </div>
-                        <Badge variant={selectedCall.callQuality === 'fluide' ? 'default' : 'secondary'}>
+                        <Badge className={`rounded-full px-2.5 py-0.5 shadow-[0_2px_4px_rgba(0,0,0,0.15)] ${
+                          selectedCall.callQuality === 'fluide' 
+                            ? 'bg-[#C8B88A]/10 text-[#C8B88A] border-[#C8B88A]/20'
+                            : 'bg-white/5 text-[#9A9A9A] border-white/10'
+                        }`}>
                           {selectedCall.callQuality}
                         </Badge>
                       </div>
                     )}
                     {selectedCall.disconnectionReason && (
                       <div>
-                        <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                        <div className="text-[10px] text-[#9A9A9A] uppercase tracking-wider mb-2 font-medium">
                           Fin d'appel
                         </div>
-                        <div className="text-xs text-muted-foreground">{selectedCall.disconnectionReason}</div>
+                        <div className="text-[12px] text-[#9A9A9A]">{selectedCall.disconnectionReason}</div>
                       </div>
                     )}
                   </div>
                 )}
 
-                {/* Keywords */}
+                {/* Section 6: Mots-clés détectés */}
                 {selectedCall.keywords && selectedCall.keywords.length > 0 && (
-                  <div>
-                    <div className="text-xs text-muted-foreground uppercase tracking-wide mb-2">
+                  <div className="pb-4">
+                    <div className="text-[11px] text-[#E8E8E8]/90 uppercase tracking-wider mb-3 font-medium flex items-center gap-2">
+                      <MessageSquare className="w-3.5 h-3.5 text-[#C8B88A]" />
                       Mots-clés détectés
                     </div>
-                    <div className="flex flex-wrap gap-1">
+                    <div className="flex flex-wrap gap-2">
                       {selectedCall.keywords.map((kw, idx) => (
-                        <Badge key={idx} variant="secondary" className="text-xs">
+                        <Badge key={idx} className="text-[11px] rounded-full px-2.5 py-0.5 bg-white/5 text-[#F5F5F5] border-white/10 shadow-[0_2px_4px_rgba(0,0,0,0.15)]">
                           {kw}
                         </Badge>
                       ))}
@@ -962,8 +988,34 @@ export default function Dashboard() {
                   </div>
                 )}
 
-                {/* Reference IDs */}
-                <div className="flex items-center gap-6 pt-4 border-t text-xs text-muted-foreground">
+                {/* Section 7: Transcription (Collapsible) */}
+                {selectedCall.transcript && (
+                  <div className="border-t border-white/[0.04] pt-4">
+                    <button
+                      onClick={() => setShowTranscript(!showTranscript)}
+                      className="w-full flex items-center justify-between py-2 text-[12px] text-[#9A9A9A] hover:text-[#F5F5F5] transition-colors"
+                      data-testid="button-toggle-transcript"
+                    >
+                      <span className="flex items-center gap-2 uppercase tracking-wider font-medium">
+                        <FileText className="w-3.5 h-3.5" />
+                        {showTranscript ? 'Masquer la transcription' : 'Afficher la transcription complète'}
+                      </span>
+                      {showTranscript ? (
+                        <ChevronUp className="w-4 h-4" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4" />
+                      )}
+                    </button>
+                    {showTranscript && (
+                      <div className="mt-3 text-[12px] text-[#9A9A9A] p-4 rounded-lg border border-white/[0.04] max-h-48 overflow-y-auto font-mono whitespace-pre-wrap leading-relaxed">
+                        {selectedCall.transcript}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Reference IDs - Footer */}
+                <div className="flex items-center gap-6 pt-4 border-t border-white/[0.04] text-[11px] text-[#9A9A9A]/60">
                   <div>
                     <span className="opacity-60">ID:</span> <span className="font-mono">{selectedCall.id.slice(0, 8)}...</span>
                   </div>
