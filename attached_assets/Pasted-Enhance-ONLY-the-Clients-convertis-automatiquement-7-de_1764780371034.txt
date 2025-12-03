@@ -1,0 +1,128 @@
+Enhance ONLY the “Clients convertis automatiquement (7 derniers jours)” insight card by:
+- adding a second comparison line (semaine précédente)
+- enabling full cursor interactivity
+- adding an automatic IA insight text
+- AND adding a “click to expand” feature that opens a large detailed view.
+
+Do not modify any other part of the dashboard.
+
+--------------------------------------------------
+### OBJECTIVE
+Turn this card into a premium analytics module with:
+- dual-line chart (current week vs previous week)
+- interactive cursor, tooltip, and tracking
+- IA-generated analysis paragraph
+- ability to EXPAND the chart into a full-size modal on click
+
+--------------------------------------------------
+## 1) DATA INPUT
+Expect:
+currentWeek[]  // 7 values
+previousWeek[] // 7 values
+days[] = ["Lun","Mar","Mer","Jeu","Ven","Sam","Dim"]
+
+--------------------------------------------------
+## 2) BASE CARD GRAPH + FEATURES
+(Keep everything previously defined)
+
+### CURRENT WEEK LINE
+- Color: #00FFB2, width 2.5px, bezier smoothing
+- Glow only on hover points
+- Under-curve gradient: transparent → #00FFB210
+
+### PREVIOUS WEEK LINE
+- Color: rgba(107,107,255,0.35)
+- Width: 2px
+- No glow, no gradient
+- Acts as a “baseline” curve
+
+### AXES
+- X-axis: days[], Inter Tight 11px, #8A8A8A
+- Y-axis: auto ticks, #6E6E6E
+- No axis lines
+
+### INTERACTION
+- Vertical tracking line: rgba(0,255,178,0.25)
+- Hover highlights both curve points
+- Tooltip displays:
+    <Day>
+    Semaine actuelle : X clients
+    Semaine précédente : Y clients
+    Différence : +Z% / -Z%
+- Tooltip styling:
+    background #181A1F, radius 10px, shadow rgba(0,255,178,0.20)
+
+--------------------------------------------------
+## 3) SUMMARY TEXT
+Below the graph:
+“Cette semaine, vos conversions IA ont évolué de (+/-X%) par rapport à la semaine précédente.”
+- Positive = #00FFB2
+- Negative = #FF6B6B
+
+--------------------------------------------------
+## 4) IA-GENERATED INSIGHT
+Add a new “Analyse IA” block:
+
+Rules:
+- Identify best day (max)
+- Identify weakest day (min)
+- Determine trend vs previous week (up/down/stable)
+- Detect anomaly: if >40% above weekly mean → mention “activité exceptionnelle ce jour-là”
+
+Format example:
+“Votre meilleure journée est le <strongestDay> avec <X> conversions. 
+La tendance globale est <haussière/baissière/stable>. 
+L’activité la plus faible a eu lieu le <weakestDay>. 
+L’IA détecte <anomalies éventuelles>.”
+
+Typography:
+- Inter Tight
+- Color: #B4B4B4
+- Line-height: 1.4
+
+--------------------------------------------------
+## 5) NEW FEATURE: CLICK TO EXPAND
+Enable a click interaction on the entire card (except tooltips).
+
+### Behavior:
+- On click, open a **modal fullscreen or large-centered** view.
+- Modal background: rgba(0,0,0,0.75) blur(4px)
+- Modal card:
+    - Width: 80% of screen
+    - Height: 70% of screen
+    - Background: #0F1013
+    - Border-radius: 16px
+    - Shadow: rgba(0,255,178,0.12)
+
+### INSIDE THE MODAL:
+- Display the SAME graph but in **large format**, with:
+    - Larger line thickness (3px / 2.5px)
+    - Axis labels bigger (13px)
+    - Tooltip unchanged
+- Add additional metrics at the top (optional but allowed):
+    - Total semaine actuelle
+    - Total semaine précédente
+    - Évolution %
+    - Meilleur jour / Pire jour
+
+### Modal controls:
+- “X” close button at top right:
+    - Icon minimal, #A0A0A0
+    - Hover color: white
+
+- Clicking outside modal ALSO closes it.
+
+### IMPORTANT:
+- The expansion modal must NOT break dashboard layout.
+- When closing, return to exact original state.
+
+--------------------------------------------------
+## 6) CARD LAYOUT
+Keep same size/padding when NOT expanded.
+Do not alter other insight cards.
+
+--------------------------------------------------
+## 7) DO NOT MODIFY ANYTHING ELSE
+- No global CSS changes
+- No edits anywhere else in dashboard
+- No typography outside this module
