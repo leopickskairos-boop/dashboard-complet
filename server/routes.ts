@@ -2063,7 +2063,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             type: "system",
             url: "/dashboard",
           },
-        }, { skipAntiSpam: true });
+        }, { skipAntiSpam: true, skipQuietHours: true });
 
         if (result.sent > 0) {
           res.json({ success: true, message: "Notification de test envoyée", ...result });
