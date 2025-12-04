@@ -1978,8 +1978,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await storage.createPushSubscription({
           userId,
           endpoint: subscription.endpoint,
-          p256dh: subscription.keys.p256dh,
-          auth: subscription.keys.auth,
+          p256dhKey: subscription.keys.p256dh,
+          authKey: subscription.keys.auth,
           expirationTime: subscription.expirationTime 
             ? new Date(subscription.expirationTime) 
             : null,

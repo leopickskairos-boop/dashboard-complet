@@ -158,8 +158,8 @@ class PushNotificationService {
       const pushSubscription = {
         endpoint: subscription.endpoint,
         keys: {
-          p256dh: subscription.p256dh,
-          auth: subscription.auth,
+          p256dh: subscription.p256dhKey,
+          auth: subscription.authKey,
         },
       };
 
