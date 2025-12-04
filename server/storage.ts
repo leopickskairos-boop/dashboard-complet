@@ -6,6 +6,7 @@ import {
   notificationPreferences,
   monthlyReports,
   speedaiClients,
+  pushSubscriptions,
   type User, 
   type InsertUser, 
   type Call, 
@@ -17,7 +18,9 @@ import {
   type MonthlyReport,
   type InsertMonthlyReport,
   type SpeedaiClient,
-  type InsertSpeedaiClient
+  type InsertSpeedaiClient,
+  type PushSubscription,
+  type InsertPushSubscription
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, desc, sql, count, isNotNull } from "drizzle-orm";
@@ -124,6 +127,14 @@ export interface IStorage {
     month?: number;
     year?: number;
   }): Promise<Call[]>;
+  
+  // Push subscriptions management
+  getPushSubscriptions(userId: string): Promise<PushSubscription[]>;
+  getPushSubscriptionByEndpoint(endpoint: string): Promise<PushSubscription | undefined>;
+  createPushSubscription(subscription: InsertPushSubscription): Promise<PushSubscription>;
+  deletePushSubscription(endpoint: string): Promise<void>;
+  deletePushSubscriptionsByUserId(userId: string): Promise<void>;
+  getAllActivePushSubscriptions(): Promise<PushSubscription[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -910,6 +921,67 @@ export class DatabaseStorage implements IStorage {
     }
     
     return await query.orderBy(desc(calls.startTime));
+  }
+
+  // ===== Push Subscriptions Management =====
+  
+  async getPushSubscriptions(userId: string): Promise<PushSubscription[]> {
+    return await db
+      .select()
+      .from(pushSubscriptions)
+      .where(eq(pushSubscriptions.userId, userId));
+  }
+
+  async getPushSubscriptionByEndpoint(endpoint: string): Promise<PushSubscription | undefined> {
+    const [subscription] = await db
+      .select()
+      .from(pushSubscriptions)
+      .where(eq(pushSubscriptions.endpoint, endpoint));
+    return subscription || undefined;
+  }
+
+  async createPushSubscription(subscription: InsertPushSubscription): Promise<PushSubscription> {
+    // Check if subscription already exists for this endpoint
+    const existing = await this.getPushSubscriptionByEndpoint(subscription.endpoint);
+    
+    if (existing) {
+      // Update existing subscription
+      const [updated] = await db
+        .update(pushSubscriptions)
+        .set({
+          ...subscription,
+          updatedAt: new Date(),
+        })
+        .where(eq(pushSubscriptions.endpoint, subscription.endpoint))
+        .returning();
+      return updated;
+    }
+    
+    // Create new subscription
+    const [created] = await db
+      .insert(pushSubscriptions)
+      .values(subscription)
+      .returning();
+    return created;
+  }
+
+  async deletePushSubscription(endpoint: string): Promise<void> {
+    await db
+      .delete(pushSubscriptions)
+      .where(eq(pushSubscriptions.endpoint, endpoint));
+  }
+
+  async deletePushSubscriptionsByUserId(userId: string): Promise<void> {
+    await db
+      .delete(pushSubscriptions)
+      .where(eq(pushSubscriptions.userId, userId));
+  }
+
+  async getAllActivePushSubscriptions(): Promise<PushSubscription[]> {
+    return await db
+      .select()
+      .from(pushSubscriptions)
+      .where(eq(pushSubscriptions.isActive, true));
   }
 }
 

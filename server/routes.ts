@@ -40,6 +40,7 @@ import {
   notifySubscriptionAlert,
   notifyPasswordChanged,
 } from "./notifications";
+import { pushNotificationService } from "./push-notification.service";
 
 // Extend Express Request type to include user property
 declare global {
@@ -1915,6 +1916,136 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res
           .status(500)
           .json({ message: "Erreur lors de la mise à jour des préférences" });
+      }
+    },
+  );
+
+  // ===== PUSH NOTIFICATION ROUTES =====
+
+  // Subscribe to push notifications
+  app.post(
+    "/api/push/subscribe",
+    requireAuth,
+    requireVerified,
+    async (req, res) => {
+      try {
+        const userId = req.user!.id;
+
+        // Validate subscription data
+        const schema = z.object({
+          subscription: z.object({
+            endpoint: z.string().url(),
+            keys: z.object({
+              p256dh: z.string(),
+              auth: z.string(),
+            }),
+            expirationTime: z.number().nullable().optional(),
+          }),
+        });
+
+        const { subscription } = schema.parse(req.body);
+
+        // Store the subscription
+        await storage.createPushSubscription({
+          userId,
+          endpoint: subscription.endpoint,
+          p256dh: subscription.keys.p256dh,
+          auth: subscription.keys.auth,
+          expirationTime: subscription.expirationTime 
+            ? new Date(subscription.expirationTime) 
+            : null,
+          isActive: true,
+        });
+
+        console.log(`[Push] New subscription for user ${userId}`);
+        res.json({ success: true, message: "Subscription enregistrée" });
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          return res.status(400).json({ message: "Données de subscription invalides" });
+        }
+        console.error("Error saving push subscription:", error);
+        res.status(500).json({ message: "Erreur lors de l'enregistrement" });
+      }
+    },
+  );
+
+  // Unsubscribe from push notifications
+  app.post(
+    "/api/push/unsubscribe",
+    requireAuth,
+    requireVerified,
+    async (req, res) => {
+      try {
+        const userId = req.user!.id;
+        const { endpoint } = req.body;
+
+        if (endpoint) {
+          await storage.deletePushSubscription(endpoint);
+        } else {
+          await storage.deletePushSubscriptionsByUserId(userId);
+        }
+
+        console.log(`[Push] Unsubscribed user ${userId}`);
+        res.json({ success: true, message: "Désinscription effectuée" });
+      } catch (error) {
+        console.error("Error removing push subscription:", error);
+        res.status(500).json({ message: "Erreur lors de la désinscription" });
+      }
+    },
+  );
+
+  // Get push subscription status
+  app.get(
+    "/api/push/status",
+    requireAuth,
+    requireVerified,
+    async (req, res) => {
+      try {
+        const userId = req.user!.id;
+        const subscriptions = await storage.getPushSubscriptions(userId);
+
+        res.json({
+          isSubscribed: subscriptions.length > 0,
+          subscriptionCount: subscriptions.length,
+          activeCount: subscriptions.filter(s => s.isActive).length,
+        });
+      } catch (error) {
+        console.error("Error getting push status:", error);
+        res.status(500).json({ message: "Erreur lors de la récupération du statut" });
+      }
+    },
+  );
+
+  // Send test notification (for debugging)
+  app.post(
+    "/api/push/test",
+    requireAuth,
+    requireVerified,
+    async (req, res) => {
+      try {
+        const userId = req.user!.id;
+
+        const result = await pushNotificationService.sendToUser(userId, {
+          title: "Test SpeedAI",
+          body: "Ceci est une notification de test. Tout fonctionne correctement!",
+          icon: "/speedai-icon-192.png",
+          tag: "test",
+          data: {
+            type: "system",
+            url: "/dashboard",
+          },
+        }, { skipAntiSpam: true });
+
+        if (result.sent > 0) {
+          res.json({ success: true, message: "Notification de test envoyée", ...result });
+        } else if (result.skipped.length > 0) {
+          res.json({ success: false, message: result.skipped.join(", "), ...result });
+        } else {
+          res.json({ success: false, message: "Aucune notification envoyée", ...result });
+        }
+      } catch (error) {
+        console.error("Error sending test notification:", error);
+        res.status(500).json({ message: "Erreur lors de l'envoi de la notification" });
       }
     },
   );
