@@ -1,0 +1,97 @@
+Tu vas modifier UNIQUEMENT le composant du dashboard correspondant à la carte :
+
+“Clients convertis automatiquement”
+et son modal d’agrandissement.
+
+NE CHANGE RIEN D’AUTRE DANS LE DASHBOARD.
+
+Objectifs de la modification :
+1. Améliorer drastiquement la lisibilité.
+2. Donner un aspect premium cohérent avec la DA SpeedAI (noir profond, effets glow subtils, traits propres).
+3. Tooltip compact + élégant avec chiffres clairs.
+4. Graphe interactif : hover fluide, dot lumineuse, ligne active glow vert menthe.
+5. Modal agrandi scrollable (éviter le texte coupé).
+6. Ajout de données d’axe X (jours) et axe Y (nombre de clients).
+7. Lorsqu’on clique sur la carte → agrandissement en “full modal” avec stats supplémentaires :
+   - Total semaine actuelle
+   - Total semaine précédente
+   - Évolution en %
+   - Meilleur jour
+   - Analyse IA compacte (pas de gros pavé)
+
+8. Styles précis :
+   - Glow très léger autour du point actif (#4CEFAD avec opacité réduite)
+   - Lignes :
+        • Semaine actuelle : #4CEFAD (glow fin)
+        • Semaine précédente : #3C4A66 (discrète)
+   - Fond carte : linear-gradient(180deg, #0D0F12 0%, #090A0D 100%)
+   - Bords arrondis premium : 18px
+   - Contour interne subtle-light : rgba(255,255,255,0.05)
+   - Titre et sous-titre alignés horizontalement + bouton “Cliquer pour agrandir”
+
+9. Tooltip compact style premium :
+   - Fond : #0E1115
+   - Bordure glow : rgba(78, 239, 173, 0.15)
+   - Contenu :
+        Jour (ex : “Mar”)
+        Actuelle : X clients (vert)
+        Précédente : Y clients (bleu doux)
+        Évolution : +Z% (vert si + / rouge si -)
+   - Doit apparaître juste au-dessus du point
+
+10. Modal agrandi :
+    - Hauteur limitée + scroll interne
+    - Grille de KPIs en haut (4 cartes)
+    - Graphe large et bien espacé
+    - Analyse IA courte en bas → 2 lignes max, pas un pavé.
+
+---
+
+À mettre à jour dans le code :
+
+A) Structure JSX de la carte (pas de refonte totale, juste adapter conteneurs) :
+- Ajouter le bouton “Cliquer pour agrandir” aligné à droite
+- Ajouter un conteneur pour axes X et Y
+- Ajouter les IDs pour gérer l’ouverture du modal
+
+B) Styles Tailwind (ou CSS suivant stack actuelle) :
+- Bordure : `border border-white/5`
+- Rayons : `rounded-2xl`
+- Glow du point actif : `drop-shadow-[0_0_8px_#4CEFAD]`
+- Tooltip style premium : fond sombre + bords glow
+
+C) Comportement du graphe :
+- Activer hover interactivity
+- Ajouter points cliquables
+- Tooltip dynamique basé sur données
+- Transition douce : `transition-all duration-200 ease-out`
+
+D) Modal :
+- Doit s’ouvrir en plein écran atténué
+- Contenu centré avec :
+   - 4 KPIs
+   - Graphe
+   - Analyse IA compacte
+- Modal scrollable si contenu dépasse la hauteur
+
+E) Données d’exemple :
+Jours : ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"]
+Semaine actuelle : [2, 3, 4, 3, 5, 6, 4]
+Semaine précédente : [1, 2, 3, 3, 4, 4, 3]
+
+KPIs de démonstration :
+- Total actuel : 27
+- Total précédent : 18
+- Évolution : +50%
+- Meilleur jour : "Sam"
+
+F) L’analyse IA dans le modal doit être courte :
+“Votre meilleure journée est le Sam avec 6 conversions. La tendance globale est haussière.”
+
+IMPORTANT :
+- Ne change rien sur les autres cartes ou sur la structure globale du dashboard.
+- N’ajoute pas de nouveau composant ailleurs.
+- Ne touche pas aux autres couleurs du dashboard.
+- N’applique pas d’effet glow à d'autres éléments : uniquement la ligne active + point actif + légère bordure du tooltip.
+
+Fin du prompt.

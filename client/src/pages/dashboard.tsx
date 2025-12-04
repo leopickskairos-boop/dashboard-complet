@@ -587,12 +587,12 @@ export default function Dashboard() {
                   );
                 })}
 
-                {/* ENHANCED: Clients convertis chart card with dual-line, interaction & modal */}
+                {/* PREMIUM: Clients convertis chart card with dual-line, interaction & modal */}
                 {(() => {
                   // Data for 7 days
                   const days = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
                   const currentWeek = [2, 3, 4, 3, 5, 6, 4];
-                  const previousWeek = [1, 2, 2, 3, 3, 4, 3];
+                  const previousWeek = [1, 2, 3, 3, 4, 4, 3];
                   
                   // Calculations
                   const totalCurrent = currentWeek.reduce((a, b) => a + b, 0);
@@ -604,19 +604,20 @@ export default function Dashboard() {
                   const maxValue = Math.max(...currentWeek);
                   const minValue = Math.min(...currentWeek);
                   const bestDayIndex = currentWeek.indexOf(maxValue);
-                  const worstDayIndex = currentWeek.indexOf(minValue);
-                  const weeklyMean = totalCurrent / 7;
-                  const hasAnomaly = currentWeek.some(v => v > weeklyMean * 1.4);
-                  const anomalyDay = hasAnomaly ? days[currentWeek.findIndex(v => v > weeklyMean * 1.4)] : null;
+                  const maxVal = Math.max(...currentWeek, ...previousWeek) + 1;
                   
                   // Trend analysis
                   const trend = evolution > 10 ? 'haussière' : evolution < -10 ? 'baissière' : 'stable';
                   
+                  // Premium colors
+                  const mintGreen = '#4CEFAD';
+                  const previousBlue = '#3C4A66';
+                  
                   // SVG path generation for smooth bezier curves
-                  const generatePath = (data: number[], maxVal: number, height: number = 50, width: number = 200) => {
+                  const generatePath = (data: number[], maxV: number, height: number = 45, width: number = 180) => {
                     const points = data.map((val, i) => ({
-                      x: (i / (data.length - 1)) * width,
-                      y: height - (val / maxVal) * (height - 10)
+                      x: 10 + (i / (data.length - 1)) * width,
+                      y: height - (val / maxV) * (height - 8)
                     }));
                     
                     let path = `M ${points[0].x},${points[0].y}`;
@@ -630,430 +631,488 @@ export default function Dashboard() {
                     return path;
                   };
                   
-                  const maxVal = Math.max(...currentWeek, ...previousWeek) + 1;
                   const currentPath = generatePath(currentWeek, maxVal);
                   const previousPath = generatePath(previousWeek, maxVal);
-                  const currentAreaPath = currentPath + ` L 200,50 L 0,50 Z`;
+                  const currentAreaPath = currentPath + ` L 190,45 L 10,45 Z`;
                   
-                  const getPointY = (val: number, maxV: number = maxVal, h: number = 50) => h - (val / maxV) * (h - 10);
+                  const getPointY = (val: number, h: number = 45) => h - (val / maxVal) * (h - 8);
+                  const getPointX = (i: number, w: number = 180) => 10 + (i / 6) * w;
                   
                   return (
                     <>
                       <div 
-                        className="group relative p-5 rounded-xl bg-[#111216] border border-white/[0.05] flex flex-col cursor-pointer transition-all duration-200 hover:border-white/[0.10]"
+                        className="group relative p-5 flex flex-col cursor-pointer transition-all duration-200 ease-out hover:translate-y-[-2px]"
                         style={{ 
-                          boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.5), 0 4px 20px rgba(0,255,178,0.12)'
+                          background: 'linear-gradient(180deg, #0D0F12 0%, #090A0D 100%)',
+                          borderRadius: '18px',
+                          border: '1px solid rgba(255,255,255,0.05)',
+                          boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.03)'
                         }}
                         onClick={() => setShowConvertedClientsModal(true)}
                         onMouseLeave={() => setHoveredDataPoint(null)}
                         data-testid="card-clients-convertis"
                       >
-                        {/* Card Header */}
-                        <div className="flex items-start justify-between mb-3">
-                          <div>
-                            <h3 className="text-[13px] font-medium text-[#EDEDED] tracking-tight">
+                        {/* Card Header - Horizontal alignment */}
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-3">
+                            <h3 className="text-[14px] font-semibold text-[#EDEDED] tracking-tight">
                               Clients convertis automatiquement
                             </h3>
-                            <p className="text-[11px] text-[#A0A0A0] mt-0.5">
-                              Impact IA hebdomadaire
-                            </p>
+                            <span className="text-[10px] text-[#606060]">
+                              7 derniers jours
+                            </span>
                           </div>
-                          <div className="text-[10px] text-[#606060] opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button 
+                            className="text-[10px] text-[#4CEFAD]/60 hover:text-[#4CEFAD] transition-colors duration-200 opacity-0 group-hover:opacity-100"
+                          >
                             Cliquer pour agrandir
-                          </div>
+                          </button>
                         </div>
 
-                        {/* Mini Dual Line Chart - Trade Republic Style */}
-                        <div className="flex-1 min-h-[60px] relative">
-                          <svg 
-                            viewBox="0 0 200 60" 
-                            className="w-full h-full"
-                            preserveAspectRatio="none"
-                          >
-                            <defs>
-                              <linearGradient id="chartGradientMini" x1="0%" y1="0%" x2="0%" y2="100%">
-                                <stop offset="0%" stopColor="#00FFB2" stopOpacity="0.15" />
-                                <stop offset="100%" stopColor="#00FFB2" stopOpacity="0.02" />
-                              </linearGradient>
-                              <filter id="glowFilterMini" x="-50%" y="-50%" width="200%" height="200%">
-                                <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
-                                <feMerge>
-                                  <feMergeNode in="coloredBlur"/>
-                                  <feMergeNode in="SourceGraphic"/>
-                                </feMerge>
-                              </filter>
-                            </defs>
-                            
-                            {/* Gradient fill under current week curve */}
-                            <path d={currentAreaPath} fill="url(#chartGradientMini)" />
-                            
-                            {/* Previous week line (baseline) */}
-                            <path 
-                              d={previousPath}
-                              fill="none"
-                              stroke="rgba(107,107,255,0.35)"
-                              strokeWidth="1.5"
-                              strokeLinecap="round"
-                            />
-                            
-                            {/* Current week line */}
-                            <path 
-                              d={currentPath}
-                              fill="none"
-                              stroke="#00FFB2"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              opacity="0.9"
-                            />
-                            
-                            {/* Hover tracking line */}
-                            {hoveredDataPoint !== null && (
-                              <line 
-                                x1={(hoveredDataPoint / 6) * 200} 
-                                y1="0" 
-                                x2={(hoveredDataPoint / 6) * 200} 
-                                y2="60" 
-                                stroke="rgba(0,255,178,0.25)" 
-                                strokeWidth="1" 
-                                strokeDasharray="3,3"
-                              />
-                            )}
-                            
-                            {/* Interactive hover zones */}
-                            {days.map((_, i) => (
-                              <rect 
-                                key={i}
-                                x={(i / 6) * 200 - 14}
-                                y="0"
-                                width="28"
-                                height="60"
-                                fill="transparent"
-                                onMouseEnter={() => setHoveredDataPoint(i)}
-                              />
-                            ))}
-                            
-                            {/* Glow points on peaks */}
-                            {currentWeek.map((val, i) => (
-                              val === maxValue && (
-                                <circle 
-                                  key={`peak-${i}`}
-                                  cx={(i / 6) * 200} 
-                                  cy={getPointY(val, maxVal, 50)} 
-                                  r="3" 
-                                  fill="#00FFB2" 
-                                  filter="url(#glowFilterMini)" 
-                                  opacity="0.7"
-                                />
-                              )
-                            ))}
-                            
-                            {/* Hover points */}
-                            {hoveredDataPoint !== null && (
-                              <>
-                                <circle 
-                                  cx={(hoveredDataPoint / 6) * 200} 
-                                  cy={getPointY(currentWeek[hoveredDataPoint], maxVal, 50)} 
-                                  r="4" 
-                                  fill="#00FFB2" 
-                                  filter="url(#glowFilterMini)"
-                                />
-                                <circle 
-                                  cx={(hoveredDataPoint / 6) * 200} 
-                                  cy={getPointY(previousWeek[hoveredDataPoint], maxVal, 50)} 
-                                  r="3" 
-                                  fill="rgba(107,107,255,0.6)"
-                                />
-                              </>
-                            )}
-                          </svg>
+                        {/* Chart Container with Y-axis */}
+                        <div className="flex gap-2">
+                          {/* Y-axis labels */}
+                          <div className="flex flex-col justify-between h-[55px] text-[9px] text-[#505050] pr-1">
+                            <span>{maxVal}</span>
+                            <span>{Math.ceil(maxVal / 2)}</span>
+                            <span>0</span>
+                          </div>
                           
-                          {/* Tooltip */}
-                          {hoveredDataPoint !== null && (
-                            <div 
-                              className="absolute z-20 px-3 py-2 rounded-[10px] text-[11px] pointer-events-none"
-                              style={{
-                                left: `${Math.min(Math.max((hoveredDataPoint / 6) * 100, 15), 85)}%`,
-                                top: '-65px',
-                                transform: 'translateX(-50%)',
-                                background: '#181A1F',
-                                boxShadow: '0 4px 12px rgba(0,255,178,0.20)',
-                                border: '1px solid rgba(255,255,255,0.08)'
-                              }}
+                          {/* Chart Area */}
+                          <div className="flex-1 relative">
+                            <svg 
+                              viewBox="0 0 200 55" 
+                              className="w-full h-[55px]"
+                              preserveAspectRatio="none"
                             >
-                              <div className="font-medium text-white mb-1">{days[hoveredDataPoint]}</div>
-                              <div className="text-[#00FFB2]">Actuelle : {currentWeek[hoveredDataPoint]} clients</div>
-                              <div className="text-[#6B6BFF]">Précédente : {previousWeek[hoveredDataPoint]} clients</div>
-                              <div className={`mt-1 ${currentWeek[hoveredDataPoint] >= previousWeek[hoveredDataPoint] ? 'text-[#00FFB2]' : 'text-[#FF6B6B]'}`}>
-                                {currentWeek[hoveredDataPoint] >= previousWeek[hoveredDataPoint] ? '+' : ''}{Math.round(((currentWeek[hoveredDataPoint] - previousWeek[hoveredDataPoint]) / (previousWeek[hoveredDataPoint] || 1)) * 100)}%
-                              </div>
+                              <defs>
+                                <linearGradient id="premiumGradientMini" x1="0%" y1="0%" x2="0%" y2="100%">
+                                  <stop offset="0%" stopColor={mintGreen} stopOpacity="0.12" />
+                                  <stop offset="100%" stopColor={mintGreen} stopOpacity="0.01" />
+                                </linearGradient>
+                                <filter id="premiumGlowMini" x="-100%" y="-100%" width="300%" height="300%">
+                                  <feGaussianBlur stdDeviation="3" result="blur"/>
+                                  <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+                                </filter>
+                              </defs>
+                              
+                              {/* Gradient fill under current week curve */}
+                              <path d={currentAreaPath} fill="url(#premiumGradientMini)" />
+                              
+                              {/* Previous week line (discrete) */}
+                              <path 
+                                d={previousPath}
+                                fill="none"
+                                stroke={previousBlue}
+                                strokeWidth="1.5"
+                                strokeLinecap="round"
+                                opacity="0.8"
+                              />
+                              
+                              {/* Current week line with glow */}
+                              <path 
+                                d={currentPath}
+                                fill="none"
+                                stroke={mintGreen}
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                style={{ filter: 'drop-shadow(0 0 4px rgba(76, 239, 173, 0.4))' }}
+                              />
+                              
+                              {/* Hover tracking line */}
+                              {hoveredDataPoint !== null && (
+                                <line 
+                                  x1={getPointX(hoveredDataPoint)} 
+                                  y1="0" 
+                                  x2={getPointX(hoveredDataPoint)} 
+                                  y2="55" 
+                                  stroke="rgba(76, 239, 173, 0.2)" 
+                                  strokeWidth="1" 
+                                  strokeDasharray="2,2"
+                                />
+                              )}
+                              
+                              {/* Interactive hover zones */}
+                              {days.map((_, i) => (
+                                <rect 
+                                  key={i}
+                                  x={getPointX(i) - 14}
+                                  y="0"
+                                  width="28"
+                                  height="55"
+                                  fill="transparent"
+                                  onMouseEnter={() => setHoveredDataPoint(i)}
+                                  style={{ cursor: 'crosshair' }}
+                                />
+                              ))}
+                              
+                              {/* Hover points */}
+                              {hoveredDataPoint !== null && (
+                                <>
+                                  <circle 
+                                    cx={getPointX(hoveredDataPoint)} 
+                                    cy={getPointY(currentWeek[hoveredDataPoint])} 
+                                    r="5" 
+                                    fill={mintGreen}
+                                    style={{ filter: 'drop-shadow(0 0 8px rgba(76, 239, 173, 0.6))' }}
+                                  />
+                                  <circle 
+                                    cx={getPointX(hoveredDataPoint)} 
+                                    cy={getPointY(previousWeek[hoveredDataPoint])} 
+                                    r="3.5" 
+                                    fill={previousBlue}
+                                    opacity="0.9"
+                                  />
+                                </>
+                              )}
+                            </svg>
+                            
+                            {/* X-axis labels */}
+                            <div className="flex justify-between mt-1 px-1">
+                              {days.map((day, i) => (
+                                <span 
+                                  key={day} 
+                                  className={`text-[9px] transition-colors duration-150 ${hoveredDataPoint === i ? 'text-[#EDEDED]' : 'text-[#505050]'}`}
+                                >
+                                  {day}
+                                </span>
+                              ))}
                             </div>
-                          )}
+                            
+                            {/* Premium Tooltip */}
+                            {hoveredDataPoint !== null && (
+                              <div 
+                                className="absolute z-30 px-3 py-2.5 pointer-events-none transition-all duration-200 ease-out"
+                                style={{
+                                  left: `${Math.min(Math.max((hoveredDataPoint / 6) * 100, 12), 88)}%`,
+                                  bottom: 'calc(100% + 8px)',
+                                  transform: 'translateX(-50%)',
+                                  background: '#0E1115',
+                                  borderRadius: '10px',
+                                  border: '1px solid rgba(76, 239, 173, 0.15)',
+                                  boxShadow: '0 4px 16px rgba(0,0,0,0.4), 0 0 0 1px rgba(76, 239, 173, 0.08)'
+                                }}
+                              >
+                                <div className="font-semibold text-[#EDEDED] text-[11px] mb-1.5">{days[hoveredDataPoint]}</div>
+                                <div className="text-[10px] mb-0.5" style={{ color: mintGreen }}>
+                                  Actuelle : {currentWeek[hoveredDataPoint]} clients
+                                </div>
+                                <div className="text-[10px] mb-1" style={{ color: '#7B8BA8' }}>
+                                  Précédente : {previousWeek[hoveredDataPoint]} clients
+                                </div>
+                                <div className={`text-[10px] font-medium ${currentWeek[hoveredDataPoint] >= previousWeek[hoveredDataPoint] ? 'text-[#4CEFAD]' : 'text-[#FF6B6B]'}`}>
+                                  {currentWeek[hoveredDataPoint] >= previousWeek[hoveredDataPoint] ? '+' : ''}{Math.round(((currentWeek[hoveredDataPoint] - previousWeek[hoveredDataPoint]) / (previousWeek[hoveredDataPoint] || 1)) * 100)}%
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         </div>
 
                         {/* Summary text */}
-                        <p className="text-[12px] text-[#A0A0A0] mt-3 leading-relaxed">
-                          Cette semaine, vos conversions IA ont évolué de{' '}
-                          <span className={`font-semibold ${isPositive ? 'text-[#00FFB2]' : 'text-[#FF6B6B]'}`}>
+                        <p className="text-[11px] text-[#707070] mt-3 leading-relaxed">
+                          Évolution :{' '}
+                          <span className={`font-semibold ${isPositive ? 'text-[#4CEFAD]' : 'text-[#FF6B6B]'}`}>
                             {isPositive ? '+' : ''}{evolution}%
                           </span>{' '}
-                          par rapport à la semaine précédente.
+                          vs semaine précédente
                         </p>
                       </div>
 
-                      {/* MODAL: Expanded Chart View */}
+                      {/* PREMIUM MODAL: Expanded Chart View */}
                       {showConvertedClientsModal && (
                         <div 
-                          className="fixed inset-0 z-50 flex items-center justify-center"
-                          style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)' }}
+                          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                          style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)' }}
                           onClick={() => setShowConvertedClientsModal(false)}
                         >
                           <div 
-                            className="relative w-[80%] max-w-4xl h-[70%] max-h-[600px] rounded-2xl p-8 overflow-hidden"
+                            className="relative w-full max-w-3xl max-h-[85vh] overflow-y-auto"
                             style={{ 
-                              background: '#0F1013',
-                              boxShadow: '0 8px 32px rgba(0,255,178,0.12), 0 0 0 1px rgba(255,255,255,0.05)'
+                              background: 'linear-gradient(180deg, #0D0F12 0%, #090A0D 100%)',
+                              borderRadius: '20px',
+                              border: '1px solid rgba(255,255,255,0.06)',
+                              boxShadow: '0 24px 64px rgba(0,0,0,0.5), 0 0 0 1px rgba(76, 239, 173, 0.05)'
                             }}
                             onClick={(e) => e.stopPropagation()}
                           >
-                            {/* Close button */}
-                            <button 
-                              className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full text-[#A0A0A0] hover:text-white hover:bg-white/10 transition-colors"
-                              onClick={() => setShowConvertedClientsModal(false)}
-                              data-testid="button-close-modal"
-                            >
-                              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                                <path d="M12 4L4 12M4 4L12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                              </svg>
-                            </button>
-
-                            {/* Modal Header */}
-                            <div className="mb-6">
-                              <h2 className="text-[20px] font-semibold text-[#EDEDED] tracking-tight">
-                                Clients convertis automatiquement
-                              </h2>
-                              <p className="text-[13px] text-[#A0A0A0] mt-1">
-                                Comparaison semaine actuelle vs semaine précédente
-                              </p>
-                            </div>
-
-                            {/* Metrics Row */}
-                            <div className="grid grid-cols-4 gap-4 mb-6">
-                              <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.05]">
-                                <div className="text-[11px] text-[#808080] uppercase tracking-wider mb-1">Total actuel</div>
-                                <div className="text-[22px] font-semibold text-[#00FFB2]">{totalCurrent}</div>
-                              </div>
-                              <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.05]">
-                                <div className="text-[11px] text-[#808080] uppercase tracking-wider mb-1">Total précédent</div>
-                                <div className="text-[22px] font-semibold text-[#6B6BFF]">{totalPrevious}</div>
-                              </div>
-                              <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.05]">
-                                <div className="text-[11px] text-[#808080] uppercase tracking-wider mb-1">Évolution</div>
-                                <div className={`text-[22px] font-semibold ${isPositive ? 'text-[#00FFB2]' : 'text-[#FF6B6B]'}`}>
-                                  {isPositive ? '+' : ''}{evolution}%
-                                </div>
-                              </div>
-                              <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.05]">
-                                <div className="text-[11px] text-[#808080] uppercase tracking-wider mb-1">Meilleur jour</div>
-                                <div className="text-[22px] font-semibold text-[#EDEDED]">{days[bestDayIndex]}</div>
-                              </div>
-                            </div>
-
-                            {/* Large Chart */}
-                            <div className="h-[200px] relative mb-6">
-                              <svg 
-                                viewBox="0 0 600 180" 
-                                className="w-full h-full"
-                                preserveAspectRatio="xMidYMid meet"
-                                onMouseLeave={() => setHoveredDataPoint(null)}
+                            {/* Modal Content with scroll */}
+                            <div className="p-6 md:p-8">
+                              {/* Close button */}
+                              <button 
+                                className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full text-[#606060] hover:text-white hover:bg-white/5 transition-all duration-200"
+                                onClick={() => setShowConvertedClientsModal(false)}
+                                data-testid="button-close-modal"
                               >
-                                <defs>
-                                  <linearGradient id="chartGradientLarge" x1="0%" y1="0%" x2="0%" y2="100%">
-                                    <stop offset="0%" stopColor="#00FFB2" stopOpacity="0.2" />
-                                    <stop offset="100%" stopColor="#00FFB2" stopOpacity="0.02" />
-                                  </linearGradient>
-                                  <filter id="glowFilterLarge" x="-50%" y="-50%" width="200%" height="200%">
-                                    <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-                                    <feMerge>
-                                      <feMergeNode in="coloredBlur"/>
-                                      <feMergeNode in="SourceGraphic"/>
-                                    </feMerge>
-                                  </filter>
-                                </defs>
-                                
-                                {/* Y-axis labels */}
-                                {[0, Math.ceil(maxVal/2), maxVal].map((val, i) => (
-                                  <text 
-                                    key={`y-${i}`}
-                                    x="30" 
-                                    y={150 - (i * 60)} 
-                                    fill="#6E6E6E" 
-                                    fontSize="11" 
-                                    textAnchor="end"
-                                  >
-                                    {val}
-                                  </text>
-                                ))}
-                                
-                                {/* X-axis labels */}
-                                {days.map((day, i) => (
-                                  <text 
-                                    key={`x-${i}`}
-                                    x={60 + (i * 80)} 
-                                    y="170" 
-                                    fill="#8A8A8A" 
-                                    fontSize="11" 
-                                    textAnchor="middle"
-                                  >
-                                    {day}
-                                  </text>
-                                ))}
-                                
-                                {/* Chart area */}
-                                <g transform="translate(40, 10)">
-                                  {/* Gradient fill under current curve */}
-                                  <path 
-                                    d={(() => {
-                                      const pts = currentWeek.map((v, i) => ({
-                                        x: 20 + (i * 80),
-                                        y: 130 - (v / maxVal) * 120
-                                      }));
-                                      let p = `M ${pts[0].x},${pts[0].y}`;
-                                      for (let i = 1; i < pts.length; i++) {
-                                        const prev = pts[i-1];
-                                        const curr = pts[i];
-                                        p += ` C ${prev.x + 26},${prev.y} ${curr.x - 26},${curr.y} ${curr.x},${curr.y}`;
-                                      }
-                                      return p + ` L ${pts[pts.length-1].x},130 L ${pts[0].x},130 Z`;
-                                    })()}
-                                    fill="url(#chartGradientLarge)"
-                                  />
-                                  
-                                  {/* Previous week line */}
-                                  <path 
-                                    d={(() => {
-                                      const pts = previousWeek.map((v, i) => ({
-                                        x: 20 + (i * 80),
-                                        y: 130 - (v / maxVal) * 120
-                                      }));
-                                      let p = `M ${pts[0].x},${pts[0].y}`;
-                                      for (let i = 1; i < pts.length; i++) {
-                                        const prev = pts[i-1];
-                                        const curr = pts[i];
-                                        p += ` C ${prev.x + 26},${prev.y} ${curr.x - 26},${curr.y} ${curr.x},${curr.y}`;
-                                      }
-                                      return p;
-                                    })()}
-                                    fill="none"
-                                    stroke="rgba(107,107,255,0.35)"
-                                    strokeWidth="2.5"
-                                    strokeLinecap="round"
-                                  />
-                                  
-                                  {/* Current week line */}
-                                  <path 
-                                    d={(() => {
-                                      const pts = currentWeek.map((v, i) => ({
-                                        x: 20 + (i * 80),
-                                        y: 130 - (v / maxVal) * 120
-                                      }));
-                                      let p = `M ${pts[0].x},${pts[0].y}`;
-                                      for (let i = 1; i < pts.length; i++) {
-                                        const prev = pts[i-1];
-                                        const curr = pts[i];
-                                        p += ` C ${prev.x + 26},${prev.y} ${curr.x - 26},${curr.y} ${curr.x},${curr.y}`;
-                                      }
-                                      return p;
-                                    })()}
-                                    fill="none"
-                                    stroke="#00FFB2"
-                                    strokeWidth="3"
-                                    strokeLinecap="round"
-                                  />
-                                  
-                                  {/* Hover zones and points */}
-                                  {days.map((_, i) => {
-                                    const x = 20 + (i * 80);
-                                    const yCurrent = 130 - (currentWeek[i] / maxVal) * 120;
-                                    const yPrevious = 130 - (previousWeek[i] / maxVal) * 120;
-                                    
-                                    return (
-                                      <g key={`point-${i}`}>
-                                        <rect 
-                                          x={x - 40}
-                                          y="0"
-                                          width="80"
-                                          height="140"
-                                          fill="transparent"
-                                          onMouseEnter={() => setHoveredDataPoint(i)}
-                                          style={{ cursor: 'crosshair' }}
-                                        />
-                                        
-                                        {hoveredDataPoint === i && (
-                                          <>
-                                            <line x1={x} y1="0" x2={x} y2="130" stroke="rgba(0,255,178,0.25)" strokeWidth="1" strokeDasharray="4,4"/>
-                                            <circle cx={x} cy={yCurrent} r="6" fill="#00FFB2" filter="url(#glowFilterLarge)"/>
-                                            <circle cx={x} cy={yPrevious} r="5" fill="rgba(107,107,255,0.7)"/>
-                                          </>
-                                        )}
-                                        
-                                        {currentWeek[i] === maxValue && hoveredDataPoint !== i && (
-                                          <circle cx={x} cy={yCurrent} r="5" fill="#00FFB2" filter="url(#glowFilterLarge)" opacity="0.7"/>
-                                        )}
-                                      </g>
-                                    );
-                                  })}
-                                </g>
-                              </svg>
-                              
-                              {/* Large chart tooltip */}
-                              {hoveredDataPoint !== null && (
+                                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                                  <path d="M11 3L3 11M3 3L11 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                                </svg>
+                              </button>
+
+                              {/* Modal Header */}
+                              <div className="mb-6">
+                                <h2 className="text-[18px] font-semibold text-[#EDEDED] tracking-tight">
+                                  Clients convertis automatiquement
+                                </h2>
+                                <p className="text-[12px] text-[#606060] mt-1">
+                                  Comparaison semaine actuelle vs précédente
+                                </p>
+                              </div>
+
+                              {/* KPI Grid - 4 cards */}
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
                                 <div 
-                                  className="absolute z-20 px-4 py-3 rounded-[10px] text-[12px] pointer-events-none"
-                                  style={{
-                                    left: `${10 + (hoveredDataPoint / 6) * 80}%`,
-                                    top: '20px',
-                                    transform: 'translateX(-50%)',
-                                    background: '#181A1F',
-                                    boxShadow: '0 4px 16px rgba(0,255,178,0.25)',
-                                    border: '1px solid rgba(255,255,255,0.1)'
+                                  className="p-4 rounded-xl"
+                                  style={{ 
+                                    background: 'rgba(255,255,255,0.02)',
+                                    border: '1px solid rgba(255,255,255,0.04)'
                                   }}
                                 >
-                                  <div className="font-semibold text-white mb-2 text-[13px]">{days[hoveredDataPoint]}</div>
-                                  <div className="text-[#00FFB2] mb-1">Semaine actuelle : {currentWeek[hoveredDataPoint]} clients</div>
-                                  <div className="text-[#6B6BFF] mb-1">Semaine précédente : {previousWeek[hoveredDataPoint]} clients</div>
-                                  <div className={`font-medium ${currentWeek[hoveredDataPoint] >= previousWeek[hoveredDataPoint] ? 'text-[#00FFB2]' : 'text-[#FF6B6B]'}`}>
-                                    Différence : {currentWeek[hoveredDataPoint] >= previousWeek[hoveredDataPoint] ? '+' : ''}{Math.round(((currentWeek[hoveredDataPoint] - previousWeek[hoveredDataPoint]) / (previousWeek[hoveredDataPoint] || 1)) * 100)}%
+                                  <div className="text-[10px] text-[#606060] uppercase tracking-wider mb-1">Total actuel</div>
+                                  <div className="text-[24px] font-bold" style={{ color: mintGreen }}>{totalCurrent}</div>
+                                </div>
+                                <div 
+                                  className="p-4 rounded-xl"
+                                  style={{ 
+                                    background: 'rgba(255,255,255,0.02)',
+                                    border: '1px solid rgba(255,255,255,0.04)'
+                                  }}
+                                >
+                                  <div className="text-[10px] text-[#606060] uppercase tracking-wider mb-1">Total précédent</div>
+                                  <div className="text-[24px] font-bold text-[#7B8BA8]">{totalPrevious}</div>
+                                </div>
+                                <div 
+                                  className="p-4 rounded-xl"
+                                  style={{ 
+                                    background: 'rgba(255,255,255,0.02)',
+                                    border: '1px solid rgba(255,255,255,0.04)'
+                                  }}
+                                >
+                                  <div className="text-[10px] text-[#606060] uppercase tracking-wider mb-1">Évolution</div>
+                                  <div className={`text-[24px] font-bold ${isPositive ? 'text-[#4CEFAD]' : 'text-[#FF6B6B]'}`}>
+                                    {isPositive ? '+' : ''}{evolution}%
                                   </div>
                                 </div>
-                              )}
-                            </div>
+                                <div 
+                                  className="p-4 rounded-xl"
+                                  style={{ 
+                                    background: 'rgba(255,255,255,0.02)',
+                                    border: '1px solid rgba(255,255,255,0.04)'
+                                  }}
+                                >
+                                  <div className="text-[10px] text-[#606060] uppercase tracking-wider mb-1">Meilleur jour</div>
+                                  <div className="text-[24px] font-bold text-[#EDEDED]">{days[bestDayIndex]}</div>
+                                </div>
+                              </div>
 
-                            {/* Legend */}
-                            <div className="flex gap-6 mb-6">
-                              <div className="flex items-center gap-2">
-                                <div className="w-3 h-0.5 bg-[#00FFB2] rounded-full"></div>
-                                <span className="text-[12px] text-[#A0A0A0]">Semaine actuelle</span>
+                              {/* Large Chart */}
+                              <div 
+                                className="p-5 rounded-xl mb-5"
+                                style={{ 
+                                  background: 'rgba(0,0,0,0.2)',
+                                  border: '1px solid rgba(255,255,255,0.03)'
+                                }}
+                              >
+                                <div className="flex gap-3">
+                                  {/* Y-axis */}
+                                  <div className="flex flex-col justify-between h-[160px] text-[10px] text-[#505050] pr-2 py-2">
+                                    <span>{maxVal}</span>
+                                    <span>{Math.ceil(maxVal * 0.66)}</span>
+                                    <span>{Math.ceil(maxVal * 0.33)}</span>
+                                    <span>0</span>
+                                  </div>
+                                  
+                                  {/* Chart */}
+                                  <div className="flex-1 relative" onMouseLeave={() => setHoveredDataPoint(null)}>
+                                    <svg 
+                                      viewBox="0 0 500 160" 
+                                      className="w-full h-[160px]"
+                                      preserveAspectRatio="none"
+                                    >
+                                      <defs>
+                                        <linearGradient id="premiumGradientLarge" x1="0%" y1="0%" x2="0%" y2="100%">
+                                          <stop offset="0%" stopColor={mintGreen} stopOpacity="0.15" />
+                                          <stop offset="100%" stopColor={mintGreen} stopOpacity="0.01" />
+                                        </linearGradient>
+                                      </defs>
+                                      
+                                      {/* Grid lines */}
+                                      {[0, 1, 2, 3].map((i) => (
+                                        <line 
+                                          key={`grid-${i}`}
+                                          x1="20" 
+                                          y1={10 + i * 45} 
+                                          x2="480" 
+                                          y2={10 + i * 45} 
+                                          stroke="rgba(255,255,255,0.03)" 
+                                          strokeWidth="1"
+                                        />
+                                      ))}
+                                      
+                                      {/* Gradient fill */}
+                                      <path 
+                                        d={(() => {
+                                          const pts = currentWeek.map((v, i) => ({
+                                            x: 20 + (i * 75),
+                                            y: 140 - (v / maxVal) * 125
+                                          }));
+                                          let p = `M ${pts[0].x},${pts[0].y}`;
+                                          for (let i = 1; i < pts.length; i++) {
+                                            const prev = pts[i-1];
+                                            const curr = pts[i];
+                                            p += ` C ${prev.x + 25},${prev.y} ${curr.x - 25},${curr.y} ${curr.x},${curr.y}`;
+                                          }
+                                          return p + ` L ${pts[pts.length-1].x},145 L ${pts[0].x},145 Z`;
+                                        })()}
+                                        fill="url(#premiumGradientLarge)"
+                                      />
+                                      
+                                      {/* Previous week line */}
+                                      <path 
+                                        d={(() => {
+                                          const pts = previousWeek.map((v, i) => ({
+                                            x: 20 + (i * 75),
+                                            y: 140 - (v / maxVal) * 125
+                                          }));
+                                          let p = `M ${pts[0].x},${pts[0].y}`;
+                                          for (let i = 1; i < pts.length; i++) {
+                                            const prev = pts[i-1];
+                                            const curr = pts[i];
+                                            p += ` C ${prev.x + 25},${prev.y} ${curr.x - 25},${curr.y} ${curr.x},${curr.y}`;
+                                          }
+                                          return p;
+                                        })()}
+                                        fill="none"
+                                        stroke={previousBlue}
+                                        strokeWidth="2.5"
+                                        strokeLinecap="round"
+                                        opacity="0.7"
+                                      />
+                                      
+                                      {/* Current week line with glow */}
+                                      <path 
+                                        d={(() => {
+                                          const pts = currentWeek.map((v, i) => ({
+                                            x: 20 + (i * 75),
+                                            y: 140 - (v / maxVal) * 125
+                                          }));
+                                          let p = `M ${pts[0].x},${pts[0].y}`;
+                                          for (let i = 1; i < pts.length; i++) {
+                                            const prev = pts[i-1];
+                                            const curr = pts[i];
+                                            p += ` C ${prev.x + 25},${prev.y} ${curr.x - 25},${curr.y} ${curr.x},${curr.y}`;
+                                          }
+                                          return p;
+                                        })()}
+                                        fill="none"
+                                        stroke={mintGreen}
+                                        strokeWidth="3"
+                                        strokeLinecap="round"
+                                        style={{ filter: 'drop-shadow(0 0 6px rgba(76, 239, 173, 0.5))' }}
+                                      />
+                                      
+                                      {/* Hover zones and points */}
+                                      {days.map((_, i) => {
+                                        const x = 20 + (i * 75);
+                                        const yCurrent = 140 - (currentWeek[i] / maxVal) * 125;
+                                        const yPrevious = 140 - (previousWeek[i] / maxVal) * 125;
+                                        
+                                        return (
+                                          <g key={`point-${i}`}>
+                                            <rect 
+                                              x={x - 37}
+                                              y="0"
+                                              width="75"
+                                              height="155"
+                                              fill="transparent"
+                                              onMouseEnter={() => setHoveredDataPoint(i)}
+                                              style={{ cursor: 'crosshair' }}
+                                            />
+                                            
+                                            {hoveredDataPoint === i && (
+                                              <>
+                                                <line x1={x} y1="5" x2={x} y2="145" stroke="rgba(76, 239, 173, 0.15)" strokeWidth="1" strokeDasharray="3,3"/>
+                                                <circle 
+                                                  cx={x} cy={yCurrent} r="7" 
+                                                  fill={mintGreen}
+                                                  style={{ filter: 'drop-shadow(0 0 10px rgba(76, 239, 173, 0.6))' }}
+                                                />
+                                                <circle cx={x} cy={yPrevious} r="5" fill={previousBlue} opacity="0.8"/>
+                                              </>
+                                            )}
+                                          </g>
+                                        );
+                                      })}
+                                    </svg>
+                                    
+                                    {/* X-axis labels */}
+                                    <div className="flex justify-between mt-2 px-1">
+                                      {days.map((day, i) => (
+                                        <span 
+                                          key={day} 
+                                          className={`text-[11px] transition-colors duration-150 ${hoveredDataPoint === i ? 'text-[#EDEDED]' : 'text-[#505050]'}`}
+                                          style={{ width: '75px', textAlign: 'center' }}
+                                        >
+                                          {day}
+                                        </span>
+                                      ))}
+                                    </div>
+                                    
+                                    {/* Large chart tooltip */}
+                                    {hoveredDataPoint !== null && (
+                                      <div 
+                                        className="absolute z-30 px-4 py-3 pointer-events-none"
+                                        style={{
+                                          left: `${8 + (hoveredDataPoint / 6) * 84}%`,
+                                          top: '10px',
+                                          transform: 'translateX(-50%)',
+                                          background: '#0E1115',
+                                          borderRadius: '12px',
+                                          border: '1px solid rgba(76, 239, 173, 0.15)',
+                                          boxShadow: '0 8px 24px rgba(0,0,0,0.5)'
+                                        }}
+                                      >
+                                        <div className="font-semibold text-[#EDEDED] text-[13px] mb-2">{days[hoveredDataPoint]}</div>
+                                        <div className="text-[11px] mb-1" style={{ color: mintGreen }}>
+                                          Actuelle : {currentWeek[hoveredDataPoint]} clients
+                                        </div>
+                                        <div className="text-[11px] mb-1.5" style={{ color: '#7B8BA8' }}>
+                                          Précédente : {previousWeek[hoveredDataPoint]} clients
+                                        </div>
+                                        <div className={`text-[11px] font-semibold ${currentWeek[hoveredDataPoint] >= previousWeek[hoveredDataPoint] ? 'text-[#4CEFAD]' : 'text-[#FF6B6B]'}`}>
+                                          {currentWeek[hoveredDataPoint] >= previousWeek[hoveredDataPoint] ? '+' : ''}{Math.round(((currentWeek[hoveredDataPoint] - previousWeek[hoveredDataPoint]) / (previousWeek[hoveredDataPoint] || 1)) * 100)}%
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
                               </div>
-                              <div className="flex items-center gap-2">
-                                <div className="w-3 h-0.5 bg-[#6B6BFF] rounded-full opacity-50"></div>
-                                <span className="text-[12px] text-[#A0A0A0]">Semaine précédente</span>
-                              </div>
-                            </div>
 
-                            {/* IA Analysis Block */}
-                            <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-                              <div className="flex items-center gap-2 mb-3">
-                                <Brain className="w-4 h-4 text-violet-400" />
-                                <span className="text-[12px] font-medium text-violet-400 uppercase tracking-wider">Analyse IA</span>
+                              {/* Legend */}
+                              <div className="flex items-center gap-6 mb-5">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-4 h-[3px] rounded-full" style={{ backgroundColor: mintGreen, boxShadow: '0 0 6px rgba(76, 239, 173, 0.4)' }}></div>
+                                  <span className="text-[11px] text-[#808080]">Semaine actuelle</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <div className="w-4 h-[3px] rounded-full" style={{ backgroundColor: previousBlue }}></div>
+                                  <span className="text-[11px] text-[#808080]">Semaine précédente</span>
+                                </div>
                               </div>
-                              <p className="text-[13px] text-[#B4B4B4] leading-[1.5]">
-                                Votre meilleure journée est le <span className="text-[#EDEDED] font-medium">{days[bestDayIndex]}</span> avec <span className="text-[#00FFB2] font-medium">{maxValue}</span> conversions. 
-                                La tendance globale est <span className={`font-medium ${trend === 'haussière' ? 'text-[#00FFB2]' : trend === 'baissière' ? 'text-[#FF6B6B]' : 'text-[#C8B88A]'}`}>{trend}</span>. 
-                                L'activité la plus faible a eu lieu le <span className="text-[#EDEDED] font-medium">{days[worstDayIndex]}</span> avec seulement {minValue} conversion{minValue > 1 ? 's' : ''}.
-                                {hasAnomaly && anomalyDay && (
-                                  <> L'IA détecte une <span className="text-[#00FFB2] font-medium">activité exceptionnelle</span> le {anomalyDay}.</>
-                                )}
-                              </p>
+
+                              {/* Compact IA Analysis */}
+                              <div 
+                                className="p-4 rounded-xl flex items-start gap-3"
+                                style={{ 
+                                  background: 'rgba(76, 239, 173, 0.03)',
+                                  border: '1px solid rgba(76, 239, 173, 0.08)'
+                                }}
+                              >
+                                <Brain className="w-4 h-4 mt-0.5 shrink-0" style={{ color: mintGreen }} />
+                                <p className="text-[12px] text-[#A0A0A0] leading-relaxed">
+                                  Votre meilleure journée est le <span className="text-[#EDEDED] font-medium">{days[bestDayIndex]}</span> avec <span style={{ color: mintGreen }} className="font-medium">{maxValue}</span> conversions. 
+                                  La tendance globale est <span className={`font-medium ${trend === 'haussière' ? 'text-[#4CEFAD]' : trend === 'baissière' ? 'text-[#FF6B6B]' : 'text-[#C8B88A]'}`}>{trend}</span>.
+                                </p>
+                              </div>
                             </div>
                           </div>
                         </div>
