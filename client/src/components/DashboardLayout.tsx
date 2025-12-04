@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useLocation, Link } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { SubscriptionExpirationBanner } from "@/components/SubscriptionExpirationBanner";
+import { PushNotificationPopup, usePushNotificationPrompt } from "@/components/PushNotificationPopup";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -15,6 +16,7 @@ interface DashboardLayoutProps {
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { showPopup, closePopup } = usePushNotificationPrompt();
 
   const handleLogout = async () => {
     try {
@@ -68,6 +70,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </main>
         </div>
       </div>
+      <PushNotificationPopup show={showPopup} onClose={closePopup} />
     </SidebarProvider>
   );
 }

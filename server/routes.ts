@@ -1922,6 +1922,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ===== PUSH NOTIFICATION ROUTES =====
 
+  // Simple in-memory rate limiter for push endpoints
+  const pushRateLimits = new Map<string, { count: number; resetTime: number }>();
+  const PUSH_RATE_LIMIT = { maxRequests: 10, windowMs: 60000 }; // 10 requests per minute
+  
+  function checkPushRateLimit(userId: string): boolean {
+    const now = Date.now();
+    const limit = pushRateLimits.get(userId);
+    
+    if (!limit || now > limit.resetTime) {
+      pushRateLimits.set(userId, { count: 1, resetTime: now + PUSH_RATE_LIMIT.windowMs });
+      return true;
+    }
+    
+    if (limit.count >= PUSH_RATE_LIMIT.maxRequests) {
+      return false;
+    }
+    
+    limit.count++;
+    return true;
+  }
+
   // Subscribe to push notifications
   app.post(
     "/api/push/subscribe",
@@ -1931,13 +1952,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const userId = req.user!.id;
 
+        // Rate limiting
+        if (!checkPushRateLimit(userId)) {
+          return res.status(429).json({ message: "Trop de requêtes. Réessayez plus tard." });
+        }
+
         // Validate subscription data
         const schema = z.object({
           subscription: z.object({
-            endpoint: z.string().url(),
+            endpoint: z.string().url().refine(
+              url => url.startsWith('https://'),
+              'Endpoint must use HTTPS'
+            ),
             keys: z.object({
-              p256dh: z.string(),
-              auth: z.string(),
+              p256dh: z.string().min(20, 'Invalid p256dh key'),
+              auth: z.string().min(10, 'Invalid auth key'),
             }),
             expirationTime: z.number().nullable().optional(),
           }),
@@ -1961,7 +1990,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.json({ success: true, message: "Subscription enregistrée" });
       } catch (error) {
         if (error instanceof z.ZodError) {
-          return res.status(400).json({ message: "Données de subscription invalides" });
+          return res.status(400).json({ message: "Données de subscription invalides", errors: error.errors });
         }
         console.error("Error saving push subscription:", error);
         res.status(500).json({ message: "Erreur lors de l'enregistrement" });

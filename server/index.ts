@@ -4,6 +4,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { monthlyReportCron } from "./monthly-report.cron";
 import { trialExpirationCron } from "./trial-expiration.cron";
+import { initPushNotificationCrons } from "./push-notification.cron";
 
 const app = express();
 
@@ -65,6 +66,10 @@ app.use((req, res, next) => {
   // Start trial expiration cron job
   trialExpirationCron.start();
   console.log('[Server] Trial expiration cron job initialized');
+
+  // Start push notification cron jobs
+  initPushNotificationCrons();
+  console.log('[Server] Push notification cron jobs initialized');
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

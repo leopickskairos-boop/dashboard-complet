@@ -12,7 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Loader2, Mail, Lock, Trash2, CreditCard, ChevronRight, Home, Bell, FileText, Download, Key, Copy, Eye, EyeOff, RefreshCw, AlertCircle, CheckCircle, X } from "lucide-react";
+import { Loader2, Mail, Lock, Trash2, CreditCard, ChevronRight, Home, Bell, FileText, Download, Key, Copy, Eye, EyeOff, RefreshCw, AlertCircle, CheckCircle, X, Smartphone } from "lucide-react";
+import { NotificationSettings } from "@/components/NotificationSettings";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -906,12 +907,15 @@ export default function Account() {
         </CardContent>
       </Card>
 
-      {/* Notification Preferences */}
+      {/* Push Notifications */}
+      <NotificationSettings />
+
+      {/* Email Notification Preferences */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Bell className="h-5 w-5" />
-            Préférences de notifications
+            <Mail className="h-5 w-5" />
+            Préférences d'emails
           </CardTitle>
           <CardDescription>
             Choisissez les notifications que vous souhaitez recevoir
