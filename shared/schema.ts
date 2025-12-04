@@ -17,6 +17,22 @@ export const notificationTypeEnum = pgEnum('notification_type', [
   'monthly_report_ready'
 ]);
 
+// Push notification type enum for PWA notifications
+export const pushNotificationTypeEnum = pgEnum('push_notification_type', [
+  'daily_summary',
+  'alert',
+  'win',
+  'affiliation'
+]);
+
+// Business type enum for vocabulary adaptation
+export const businessTypeEnum = pgEnum('business_type', [
+  'restaurant',
+  'kine',
+  'garage',
+  'other'
+]);
+
 // Users table with authentication, email verification, and Stripe subscription
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -433,3 +449,237 @@ export type N8NLogWithMetadata = N8NLog & {
   fileName: string;
   fileTimestamp: string;
 };
+
+// ===== PWA PUSH NOTIFICATIONS SYSTEM =====
+
+// Push subscriptions table - stores Web Push API subscriptions
+export const pushSubscriptions = pgTable("push_subscriptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  endpoint: text("endpoint").notNull().unique(), // Push service endpoint URL
+  p256dhKey: text("p256dh_key").notNull(), // Public key for encryption
+  authKey: text("auth_key").notNull(), // Auth secret for encryption
+  userAgent: text("user_agent"), // Browser/device info
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  lastUsedAt: timestamp("last_used_at"),
+});
+
+// Insert schema for push subscriptions
+export const insertPushSubscriptionSchema = createInsertSchema(pushSubscriptions).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Types for push subscriptions
+export type InsertPushSubscription = z.infer<typeof insertPushSubscriptionSchema>;
+export type PushSubscription = typeof pushSubscriptions.$inferSelect;
+
+// Push notification preferences - granular control per notification type
+export const pushNotificationPreferences = pgTable("push_notification_preferences", {
+  userId: varchar("user_id").primaryKey().references(() => users.id, { onDelete: 'cascade' }),
+  
+  // Channel preferences
+  pushEnabled: boolean("push_enabled").notNull().default(false), // Master toggle for push
+  emailEnabled: boolean("email_enabled").notNull().default(true), // Master toggle for email
+  
+  // Push notification types
+  dailySummaryPush: boolean("daily_summary_push").notNull().default(true),
+  alertsPush: boolean("alerts_push").notNull().default(true),
+  winsPush: boolean("wins_push").notNull().default(true),
+  affiliationPush: boolean("affiliation_push").notNull().default(true),
+  
+  // Email notification types
+  dailySummaryEmail: boolean("daily_summary_email").notNull().default(true),
+  alertsEmail: boolean("alerts_email").notNull().default(true),
+  winsEmail: boolean("wins_email").notNull().default(false),
+  affiliationEmail: boolean("affiliation_email").notNull().default(false),
+  
+  // Quiet hours (no push between these hours)
+  quietHoursStart: integer("quiet_hours_start").default(23), // 23:00
+  quietHoursEnd: integer("quiet_hours_end").default(7), // 07:00
+  
+  // Timestamps
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Insert schema for push notification preferences
+export const insertPushNotificationPreferencesSchema = createInsertSchema(pushNotificationPreferences).omit({
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Types for push notification preferences
+export type InsertPushNotificationPreferences = z.infer<typeof insertPushNotificationPreferencesSchema>;
+export type PushNotificationPreferences = typeof pushNotificationPreferences.$inferSelect;
+
+// Push notification history - tracks sent notifications
+export const pushNotificationHistory = pgTable("push_notification_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  type: pushNotificationTypeEnum("type").notNull(),
+  title: text("title").notNull(),
+  body: text("body").notNull(),
+  tag: text("tag").notNull(), // Unique tag for deduplication (e.g., "daily-summary-2025-12-05")
+  url: text("url").default("/dashboard"), // Redirect URL on click
+  
+  // Delivery status
+  sentAt: timestamp("sent_at").notNull().defaultNow(),
+  deliveredAt: timestamp("delivered_at"),
+  clickedAt: timestamp("clicked_at"),
+  failedAt: timestamp("failed_at"),
+  errorMessage: text("error_message"),
+  
+  // Affiliation tracking
+  includesAffiliation: boolean("includes_affiliation").notNull().default(false),
+  affiliationBody: text("affiliation_body"),
+  
+  // Metadata
+  metadata: jsonb("metadata"), // Additional data (clientData snapshot, etc.)
+});
+
+// Insert schema for push notification history
+export const insertPushNotificationHistorySchema = createInsertSchema(pushNotificationHistory).omit({
+  id: true,
+  sentAt: true,
+});
+
+// Types for push notification history
+export type InsertPushNotificationHistory = z.infer<typeof insertPushNotificationHistorySchema>;
+export type PushNotificationHistory = typeof pushNotificationHistory.$inferSelect;
+
+// Client business data for notifications (extends speedaiClients with notification-specific data)
+export const clientNotificationData = pgTable("client_notification_data", {
+  userId: varchar("user_id").primaryKey().references(() => users.id, { onDelete: 'cascade' }),
+  
+  // Business identity
+  companyName: text("company_name"),
+  ownerName: text("owner_name"),
+  businessType: businessTypeEnum("business_type").default('other'),
+  
+  // Business config
+  openingHour: integer("opening_hour").default(9), // 09:00
+  closingHour: integer("closing_hour").default(18), // 18:00
+  avgTicket: integer("avg_ticket").default(50), // € average per conversion
+  
+  // Affiliation tracking
+  lastAffiliationNotif: timestamp("last_affiliation_notif"),
+  totalReferrals: integer("total_referrals").notNull().default(0),
+  totalEarned: integer("total_earned").notNull().default(0), // € total earned from referrals
+  
+  // Records tracking
+  bestDayReservations: integer("best_day_reservations").notNull().default(0),
+  bestDayRevenue: integer("best_day_revenue").notNull().default(0),
+  
+  // Notification state tracking
+  lastDailySummary: timestamp("last_daily_summary"),
+  lastWinNotification: timestamp("last_win_notification"),
+  lastAlertNotification: timestamp("last_alert_notification"),
+  notificationsToday: integer("notifications_today").notNull().default(0),
+  lastNotificationReset: timestamp("last_notification_reset").defaultNow(),
+  
+  // Timestamps
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Insert schema for client notification data
+export const insertClientNotificationDataSchema = createInsertSchema(clientNotificationData).omit({
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Types for client notification data
+export type InsertClientNotificationData = z.infer<typeof insertClientNotificationDataSchema>;
+export type ClientNotificationData = typeof clientNotificationData.$inferSelect;
+
+// ===== NOTIFICATION GENERATION SCHEMAS =====
+
+// Schema for daily stats used in notification generation
+export const dailyStatsSchema = z.object({
+  calls_total: z.number().default(0),
+  calls_converted: z.number().default(0),
+  reservations: z.number().default(0),
+  cancellations: z.number().default(0),
+  no_shows: z.number().default(0),
+  revenue_generated: z.number().default(0),
+  calls_outside_hours: z.number().default(0),
+  revenue_outside_hours: z.number().default(0),
+  hours_saved: z.number().default(0),
+  empty_slots_tomorrow: z.number().default(0),
+  empty_slots_revenue_potential: z.number().default(0),
+  big_cancellation: z.object({
+    nb_persons: z.number(),
+    revenue_lost: z.number(),
+  }).nullable().default(null),
+  frustrated_client_detected: z.boolean().default(false),
+});
+
+// Schema for period stats
+export const periodStatsSchema = z.object({
+  week_revenue: z.number().default(0),
+  week_revenue_previous: z.number().default(0),
+  week_growth_percent: z.number().default(0),
+  month_revenue: z.number().default(0),
+  month_calls: z.number().default(0),
+  month_hours_saved: z.number().default(0),
+  days_without_noshow: z.number().default(0),
+  conversion_rate: z.number().default(0),
+});
+
+// Schema for records
+export const recordsSchema = z.object({
+  best_day_reservations: z.number().default(0),
+  best_day_revenue: z.number().default(0),
+  is_new_record_today: z.boolean().default(false),
+});
+
+// Complete client data schema for notification generation
+export const clientDataForNotificationsSchema = z.object({
+  client_id: z.string(),
+  company_name: z.string().default("Votre entreprise"),
+  owner_name: z.string().default("Client"),
+  business_type: z.enum(['restaurant', 'kine', 'garage', 'other']).default('other'),
+  opening_hours: z.object({
+    open: z.string().default("09:00"),
+    close: z.string().default("18:00"),
+  }),
+  avg_ticket: z.number().default(50),
+  today: dailyStatsSchema,
+  period: periodStatsSchema,
+  records: recordsSchema,
+  affiliation: z.object({
+    last_affiliation_notif: z.string().nullable().default(null),
+    total_referrals: z.number().default(0),
+    total_earned: z.number().default(0),
+  }),
+});
+
+// Types for notification generation
+export type DailyStats = z.infer<typeof dailyStatsSchema>;
+export type PeriodStats = z.infer<typeof periodStatsSchema>;
+export type Records = z.infer<typeof recordsSchema>;
+export type ClientDataForNotifications = z.infer<typeof clientDataForNotificationsSchema>;
+
+// Notification output schema
+export const notificationOutputSchema = z.object({
+  client_id: z.string(),
+  notification: z.object({
+    type: z.enum(['daily_summary', 'alert', 'win', 'affiliation']),
+    title: z.string(),
+    body: z.string(),
+    icon: z.string().default("/icon-192.png"),
+    badge: z.string().default("/badge-72.png"),
+    tag: z.string(),
+    data: z.object({
+      url: z.string().default("/dashboard"),
+      type: z.enum(['daily_summary', 'alert', 'win', 'affiliation']),
+    }),
+  }),
+  scheduled_at: z.string(),
+  include_affiliation: z.boolean().default(false),
+  affiliation_body: z.string().optional(),
+});
+
+export type NotificationOutput = z.infer<typeof notificationOutputSchema>;
