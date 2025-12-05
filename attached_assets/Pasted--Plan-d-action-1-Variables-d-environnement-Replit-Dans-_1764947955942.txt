@@ -1,0 +1,141 @@
+🚀 Plan d'action
+1. Variables d'environnement Replit
+Dans Replit → Secrets (ou .env), ajoute :
+envSTRIPE_SECRET_KEY=sk_live_xxx          # ou sk_test_xxx pour tester
+STRIPE_PUBLISHABLE_KEY=pk_live_xxx     # ou pk_test_xxx
+STRIPE_WEBHOOK_SECRET=whsec_xxx        # On le crée à l'étape 3
+
+2. Créer ton compte Stripe Connect Platform
+
+Va sur https://dashboard.stripe.com/connect/accounts/overview
+Active Connect si pas déjà fait
+Choisis Express comme type de compte (plus simple pour tes clients)
+Configure :
+
+Pays : France
+Branding : Logo SpeedAI
+URLs de redirection : https://ton-app.replit.app/guarantee/settings
+
+
+
+
+3. Configurer le Webhook Stripe
+
+Va sur https://dashboard.stripe.com/webhooks
+Clique "Ajouter un endpoint"
+URL : https://ton-app.replit.app/api/webhooks/stripe
+Sélectionne ces événements :
+
+checkout.session.completed
+account.updated
+payment_intent.succeeded
+payment_intent.payment_failed
+
+
+Copie le Signing secret (whsec_xxx) → mets-le dans STRIPE_WEBHOOK_SECRET
+
+
+4. Vérifier l'endpoint webhook dans Replit
+Vérifie que ton server/routes.ts a bien un handler pour /api/webhooks/stripe :
+typescript// Le webhook doit utiliser express.raw() pour la signature
+app.post('/api/webhooks/stripe', 
+  express.raw({ type: 'application/json' }), 
+  async (req, res) => {
+    const sig = req.headers['stripe-signature'];
+    let event;
+    
+    try {
+      event = stripe.webhooks.constructEvent(
+        req.body,
+        sig,
+        process.env.STRIPE_WEBHOOK_SECRET
+      );
+    } catch (err) {
+      return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+    
+    // Gérer les événements
+    switch (event.type) {
+      case 'checkout.session.completed':
+        const session = event.data.object;
+        if (session.mode === 'setup') {
+          // Mettre à jour la session en DB → status = 'validated'
+          await storage.validateGuaranteeSession(session.id, {
+            setupIntentId: session.setup_intent,
+            customerStripeId: session.customer
+          });
+        }
+        break;
+        
+      case 'account.updated':
+        const account = event.data.object;
+        if (account.charges_enabled) {
+          // Compte Stripe prêt
+          await storage.updateStripeAccountStatus(account.id, 'complete');
+        }
+        break;
+    }
+    
+    res.json({ received: true });
+  }
+);
+
+5. Configurer les workflows N8N
+Importe les workflows que je t'ai créés et configure :
+Workflow 1 : Nouvelle réservation
+
+Webhook Retell → appelle POST /api/n8n/guarantee/create-session
+Header : x-agent-id: {client_id}
+Envoie email + SMS avec le lien retourné
+
+Workflow 2 : Webhook Stripe (CB validée)
+
+Reçoit l'événement de Stripe
+Crée l'événement Google Calendar
+Envoie email + SMS de confirmation
+
+
+6. Tester le flux complet
+Test 1 : Connexion Stripe d'un client
+
+Va sur /guarantee/settings
+Clique "Connecter Stripe"
+Tu dois être redirigé vers Stripe onboarding
+Après complétion, retour sur ton app avec statut "Connecté"
+
+Test 2 : Créer une session (simule N8N)
+bashcurl -X POST https://ton-app.replit.app/api/n8n/guarantee/create-session \
+  -H "Content-Type: application/json" \
+  -H "x-agent-id: TON_USER_ID" \
+  -d '{
+    "reservation_id": "TEST-001",
+    "customer_name": "Jean Test",
+    "customer_email": "jean@test.com",
+    "customer_phone": "0612345678",
+    "nb_persons": 4,
+    "reservation_date": "2024-12-20",
+    "reservation_time": "20:00"
+  }'
+Test 3 : Validation CB
+
+Ouvre l'URL retournée (/guarantee/validate/:sessionId)
+Clique "Valider ma réservation"
+Utilise la carte test Stripe : 4242 4242 4242 4242
+La session doit passer en "validated"
+
+Test 4 : No-show et débit
+
+Va sur /guarantee/reservations
+Trouve la réservation validée
+Clique "No-show"
+Vérifie que le débit apparaît dans Stripe Dashboard
+
+
+⚠️ Points à vérifier
+ÉlémentComment vérifierStripe Connect activéDashboard Stripe → Connect visibleWebhook configuréDashboard Stripe → Webhooks → Endpoint vertVariables envReplit Secrets → toutes présentesExpress.raw()Le webhook Stripe doit recevoir le body brutCORSLes appels depuis N8N passent
+
+🔧 Si quelque chose ne marche pas
+Erreur "No such account" → Le stripeAccountId n'est pas bon, vérifie en DB
+Erreur "Webhook signature failed" → Le STRIPE_WEBHOOK_SECRET ne correspond pas
+Erreur 401 sur /api/n8n/* → Vérifie que le header x-agent-id est bien envoyé
+Page blanche sur /guarantee/validate → Vérifie que la route publique n'a pas d'auth
