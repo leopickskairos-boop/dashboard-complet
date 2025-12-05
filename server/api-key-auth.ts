@@ -2,9 +2,25 @@ import { Request, Response, NextFunction } from "express";
 import { storage } from "./storage";
 import { isValidApiKeyFormat, verifyApiKey } from "./api-key";
 
+// N8N Master API Key - allows N8N to create sessions for any client by specifying client_id
+// Format: speedai_n8n_xxxxxxxx (different prefix to distinguish from user keys)
+const N8N_MASTER_KEY = process.env.N8N_MASTER_API_KEY;
+
+/**
+ * Check if an API key is the N8N master key
+ */
+function isN8nMasterKey(apiKey: string): boolean {
+  if (!N8N_MASTER_KEY) return false;
+  return apiKey === N8N_MASTER_KEY;
+}
+
 /**
  * Middleware to authenticate requests using API key from Authorization header
  * Expected format: Authorization: Bearer speedai_live_xxxxx
+ * 
+ * Also supports N8N Master Key for multi-client workflows:
+ * - Use N8N_MASTER_API_KEY to authenticate
+ * - Specify client_id or client_email in body to act on behalf of that client
  * 
  * Security: API keys are hashed with bcrypt before storage.
  * This middleware compares the provided key against all stored hashes.
@@ -35,6 +51,52 @@ export async function requireApiKey(req: Request, res: Response, next: NextFunct
       });
     }
 
+    // ===== N8N MASTER KEY AUTHENTICATION =====
+    // Allows N8N to create sessions for any client by specifying client_id or client_email
+    if (isN8nMasterKey(apiKey)) {
+      console.log("🔑 N8N Master Key detected");
+      
+      const clientId = req.body?.client_id;
+      const clientEmail = req.body?.client_email;
+      
+      if (!clientId && !clientEmail) {
+        return res.status(400).json({
+          error: "Missing client identifier",
+          message: "Avec la clé master N8N, vous devez spécifier client_id ou client_email dans le body",
+          example: {
+            client_id: "user-uuid-here",
+            client_email: "client@example.com"
+          }
+        });
+      }
+      
+      // Find the target client
+      let targetUser = null;
+      if (clientId) {
+        targetUser = await storage.getUser(clientId);
+      } else if (clientEmail) {
+        targetUser = await storage.getUserByEmail(clientEmail);
+      }
+      
+      if (!targetUser) {
+        console.log("❌ N8N Master: Client not found:", clientId || clientEmail);
+        return res.status(404).json({
+          error: "Client not found",
+          message: `Client introuvable: ${clientId || clientEmail}`
+        });
+      }
+      
+      console.log("✅ N8N Master Key: Acting on behalf of:", targetUser.email);
+      
+      // Attach user to request (skip subscription/verification checks for master key)
+      (req as any).user = targetUser;
+      (req as any).isN8nMasterAuth = true;
+      next();
+      return;
+    }
+
+    // ===== STANDARD USER API KEY AUTHENTICATION =====
+    
     // Validate API key format
     if (!isValidApiKeyFormat(apiKey)) {
       return res.status(401).json({ 
