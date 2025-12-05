@@ -29,7 +29,12 @@ The project utilizes a modern web stack for a responsive and professional user i
 -   **N8N Logs Router**: Scalable multi-client infrastructure for receiving N8N workflow data, ensuring client isolation and traceability.
 -   **N8N Logs Visualization**: Admin-only section in the dashboard for monitoring logs from all clients with comprehensive filtering and detailed log viewing.
 -   **Admin Clients Data API**: Comprehensive endpoint for administrators to overview all client data for N8N integration management.
--   **AI Analytics Deep Insights**: On-demand AI-powered deep analysis for call volume, conversion rate, time slots, and average duration, triggered from dashboard KPI cards.
+-   **AI Analytics Deep Insights**: On-demand AI-powered deep analysis for call volume, conversion rate, time slots, and average duration, triggered from dashboard KPI cards. Enhanced with CB Guarantee data for comprehensive business intelligence:
+    -   No-show rate analysis with performance scoring
+    -   Revenue recovered from penalties tracking
+    -   Guarantee validation rate monitoring
+    -   Customer reliability patterns analysis
+    -   Actionable recommendations based on guarantee metrics
 -   **CB Guarantee Anti No-Show System**: Complete credit card guarantee system for reservations with:
     -   Stripe Connect integration for direct payouts to merchants
     -   N8N API endpoint for creating guarantee sessions from external workflows

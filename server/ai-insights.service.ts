@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { calls } from "@shared/schema";
+import { calls, guaranteeSessions, noshowCharges } from "@shared/schema";
 import { eq, and, gte, desc } from "drizzle-orm";
 
 interface AIInsight {
@@ -9,9 +9,21 @@ interface AIInsight {
   level?: 'good' | 'average' | 'warning';
 }
 
+interface GuaranteeStats {
+  totalSessions: number;
+  validated: number;
+  completed: number;
+  noShowCharged: number;
+  noShowFailed: number;
+  cancelled: number;
+  pending: number;
+  totalRecovered: number; // in cents
+  totalFailed: number; // failed charge amount in cents
+}
+
 export class AIInsightsService {
   /**
-   * Generate personalized AI insights based on real call data
+   * Generate personalized AI insights based on real call data and guarantee data
    */
   async generateInsights(userId: string, timeFilter?: 'hour' | 'today' | 'two_days' | 'week'): Promise<AIInsight[]> {
     const insights: AIInsight[] = [];
@@ -30,40 +42,269 @@ export class AIInsightsService {
       .where(and(...conditions))
       .orderBy(desc(calls.startTime));
 
-    if (userCalls.length === 0) {
-      // Return default encouraging insights for new users
+    // Fetch guarantee data
+    const guaranteeStats = await this.getGuaranteeStats(userId, timeDate);
+
+    // If no data at all, return defaults
+    if (userCalls.length === 0 && guaranteeStats.totalSessions === 0) {
       return this.getDefaultInsights();
     }
 
-    // Analyze best performing hours
-    const hourlyInsight = await this.analyzeBestHours(userCalls);
-    if (hourlyInsight) insights.push(hourlyInsight);
+    // Priority 1: Guarantee insights (if user has guarantee data)
+    if (guaranteeStats.totalSessions > 0) {
+      // No-show rate analysis
+      const noShowInsight = this.analyzeNoShowRate(guaranteeStats);
+      if (noShowInsight) insights.push(noShowInsight);
 
-    // Analyze best performing days
-    const dayInsight = await this.analyzeBestDays(userCalls);
-    if (dayInsight) insights.push(dayInsight);
+      // Revenue recovered analysis
+      const revenueInsight = this.analyzeRecoveredRevenue(guaranteeStats);
+      if (revenueInsight) insights.push(revenueInsight);
 
-    // Analyze optimal call duration
-    const durationInsight = await this.analyzeOptimalDuration(userCalls);
-    if (durationInsight) insights.push(durationInsight);
+      // Guarantee validation rate
+      const validationInsight = this.analyzeGuaranteeValidation(guaranteeStats);
+      if (validationInsight) insights.push(validationInsight);
+    }
 
-    // Analyze after-hours performance
-    const afterHoursInsight = await this.analyzeAfterHours(userCalls);
-    if (afterHoursInsight) insights.push(afterHoursInsight);
+    // Priority 2: Call-based insights (if we need more)
+    if (insights.length < 3 && userCalls.length > 0) {
+      // Analyze best performing hours
+      const hourlyInsight = await this.analyzeBestHours(userCalls);
+      if (hourlyInsight && insights.length < 3) insights.push(hourlyInsight);
 
-    // Analyze conversion trends
-    const conversionInsight = await this.analyzeConversionTrends(userCalls);
-    if (conversionInsight) insights.push(conversionInsight);
+      // Analyze best performing days
+      const dayInsight = await this.analyzeBestDays(userCalls);
+      if (dayInsight && insights.length < 3) insights.push(dayInsight);
+
+      // Analyze optimal call duration
+      const durationInsight = await this.analyzeOptimalDuration(userCalls);
+      if (durationInsight && insights.length < 3) insights.push(durationInsight);
+
+      // Analyze after-hours performance
+      const afterHoursInsight = await this.analyzeAfterHours(userCalls);
+      if (afterHoursInsight && insights.length < 3) insights.push(afterHoursInsight);
+
+      // Analyze conversion trends
+      const conversionInsight = await this.analyzeConversionTrends(userCalls);
+      if (conversionInsight && insights.length < 3) insights.push(conversionInsight);
+    }
+
+    // Priority 3: Additional guarantee insights if we have data
+    if (insights.length < 3 && guaranteeStats.totalSessions >= 3) {
+      const reliabilityInsight = this.analyzeCustomerReliability(guaranteeStats);
+      if (reliabilityInsight && insights.length < 3) insights.push(reliabilityInsight);
+    }
 
     // Ensure we always return exactly 3 insights
-    // If we have fewer than 3, supplement with default business insights
     if (insights.length < 3) {
-      const supplementalInsights = this.getSupplementalInsights(userCalls.length);
+      const supplementalInsights = this.getSupplementalInsights(userCalls.length, guaranteeStats);
       insights.push(...supplementalInsights);
     }
 
     // Return exactly 3 insights
     return insights.slice(0, 3);
+  }
+
+  /**
+   * Get guarantee statistics for a user
+   */
+  private async getGuaranteeStats(userId: string, timeDate: Date | null): Promise<GuaranteeStats> {
+    const conditions = [eq(guaranteeSessions.userId, userId)];
+    if (timeDate) {
+      // Use reservationDate for filtering - more relevant for business insights
+      conditions.push(gte(guaranteeSessions.reservationDate, timeDate));
+    }
+
+    // Fetch all sessions
+    const sessions = await db
+      .select()
+      .from(guaranteeSessions)
+      .where(and(...conditions));
+
+    // Count by status
+    const stats: GuaranteeStats = {
+      totalSessions: sessions.length,
+      validated: sessions.filter(s => s.status === 'validated').length,
+      completed: sessions.filter(s => s.status === 'completed').length,
+      noShowCharged: sessions.filter(s => s.status === 'noshow_charged').length,
+      noShowFailed: sessions.filter(s => s.status === 'noshow_failed').length,
+      cancelled: sessions.filter(s => s.status === 'cancelled').length,
+      pending: sessions.filter(s => s.status === 'pending').length,
+      totalRecovered: 0,
+      totalFailed: 0,
+    };
+
+    // Get noshow charges for revenue calculation - use chargedAmount from sessions directly
+    // This ensures we only count amounts from sessions in the filtered time window
+    stats.totalRecovered = sessions
+      .filter(s => s.status === 'noshow_charged' && s.chargedAmount)
+      .reduce((sum, s) => sum + (s.chargedAmount || 0), 0);
+
+    // For failed charges, fetch from noshowCharges table (only for sessions in window)
+    if (stats.noShowFailed > 0) {
+      const failedSessionIds = sessions
+        .filter(s => s.status === 'noshow_failed')
+        .map(s => s.id);
+
+      if (failedSessionIds.length > 0) {
+        const failedCharges = await db
+          .select()
+          .from(noshowCharges)
+          .where(eq(noshowCharges.userId, userId));
+
+        stats.totalFailed = failedCharges
+          .filter(c => c.status === 'failed' && failedSessionIds.includes(c.guaranteeSessionId))
+          .reduce((sum, c) => sum + c.amount, 0);
+      }
+    }
+
+    return stats;
+  }
+
+  /**
+   * Analyze no-show rate from guarantee data
+   */
+  private analyzeNoShowRate(stats: GuaranteeStats): AIInsight | null {
+    const confirmedReservations = stats.completed + stats.noShowCharged + stats.noShowFailed;
+    if (confirmedReservations === 0) return null;
+
+    const noShowCount = stats.noShowCharged + stats.noShowFailed;
+    const noShowRate = (noShowCount / confirmedReservations) * 100;
+
+    if (noShowRate === 0) {
+      return {
+        icon: 'shield-check',
+        type: 'business',
+        text: `Aucun no-show sur ${confirmedReservations} réservation${confirmedReservations > 1 ? 's' : ''} garantie${confirmedReservations > 1 ? 's' : ''}. La garantie CB a un effet dissuasif excellent.`,
+        level: 'good',
+      };
+    } else if (noShowRate <= 5) {
+      return {
+        icon: 'shield-check',
+        type: 'business',
+        text: `Taux de no-show : ${noShowRate.toFixed(1)}% (${noShowCount}/${confirmedReservations}). Performance excellente grâce à la garantie CB.`,
+        level: 'good',
+      };
+    } else if (noShowRate <= 15) {
+      return {
+        icon: 'shield',
+        type: 'business',
+        text: `Taux de no-show : ${noShowRate.toFixed(1)}% (${noShowCount}/${confirmedReservations}). Envisagez d'augmenter le montant de la pénalité.`,
+        level: 'average',
+      };
+    } else {
+      return {
+        icon: 'shield-alert',
+        type: 'business',
+        text: `Taux de no-show élevé : ${noShowRate.toFixed(1)}% (${noShowCount}/${confirmedReservations}). Augmentez la pénalité ou activez les rappels SMS.`,
+        level: 'warning',
+      };
+    }
+  }
+
+  /**
+   * Analyze revenue recovered from no-show penalties
+   */
+  private analyzeRecoveredRevenue(stats: GuaranteeStats): AIInsight | null {
+    if (stats.noShowCharged === 0 && stats.noShowFailed === 0) return null;
+
+    const recoveredEuros = stats.totalRecovered / 100;
+    const failedEuros = stats.totalFailed / 100;
+    const totalAttempted = recoveredEuros + failedEuros;
+
+    if (stats.totalRecovered > 0 && stats.totalFailed === 0) {
+      return {
+        icon: 'euro',
+        type: 'business',
+        text: `${recoveredEuros.toFixed(0)}€ récupérés en pénalités no-show. 100% des débits réussis (${stats.noShowCharged} no-show${stats.noShowCharged > 1 ? 's' : ''}).`,
+        level: 'good',
+      };
+    } else if (stats.totalRecovered > 0) {
+      const successRate = (stats.totalRecovered / (stats.totalRecovered + stats.totalFailed)) * 100;
+      return {
+        icon: 'euro',
+        type: 'business',
+        text: `${recoveredEuros.toFixed(0)}€ récupérés sur ${totalAttempted.toFixed(0)}€ de no-shows (${successRate.toFixed(0)}% de réussite). ${failedEuros.toFixed(0)}€ en échec de paiement.`,
+        level: successRate >= 80 ? 'good' : successRate >= 50 ? 'average' : 'warning',
+      };
+    } else {
+      return {
+        icon: 'euro',
+        type: 'business',
+        text: `${stats.noShowFailed} no-show${stats.noShowFailed > 1 ? 's' : ''} avec échec de débit (${failedEuros.toFixed(0)}€). Vérifiez les cartes expirées ou fonds insuffisants.`,
+        level: 'warning',
+      };
+    }
+  }
+
+  /**
+   * Analyze guarantee validation rate
+   */
+  private analyzeGuaranteeValidation(stats: GuaranteeStats): AIInsight | null {
+    if (stats.totalSessions < 3) return null;
+
+    const sentSessions = stats.totalSessions - stats.cancelled;
+    const validatedSessions = stats.validated + stats.completed + stats.noShowCharged + stats.noShowFailed;
+    
+    if (sentSessions === 0) return null;
+    
+    const validationRate = (validatedSessions / sentSessions) * 100;
+    const pendingRate = (stats.pending / sentSessions) * 100;
+
+    if (validationRate >= 90) {
+      return {
+        icon: 'check-circle',
+        type: 'performance',
+        text: `${validationRate.toFixed(0)}% des garanties validées (${validatedSessions}/${sentSessions}). Vos clients acceptent bien le système.`,
+        level: 'good',
+      };
+    } else if (validationRate >= 70) {
+      return {
+        icon: 'check-circle',
+        type: 'performance',
+        text: `Taux de validation : ${validationRate.toFixed(0)}%. ${stats.pending} en attente. Activez les relances automatiques.`,
+        level: 'average',
+      };
+    } else {
+      return {
+        icon: 'alert-circle',
+        type: 'performance',
+        text: `Seulement ${validationRate.toFixed(0)}% de garanties validées. ${pendingRate.toFixed(0)}% en attente. Revoyez le message d'envoi ou le montant.`,
+        level: 'warning',
+      };
+    }
+  }
+
+  /**
+   * Analyze customer reliability patterns
+   */
+  private analyzeCustomerReliability(stats: GuaranteeStats): AIInsight | null {
+    const totalOutcomes = stats.completed + stats.noShowCharged + stats.noShowFailed;
+    if (totalOutcomes < 5) return null;
+
+    const attendanceRate = (stats.completed / totalOutcomes) * 100;
+
+    if (attendanceRate >= 95) {
+      return {
+        icon: 'users',
+        type: 'business',
+        text: `${attendanceRate.toFixed(0)}% de clients présents après validation CB. La garantie filtre efficacement les réservations sérieuses.`,
+        level: 'good',
+      };
+    } else if (attendanceRate >= 85) {
+      return {
+        icon: 'users',
+        type: 'business',
+        text: `Fiabilité client : ${attendanceRate.toFixed(0)}%. Les pénalités compensent les ${(100 - attendanceRate).toFixed(0)}% d'absences.`,
+        level: 'average',
+      };
+    } else {
+      return {
+        icon: 'user-x',
+        type: 'business',
+        text: `${(100 - attendanceRate).toFixed(0)}% d'absences malgré la garantie. Considérez un montant plus dissuasif ou un dépôt immédiat.`,
+        level: 'warning',
+      };
+    }
   }
 
   /**
@@ -331,39 +572,70 @@ export class AIInsightsService {
   /**
    * Get supplemental insights to fill gaps when not enough data-driven insights
    */
-  private getSupplementalInsights(totalCalls: number): AIInsight[] {
-    const supplemental: AIInsight[] = [
-      {
+  private getSupplementalInsights(totalCalls: number, guaranteeStats?: GuaranteeStats): AIInsight[] {
+    const supplemental: AIInsight[] = [];
+
+    // Guarantee-related supplemental insights
+    if (guaranteeStats && guaranteeStats.totalSessions > 0) {
+      if (guaranteeStats.totalSessions < 3) {
+        supplemental.push({
+          icon: 'shield',
+          type: 'business',
+          text: `${guaranteeStats.totalSessions} garantie${guaranteeStats.totalSessions > 1 ? 's' : ''} CB envoyée${guaranteeStats.totalSessions > 1 ? 's' : ''}. Encore ${3 - guaranteeStats.totalSessions} pour débloquer l'analyse de fiabilité.`,
+          level: 'average',
+        });
+      }
+      if (guaranteeStats.pending > 0) {
+        supplemental.push({
+          icon: 'clock',
+          type: 'performance',
+          text: `${guaranteeStats.pending} garantie${guaranteeStats.pending > 1 ? 's' : ''} en attente de validation. Envoyez une relance pour améliorer le taux.`,
+          level: 'average',
+        });
+      }
+    } else if (guaranteeStats && guaranteeStats.totalSessions === 0 && totalCalls > 5) {
+      supplemental.push({
+        icon: 'shield',
+        type: 'business',
+        text: `Activez la garantie CB pour réduire les no-shows. Moyenne du secteur : -60% d'absences.`,
+        level: 'average',
+      });
+    }
+
+    // Call-related supplemental insights
+    if (totalCalls > 0) {
+      supplemental.push({
         icon: 'trending-up',
         type: 'business',
         text: `${totalCalls} appel${totalCalls > 1 ? 's' : ''} analysé${totalCalls > 1 ? 's' : ''}. Encore ${Math.max(0, 10 - totalCalls)} appels pour débloquer l'analyse des créneaux horaires.`,
         level: 'average',
-      },
-      {
+      });
+      supplemental.push({
         icon: 'calendar',
         type: 'business',
         text: `Besoin de ${Math.max(0, 5 - totalCalls)} appels supplémentaires pour identifier vos jours les plus performants.`,
         level: 'average',
-      },
-      {
-        icon: 'chart',
-        type: 'performance',
-        text: "Analyse du taux de conversion disponible après 3 appels avec différents statuts.",
-        level: 'average',
-      },
-      {
-        icon: 'clock',
-        type: 'performance',
-        text: "L'analyse de durée optimale nécessite au moins 3 RDV confirmés.",
-        level: 'average',
-      },
-      {
-        icon: 'target',
-        type: 'business',
-        text: "Les recommandations de plages horaires seront disponibles après une semaine d'activité.",
-        level: 'average',
-      },
-    ];
+      });
+    }
+
+    supplemental.push({
+      icon: 'chart',
+      type: 'performance',
+      text: "Analyse du taux de conversion disponible après 3 appels avec différents statuts.",
+      level: 'average',
+    });
+    supplemental.push({
+      icon: 'clock',
+      type: 'performance',
+      text: "L'analyse de durée optimale nécessite au moins 3 RDV confirmés.",
+      level: 'average',
+    });
+    supplemental.push({
+      icon: 'target',
+      type: 'business',
+      text: "Les recommandations de plages horaires seront disponibles après une semaine d'activité.",
+      level: 'average',
+    });
 
     return supplemental;
   }
