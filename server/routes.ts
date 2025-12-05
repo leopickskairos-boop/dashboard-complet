@@ -3044,7 +3044,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Generate Stripe Connect OAuth URL
+  // Create Stripe Connect Express account and generate onboarding link
   app.post("/api/guarantee/connect-stripe", requireAuth, async (req, res) => {
     try {
       const userId = req.user!.id;
@@ -3052,16 +3052,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!user) {
         return res.status(404).json({ message: "Utilisateur non trouvé" });
-      }
-      
-      // Check if STRIPE_CONNECT_CLIENT_ID is configured
-      const clientId = process.env.STRIPE_CONNECT_CLIENT_ID;
-      if (!clientId) {
-        console.error('[Guarantee] STRIPE_CONNECT_CLIENT_ID not configured');
-        return res.status(500).json({ 
-          message: "Stripe Connect n'est pas encore configuré. Contactez l'administrateur.",
-          error_code: "CONNECT_NOT_CONFIGURED"
-        });
       }
       
       // Check if already connected
@@ -3076,7 +3066,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               accountId: existingConfig.stripeAccountId
             });
           }
-          // Account exists but not fully onboarded - generate new link
+          // Account exists but not fully onboarded - generate new onboarding link
+          console.log('[Guarantee] Account not fully onboarded, generating new link');
           const accountLink = await stripe.accountLinks.create({
             account: existingConfig.stripeAccountId,
             refresh_url: `${getFrontendUrl()}/settings/guarantee?stripe_refresh=true`,
@@ -3087,41 +3078,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
             url: accountLink.url,
             accountId: existingConfig.stripeAccountId
           });
-        } catch (e) {
-          // Account no longer valid, clear it
+        } catch (e: any) {
+          console.log('[Guarantee] Existing account invalid, creating new one:', e.message);
+          // Account no longer valid, clear it and create new
           await storage.upsertGuaranteeConfig(userId, { stripeAccountId: null });
         }
       }
       
-      // Generate OAuth authorization URL
-      const state = Buffer.from(JSON.stringify({ 
-        userId, 
-        timestamp: Date.now() 
-      })).toString('base64');
+      // Create a new Stripe Connect Express account
+      console.log('[Guarantee] Creating new Stripe Connect Express account for:', user.email);
+      const account = await stripe.accounts.create({
+        type: 'express',
+        country: 'FR',
+        email: user.email,
+        capabilities: {
+          card_payments: { requested: true },
+          transfers: { requested: true },
+        },
+        business_type: 'individual',
+        metadata: {
+          userId: userId,
+          platform: 'speedai',
+        },
+      });
       
-      const redirectUri = `${getFrontendUrl()}/api/guarantee/stripe-callback`;
+      console.log('[Guarantee] Created Stripe account:', account.id);
       
-      const oauthUrl = new URL('https://connect.stripe.com/oauth/authorize');
-      oauthUrl.searchParams.set('response_type', 'code');
-      oauthUrl.searchParams.set('client_id', clientId);
-      oauthUrl.searchParams.set('scope', 'read_write');
-      oauthUrl.searchParams.set('redirect_uri', redirectUri);
-      oauthUrl.searchParams.set('state', state);
-      oauthUrl.searchParams.set('stripe_user[email]', user.email);
-      oauthUrl.searchParams.set('stripe_user[country]', 'FR');
+      // Save the account ID
+      await storage.upsertGuaranteeConfig(userId, {
+        stripeAccountId: account.id,
+      });
+      
+      // Generate onboarding link
+      const accountLink = await stripe.accountLinks.create({
+        account: account.id,
+        refresh_url: `${getFrontendUrl()}/settings/guarantee?stripe_refresh=true`,
+        return_url: `${getFrontendUrl()}/settings/guarantee?stripe_connected=true`,
+        type: 'account_onboarding',
+      });
+      
+      console.log('[Guarantee] Generated onboarding link for account:', account.id);
       
       res.json({ 
-        url: oauthUrl.toString(),
-        oauth: true
+        url: accountLink.url,
+        accountId: account.id
       });
     } catch (error: any) {
       console.error('[Guarantee] Error creating Stripe Connect:', error);
-      res.status(500).json({ message: "Erreur lors de la connexion Stripe" });
+      res.status(500).json({ message: error.message || "Erreur lors de la connexion Stripe" });
     }
   });
 
-  // Stripe Connect OAuth callback
+  // Stripe Connect return handler (after onboarding)
   app.get("/api/guarantee/stripe-callback", async (req, res) => {
+    // This endpoint is kept for legacy OAuth support, but now we use account links
+    // which redirect directly to /settings/guarantee with query params
+    const { error, error_description } = req.query;
+    
+    if (error) {
+      console.error('[Guarantee] Callback error:', error, error_description);
+      return res.redirect(`/settings/guarantee?stripe_error=${encodeURIComponent(error_description as string || 'Erreur')}`);
+    }
+    
+    // For account links, Stripe redirects directly to return_url with no additional params
+    res.redirect('/settings/guarantee?stripe_connected=true');
+  });
+  
+  // Legacy OAuth callback handler (kept for compatibility)
+  app.get("/api/guarantee/stripe-oauth-callback", async (req, res) => {
     try {
       const { code, state, error, error_description } = req.query;
       
