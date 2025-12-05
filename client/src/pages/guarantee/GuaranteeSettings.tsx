@@ -160,8 +160,12 @@ export default function GuaranteeSettings() {
         });
         refetch();
       } else if (data.url) {
-        // Redirect to Stripe OAuth page (same tab for OAuth flow)
-        window.location.href = data.url;
+        // Open Stripe onboarding in a new tab (required due to Stripe frame restrictions)
+        toast({
+          title: "Redirection vers Stripe",
+          description: "Une nouvelle fenêtre va s'ouvrir. Complétez le formulaire puis revenez ici.",
+        });
+        window.open(data.url, '_blank', 'noopener,noreferrer');
       }
     },
     onError: (error: any) => {
@@ -283,19 +287,41 @@ export default function GuaranteeSettings() {
               <p className="text-sm text-gray-400">
                 Connectez votre compte Stripe pour recevoir les pénalités no-show directement sur votre compte.
               </p>
-              <Button
-                onClick={() => connectStripeMutation.mutate()}
-                disabled={connectStripeMutation.isPending}
-                className="bg-[#C8B88A] text-black hover:bg-[#D4C999]"
-                data-testid="button-connect-stripe"
-              >
-                {connectStripeMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <CreditCard className="h-4 w-4 mr-2" />
-                )}
-                Connecter Stripe
-              </Button>
+              <div className="flex flex-col gap-3">
+                <Button
+                  onClick={() => connectStripeMutation.mutate()}
+                  disabled={connectStripeMutation.isPending}
+                  className="bg-[#C8B88A] text-black hover:bg-[#D4C999]"
+                  data-testid="button-connect-stripe"
+                >
+                  {connectStripeMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <CreditCard className="h-4 w-4 mr-2" />
+                  )}
+                  Connecter Stripe
+                </Button>
+                <p className="text-xs text-gray-500">
+                  Le formulaire s'ouvrira dans un nouvel onglet. Une fois terminé, revenez ici et cliquez sur "Vérifier la connexion".
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    refetch();
+                    queryClient.invalidateQueries({ queryKey: ['/api/guarantee/stripe-status'] });
+                    toast({
+                      title: "Vérification en cours...",
+                      description: "Actualisation du statut Stripe.",
+                    });
+                  }}
+                  className="border-white/20 text-gray-300"
+                  data-testid="button-refresh-stripe-status"
+                >
+                  <Loader2 className="h-4 w-4 mr-2" />
+                  Vérifier la connexion
+                </Button>
+              </div>
             </>
           )}
         </div>
