@@ -223,10 +223,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     // DEBUG LOG: Track /api/auth/me response (development only)
     if (process.env.NODE_ENV === "development") {
-      console.log("[BACKEND /api/auth/me] Returning user:", {
+      console.log("[BACKEND /api/auth/me] Full user data:", {
         userId: user.id,
         email: user.email,
         role: user.role,
+        accountStatus: user.accountStatus,
+        subscriptionStatus: user.subscriptionStatus,
+        plan: user.plan,
+        subscriptionCurrentPeriodEnd: user.subscriptionCurrentPeriodEnd,
       });
     }
 
