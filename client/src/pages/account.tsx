@@ -120,6 +120,18 @@ export default function Account() {
     queryKey: ['/api/auth/me'],
   });
 
+  // Debug: Log user data to see subscription status
+  useEffect(() => {
+    if (user) {
+      console.log('[ACCOUNT PAGE] User data received:', {
+        email: user.email,
+        subscriptionStatus: user.subscriptionStatus,
+        stripeCustomerId: user.stripeCustomerId,
+        fullUser: user
+      });
+    }
+  }, [user]);
+
   // Fetch payment history
   const { data: payments, isLoading: paymentsLoading } = useQuery<Payment[]>({
     queryKey: ['/api/account/payments'],
