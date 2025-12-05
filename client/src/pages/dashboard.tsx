@@ -34,7 +34,7 @@ import {
   Target,
   MessageSquare
 } from "lucide-react";
-import { Line, LineChart, XAxis, YAxis, Tooltip, ResponsiveContainer, Bar, BarChart } from "recharts";
+import { Line, LineChart, XAxis, YAxis, Tooltip, ResponsiveContainer, Bar, BarChart, CartesianGrid, Area, AreaChart } from "recharts";
 import type { Call, PublicUser } from "@shared/schema";
 import { TrialCountdown } from "@/components/TrialCountdown";
 import { AnalyticsDialog } from "@/components/AnalyticsDialog";
@@ -1608,24 +1608,68 @@ export default function Dashboard() {
         <Dialog open={chartDialog === 'total'} onOpenChange={() => setChartDialog(null)}>
           <DialogContent className="max-w-3xl" data-testid="dialog-chart-total">
             <DialogHeader>
-              <DialogTitle>Total des appels</DialogTitle>
-              <DialogDescription>
-                Évolution du nombre d'appels au fil du temps
+              <DialogTitle className="flex items-center gap-2">
+                <Phone className="w-5 h-5 text-[#C8B88A]" />
+                Total des appels
+              </DialogTitle>
+              <DialogDescription className="flex items-center gap-2">
+                Évolution du nombre d'appels 
+                <Badge variant="outline" className="ml-2 text-xs">
+                  {globalTimeFilter === 'all' ? 'Toutes périodes' : 
+                   globalTimeFilter === 'hour' ? 'Dernière heure' :
+                   globalTimeFilter === 'today' ? "Aujourd'hui" :
+                   globalTimeFilter === 'two_days' ? '2 derniers jours' : 'Cette semaine'}
+                </Badge>
               </DialogDescription>
             </DialogHeader>
             {chartLoading ? (
               <div className="flex justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                <Loader2 className="w-8 h-8 animate-spin text-[#C8B88A]" />
+              </div>
+            ) : totalCallsChartData.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                <BarChart3 className="w-12 h-12 mb-3 opacity-30" />
+                <p className="text-sm">Aucune donnée pour cette période</p>
               </div>
             ) : (
-              <div className="h-[300px] mt-4">
+              <div className="h-[350px] mt-4">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={totalCallsChartData}>
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip />
-                    <Line type="monotone" dataKey="value" stroke="hsl(var(--primary))" strokeWidth={2} />
-                  </LineChart>
+                  <AreaChart data={totalCallsChartData}>
+                    <defs>
+                      <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#4CEFAD" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#4CEFAD" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                    <XAxis 
+                      dataKey="name" 
+                      tick={{ fill: '#9A9A9A', fontSize: 11 }}
+                      axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
+                    />
+                    <YAxis 
+                      tick={{ fill: '#9A9A9A', fontSize: 11 }}
+                      axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
+                      allowDecimals={false}
+                    />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: '#1A1C1F', 
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        borderRadius: '8px',
+                        color: '#fff'
+                      }}
+                      labelStyle={{ color: '#9A9A9A' }}
+                      formatter={(value: number) => [`${value} appels`, 'Total']}
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="value" 
+                      stroke="#4CEFAD" 
+                      strokeWidth={2}
+                      fill="url(#colorTotal)"
+                    />
+                  </AreaChart>
                 </ResponsiveContainer>
               </div>
             )}
@@ -1635,23 +1679,66 @@ export default function Dashboard() {
         <Dialog open={chartDialog === 'conversion'} onOpenChange={() => setChartDialog(null)}>
           <DialogContent className="max-w-3xl" data-testid="dialog-chart-conversion">
             <DialogHeader>
-              <DialogTitle>Taux de conversion</DialogTitle>
-              <DialogDescription>
-                Évolution du taux de conversion au fil du temps (%)
+              <DialogTitle className="flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-[#C8B88A]" />
+                Taux de conversion
+              </DialogTitle>
+              <DialogDescription className="flex items-center gap-2">
+                Évolution du taux de conversion (%)
+                <Badge variant="outline" className="ml-2 text-xs">
+                  {globalTimeFilter === 'all' ? 'Toutes périodes' : 
+                   globalTimeFilter === 'hour' ? 'Dernière heure' :
+                   globalTimeFilter === 'today' ? "Aujourd'hui" :
+                   globalTimeFilter === 'two_days' ? '2 derniers jours' : 'Cette semaine'}
+                </Badge>
               </DialogDescription>
             </DialogHeader>
             {chartLoading ? (
               <div className="flex justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                <Loader2 className="w-8 h-8 animate-spin text-[#C8B88A]" />
+              </div>
+            ) : conversionRateChartData.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                <BarChart3 className="w-12 h-12 mb-3 opacity-30" />
+                <p className="text-sm">Aucune donnée pour cette période</p>
               </div>
             ) : (
-              <div className="h-[300px] mt-4">
+              <div className="h-[350px] mt-4">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={conversionRateChartData}>
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="value" fill="hsl(var(--primary))" />
+                    <defs>
+                      <linearGradient id="colorConversion" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#C8B88A" stopOpacity={1}/>
+                        <stop offset="100%" stopColor="#C8B88A" stopOpacity={0.6}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                    <XAxis 
+                      dataKey="name" 
+                      tick={{ fill: '#9A9A9A', fontSize: 11 }}
+                      axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
+                    />
+                    <YAxis 
+                      tick={{ fill: '#9A9A9A', fontSize: 11 }}
+                      axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
+                      domain={[0, 100]}
+                      tickFormatter={(value) => `${value}%`}
+                    />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: '#1A1C1F', 
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        borderRadius: '8px',
+                        color: '#fff'
+                      }}
+                      labelStyle={{ color: '#9A9A9A' }}
+                      formatter={(value: number) => [`${value}%`, 'Conversion']}
+                    />
+                    <Bar 
+                      dataKey="value" 
+                      fill="url(#colorConversion)"
+                      radius={[4, 4, 0, 0]}
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -1662,24 +1749,72 @@ export default function Dashboard() {
         <Dialog open={chartDialog === 'duration'} onOpenChange={() => setChartDialog(null)}>
           <DialogContent className="max-w-3xl" data-testid="dialog-chart-duration">
             <DialogHeader>
-              <DialogTitle>Durée moyenne des appels</DialogTitle>
-              <DialogDescription>
-                Évolution de la durée moyenne au fil du temps (en secondes)
+              <DialogTitle className="flex items-center gap-2">
+                <Clock className="w-5 h-5 text-[#C8B88A]" />
+                Durée moyenne des appels
+              </DialogTitle>
+              <DialogDescription className="flex items-center gap-2">
+                Évolution de la durée moyenne (en secondes)
+                <Badge variant="outline" className="ml-2 text-xs">
+                  {globalTimeFilter === 'all' ? 'Toutes périodes' : 
+                   globalTimeFilter === 'hour' ? 'Dernière heure' :
+                   globalTimeFilter === 'today' ? "Aujourd'hui" :
+                   globalTimeFilter === 'two_days' ? '2 derniers jours' : 'Cette semaine'}
+                </Badge>
               </DialogDescription>
             </DialogHeader>
             {chartLoading ? (
               <div className="flex justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                <Loader2 className="w-8 h-8 animate-spin text-[#C8B88A]" />
+              </div>
+            ) : averageDurationChartData.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                <BarChart3 className="w-12 h-12 mb-3 opacity-30" />
+                <p className="text-sm">Aucune donnée pour cette période</p>
               </div>
             ) : (
-              <div className="h-[300px] mt-4">
+              <div className="h-[350px] mt-4">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={averageDurationChartData}>
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip />
-                    <Line type="monotone" dataKey="value" stroke="hsl(var(--primary))" strokeWidth={2} />
-                  </LineChart>
+                  <AreaChart data={averageDurationChartData}>
+                    <defs>
+                      <linearGradient id="colorDuration" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#4CEFAD" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#4CEFAD" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                    <XAxis 
+                      dataKey="name" 
+                      tick={{ fill: '#9A9A9A', fontSize: 11 }}
+                      axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
+                    />
+                    <YAxis 
+                      tick={{ fill: '#9A9A9A', fontSize: 11 }}
+                      axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
+                      tickFormatter={(value) => `${Math.round(value)}s`}
+                    />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: '#1A1C1F', 
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        borderRadius: '8px',
+                        color: '#fff'
+                      }}
+                      labelStyle={{ color: '#9A9A9A' }}
+                      formatter={(value: number) => {
+                        const minutes = Math.floor(value / 60);
+                        const seconds = Math.round(value % 60);
+                        return [minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`, 'Durée'];
+                      }}
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="value" 
+                      stroke="#4CEFAD" 
+                      strokeWidth={2}
+                      fill="url(#colorDuration)"
+                    />
+                  </AreaChart>
                 </ResponsiveContainer>
               </div>
             )}
