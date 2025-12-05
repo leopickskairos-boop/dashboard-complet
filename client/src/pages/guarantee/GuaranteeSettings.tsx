@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
+import { useLocation } from 'wouter';
 import { 
   Shield, 
   CreditCard, 
@@ -17,7 +18,8 @@ import {
   Building2,
   Phone,
   MapPin,
-  Eye
+  Eye,
+  AlertTriangle
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -64,11 +66,47 @@ type SectionKey = 'stripe' | 'penalty' | 'delay' | 'conditions' | 'branding' | '
 
 export default function GuaranteeSettings() {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [expandedSection, setExpandedSection] = useState<SectionKey>(null);
   const [localConfig, setLocalConfig] = useState<GuaranteeConfig | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
 
-  const { data, isLoading } = useQuery<ConfigResponse>({
+  // Handle OAuth callback parameters
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const stripeConnected = urlParams.get('stripe_connected');
+    const stripeError = urlParams.get('stripe_error');
+    const stripeRefresh = urlParams.get('stripe_refresh');
+    
+    if (stripeConnected === 'true') {
+      toast({
+        title: "Stripe connecté !",
+        description: "Votre compte Stripe a été connecté avec succès.",
+      });
+      // Clean URL
+      window.history.replaceState({}, '', '/settings/guarantee');
+      // Refresh data
+      queryClient.invalidateQueries({ queryKey: ['/api/guarantee/config'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/guarantee/stripe-status'] });
+    } else if (stripeError) {
+      toast({
+        title: "Erreur Stripe",
+        description: decodeURIComponent(stripeError),
+        variant: "destructive",
+      });
+      window.history.replaceState({}, '', '/settings/guarantee');
+    } else if (stripeRefresh === 'true') {
+      toast({
+        title: "Session expirée",
+        description: "Veuillez reconnecter votre compte Stripe.",
+        variant: "destructive",
+      });
+      window.history.replaceState({}, '', '/settings/guarantee');
+      setExpandedSection('stripe');
+    }
+  }, [toast]);
+
+  const { data, isLoading, refetch } = useQuery<ConfigResponse>({
     queryKey: ['/api/guarantee/config'],
   });
 
@@ -108,17 +146,29 @@ export default function GuaranteeSettings() {
   const connectStripeMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest('POST', '/api/guarantee/connect-stripe');
-      return response.json();
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || 'Erreur de connexion');
+      }
+      return data;
     },
     onSuccess: (data) => {
-      if (data.url) {
-        window.open(data.url, '_blank');
+      if (data.already_connected) {
+        toast({
+          title: "Déjà connecté",
+          description: "Votre compte Stripe est déjà connecté.",
+        });
+        refetch();
+      } else if (data.url) {
+        // Redirect to Stripe OAuth page (same tab for OAuth flow)
+        window.location.href = data.url;
       }
     },
-    onError: () => {
+    onError: (error: any) => {
+      const message = error?.message || "Impossible de connecter Stripe.";
       toast({
         title: "Erreur",
-        description: "Impossible de connecter Stripe.",
+        description: message,
         variant: "destructive",
       });
     },

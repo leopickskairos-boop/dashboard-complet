@@ -77,6 +77,24 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
 const STRIPE_PRICE_ID = process.env.STRIPE_PRICE_ID;
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
 
+// Helper function to get frontend URL
+function getFrontendUrl(): string {
+  if (process.env.FRONTEND_URL) {
+    return process.env.FRONTEND_URL;
+  }
+  // In production, REPLIT_DOMAINS contains the production URL(s)
+  if (process.env.REPLIT_DOMAINS) {
+    const domains = process.env.REPLIT_DOMAINS.split(',');
+    const productionDomain = domains.find(d => d.includes('.replit.app')) || domains[0];
+    return `https://${productionDomain}`;
+  }
+  // In development
+  if (process.env.REPLIT_DEV_DOMAIN) {
+    return `https://${process.env.REPLIT_DEV_DOMAIN}`;
+  }
+  return 'http://localhost:5000';
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // ===== AUTHENTICATION ROUTES =====
 
@@ -1984,9 +2002,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           endpoint: subscription.endpoint,
           p256dhKey: subscription.keys.p256dh,
           authKey: subscription.keys.auth,
-          expirationTime: subscription.expirationTime 
-            ? new Date(subscription.expirationTime) 
-            : null,
           isActive: true,
         });
 
@@ -3029,7 +3044,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create Stripe Connect account and get onboarding URL
+  // Generate Stripe Connect OAuth URL
   app.post("/api/guarantee/connect-stripe", requireAuth, async (req, res) => {
     try {
       const userId = req.user!.id;
@@ -3039,56 +3054,140 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Utilisateur non trouvé" });
       }
       
-      // Check if already connected
-      const existingConfig = await storage.getGuaranteeConfig(userId);
-      if (existingConfig?.stripeAccountId) {
-        // Generate new account link for existing account
-        const accountLink = await stripe.accountLinks.create({
-          account: existingConfig.stripeAccountId,
-          refresh_url: `${process.env.DASHBOARD_URL || 'https://speedai.fr'}/settings/guarantee?stripe_refresh=true`,
-          return_url: `${process.env.DASHBOARD_URL || 'https://speedai.fr'}/settings/guarantee?stripe_connected=true`,
-          type: 'account_onboarding',
-        });
-        
-        return res.json({ 
-          url: accountLink.url,
-          accountId: existingConfig.stripeAccountId
+      // Check if STRIPE_CONNECT_CLIENT_ID is configured
+      const clientId = process.env.STRIPE_CONNECT_CLIENT_ID;
+      if (!clientId) {
+        console.error('[Guarantee] STRIPE_CONNECT_CLIENT_ID not configured');
+        return res.status(500).json({ 
+          message: "Stripe Connect n'est pas encore configuré. Contactez l'administrateur.",
+          error_code: "CONNECT_NOT_CONFIGURED"
         });
       }
       
-      // Create new Stripe Connect Standard account
-      const account = await stripe.accounts.create({
-        type: 'standard',
-        country: 'FR',
-        email: user.email,
-        metadata: {
-          speedai_user_id: userId,
-        },
-        business_profile: {
-          mcc: '5812', // Restaurants
-        },
-      });
+      // Check if already connected
+      const existingConfig = await storage.getGuaranteeConfig(userId);
+      if (existingConfig?.stripeAccountId) {
+        // Verify the account still exists and get status
+        try {
+          const account = await stripe.accounts.retrieve(existingConfig.stripeAccountId);
+          if (account.charges_enabled && account.details_submitted) {
+            return res.json({ 
+              already_connected: true,
+              accountId: existingConfig.stripeAccountId
+            });
+          }
+          // Account exists but not fully onboarded - generate new link
+          const accountLink = await stripe.accountLinks.create({
+            account: existingConfig.stripeAccountId,
+            refresh_url: `${getFrontendUrl()}/settings/guarantee?stripe_refresh=true`,
+            return_url: `${getFrontendUrl()}/settings/guarantee?stripe_connected=true`,
+            type: 'account_onboarding',
+          });
+          return res.json({ 
+            url: accountLink.url,
+            accountId: existingConfig.stripeAccountId
+          });
+        } catch (e) {
+          // Account no longer valid, clear it
+          await storage.upsertGuaranteeConfig(userId, { stripeAccountId: null });
+        }
+      }
       
-      // Save account ID
-      await storage.upsertGuaranteeConfig(userId, {
-        stripeAccountId: account.id,
-      });
+      // Generate OAuth authorization URL
+      const state = Buffer.from(JSON.stringify({ 
+        userId, 
+        timestamp: Date.now() 
+      })).toString('base64');
       
-      // Generate onboarding link
-      const accountLink = await stripe.accountLinks.create({
-        account: account.id,
-        refresh_url: `${process.env.DASHBOARD_URL || 'https://speedai.fr'}/settings/guarantee?stripe_refresh=true`,
-        return_url: `${process.env.DASHBOARD_URL || 'https://speedai.fr'}/settings/guarantee?stripe_connected=true`,
-        type: 'account_onboarding',
-      });
+      const redirectUri = `${getFrontendUrl()}/api/guarantee/stripe-callback`;
+      
+      const oauthUrl = new URL('https://connect.stripe.com/oauth/authorize');
+      oauthUrl.searchParams.set('response_type', 'code');
+      oauthUrl.searchParams.set('client_id', clientId);
+      oauthUrl.searchParams.set('scope', 'read_write');
+      oauthUrl.searchParams.set('redirect_uri', redirectUri);
+      oauthUrl.searchParams.set('state', state);
+      oauthUrl.searchParams.set('stripe_user[email]', user.email);
+      oauthUrl.searchParams.set('stripe_user[country]', 'FR');
       
       res.json({ 
-        url: accountLink.url,
-        accountId: account.id
+        url: oauthUrl.toString(),
+        oauth: true
       });
     } catch (error: any) {
       console.error('[Guarantee] Error creating Stripe Connect:', error);
       res.status(500).json({ message: "Erreur lors de la connexion Stripe" });
+    }
+  });
+
+  // Stripe Connect OAuth callback
+  app.get("/api/guarantee/stripe-callback", async (req, res) => {
+    try {
+      const { code, state, error, error_description } = req.query;
+      
+      // Handle OAuth errors
+      if (error) {
+        console.error('[Guarantee] OAuth error:', error, error_description);
+        return res.redirect(`/settings/guarantee?stripe_error=${encodeURIComponent(error_description as string || 'Autorisation refusée')}`);
+      }
+      
+      if (!code || !state) {
+        return res.redirect('/settings/guarantee?stripe_error=Paramètres manquants');
+      }
+      
+      // Decode state to get userId
+      let stateData;
+      try {
+        stateData = JSON.parse(Buffer.from(state as string, 'base64').toString());
+      } catch (e) {
+        return res.redirect('/settings/guarantee?stripe_error=État invalide');
+      }
+      
+      const { userId, timestamp } = stateData;
+      
+      // Check state is not too old (15 minutes)
+      if (Date.now() - timestamp > 15 * 60 * 1000) {
+        return res.redirect('/settings/guarantee?stripe_error=Session expirée, veuillez réessayer');
+      }
+      
+      // Exchange authorization code for access token
+      const response = await fetch('https://connect.stripe.com/oauth/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          grant_type: 'authorization_code',
+          code: code as string,
+          client_secret: process.env.STRIPE_SECRET_KEY!,
+        }),
+      });
+      
+      const tokenData = await response.json();
+      
+      if (tokenData.error) {
+        console.error('[Guarantee] Token exchange error:', tokenData);
+        return res.redirect(`/settings/guarantee?stripe_error=${encodeURIComponent(tokenData.error_description || 'Erreur de connexion')}`);
+      }
+      
+      const stripeAccountId = tokenData.stripe_user_id;
+      
+      if (!stripeAccountId) {
+        return res.redirect('/settings/guarantee?stripe_error=ID de compte non reçu');
+      }
+      
+      // Save the connected account ID
+      await storage.upsertGuaranteeConfig(userId, {
+        stripeAccountId,
+      });
+      
+      console.log('[Guarantee] Stripe account connected:', stripeAccountId, 'for user:', userId);
+      
+      // Redirect back to settings with success
+      res.redirect('/settings/guarantee?stripe_connected=true');
+    } catch (error: any) {
+      console.error('[Guarantee] Callback error:', error);
+      res.redirect(`/settings/guarantee?stripe_error=${encodeURIComponent('Erreur de connexion')}`);
     }
   });
 
@@ -3680,10 +3779,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         stripeCheckoutSession = await stripe.checkout.sessions.retrieve(
           checkout_session_id,
-          { 
-            expand: ['setup_intent', 'setup_intent.payment_method'],
-            stripeAccount: config.stripeAccountId 
-          }
+          { expand: ['setup_intent', 'setup_intent.payment_method'] },
+          { stripeAccount: config.stripeAccountId }
         );
       } catch (stripeError: any) {
         console.error('[Guarantee] Stripe verification failed:', stripeError);
