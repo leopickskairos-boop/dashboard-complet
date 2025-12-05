@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bell, BellOff, Send, CheckCircle, AlertTriangle, Loader2 } from 'lucide-react';
+import { Bell, BellOff, Send, CheckCircle, AlertTriangle, Loader2, Smartphone, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import usePushNotifications from '@/hooks/usePushNotifications';
 import { apiRequest } from '@/lib/queryClient';
+import { SiApple, SiAndroid } from 'react-icons/si';
 
 export function NotificationSettings() {
   const { toast } = useToast();
@@ -21,6 +22,7 @@ export function NotificationSettings() {
   } = usePushNotifications();
 
   const [isSendingTest, setIsSendingTest] = useState(false);
+  const [showMobileGuide, setShowMobileGuide] = useState(false);
 
   const handleTogglePush = async () => {
     if (isSubscribed) {
@@ -214,6 +216,105 @@ export function NotificationSettings() {
               Programme d'affiliation (rappels, gains)
             </div>
           </div>
+        </div>
+
+        {/* Mobile Installation Guide */}
+        <div className="border-t border-white/5 pt-4">
+          <button
+            onClick={() => setShowMobileGuide(!showMobileGuide)}
+            className="w-full flex items-center justify-between p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.05] transition-colors"
+            data-testid="button-toggle-mobile-guide"
+          >
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-[#C8B88A]/10 flex items-center justify-center">
+                <Smartphone className="h-5 w-5 text-[#C8B88A]" />
+              </div>
+              <div className="text-left">
+                <p className="text-white font-medium text-sm">Notifications sur mobile</p>
+                <p className="text-xs text-gray-400">iPhone et Android</p>
+              </div>
+            </div>
+            {showMobileGuide ? (
+              <ChevronUp className="h-5 w-5 text-gray-400" />
+            ) : (
+              <ChevronDown className="h-5 w-5 text-gray-400" />
+            )}
+          </button>
+
+          {showMobileGuide && (
+            <div className="mt-4 space-y-4">
+              {/* iPhone Guide */}
+              <div className="p-4 rounded-xl bg-gradient-to-br from-gray-900/50 to-gray-800/30 border border-white/[0.06]">
+                <div className="flex items-center gap-2 mb-3">
+                  <SiApple className="h-5 w-5 text-white" />
+                  <h4 className="text-white font-medium">iPhone (iOS 16.4+)</h4>
+                </div>
+                <ol className="space-y-2 text-sm text-gray-400">
+                  <li className="flex gap-2">
+                    <span className="text-[#C8B88A] font-semibold">1.</span>
+                    <span>Ouvrez <strong className="text-white">Safari</strong> (obligatoire)</span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="text-[#C8B88A] font-semibold">2.</span>
+                    <span>Allez sur <strong className="text-white">speedai.fr</strong></span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="text-[#C8B88A] font-semibold">3.</span>
+                    <span>Appuyez sur le bouton <strong className="text-white">Partager</strong> (⬆️)</span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="text-[#C8B88A] font-semibold">4.</span>
+                    <span>Sélectionnez <strong className="text-white">"Sur l'écran d'accueil"</strong></span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="text-[#C8B88A] font-semibold">5.</span>
+                    <span>Ouvrez l'app et activez les notifications</span>
+                  </li>
+                </ol>
+                <p className="mt-3 text-xs text-gray-500 flex items-center gap-1">
+                  <AlertTriangle className="h-3 w-3" />
+                  Requiert iOS 16.4 ou plus récent
+                </p>
+              </div>
+
+              {/* Android Guide */}
+              <div className="p-4 rounded-xl bg-gradient-to-br from-gray-900/50 to-gray-800/30 border border-white/[0.06]">
+                <div className="flex items-center gap-2 mb-3">
+                  <SiAndroid className="h-5 w-5 text-[#4CEFAD]" />
+                  <h4 className="text-white font-medium">Android</h4>
+                </div>
+                <ol className="space-y-2 text-sm text-gray-400">
+                  <li className="flex gap-2">
+                    <span className="text-[#4CEFAD] font-semibold">1.</span>
+                    <span>Ouvrez <strong className="text-white">Chrome</strong></span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="text-[#4CEFAD] font-semibold">2.</span>
+                    <span>Allez sur <strong className="text-white">speedai.fr</strong></span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="text-[#4CEFAD] font-semibold">3.</span>
+                    <span>Appuyez sur le menu <strong className="text-white">(⋮)</strong> en haut à droite</span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="text-[#4CEFAD] font-semibold">4.</span>
+                    <span>Sélectionnez <strong className="text-white">"Ajouter à l'écran d'accueil"</strong></span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="text-[#4CEFAD] font-semibold">5.</span>
+                    <span>Ouvrez l'app et activez les notifications</span>
+                  </li>
+                </ol>
+              </div>
+
+              {/* Info box */}
+              <div className="p-3 rounded-xl bg-[#C8B88A]/10 border border-[#C8B88A]/20">
+                <p className="text-sm text-[#C8B88A]">
+                  Une fois installée, vous recevrez les notifications même avec le téléphone verrouillé, comme pour WhatsApp ou les SMS.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
