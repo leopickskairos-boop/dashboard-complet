@@ -3265,32 +3265,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ===== GUARANTEE SESSIONS (N8N + Dashboard) =====
   
   // Create guarantee session (called by N8N via API key)
+  // Returns enriched response with customer & config info for N8N email templates
   app.post("/api/guarantee/create-session", requireApiKey, async (req, res) => {
     try {
-      const userId = (req as any).userId;
+      const userId = (req as any).user?.id || (req as any).userId;
       
       // Validate request body
       const validationResult = guaranteeSessionCreateSchema.safeParse(req.body);
       if (!validationResult.success) {
         return res.status(400).json({ 
+          success: false,
+          guaranteeRequired: false,
           message: "Données invalides",
           errors: validationResult.error.errors
         });
       }
       
       const data = validationResult.data;
+      const nbPersons = data.nb_persons || 1;
       
       // Get user's guarantee config
       const config = await storage.getGuaranteeConfig(userId);
       
+      // Get user info for company defaults
+      const user = await storage.getUser(userId);
+      
+      // Check if guarantee is disabled
       if (!config || !config.enabled) {
-        return res.status(400).json({ 
-          message: "Garantie CB non activée pour ce compte" 
+        return res.json({ 
+          success: true,
+          guaranteeRequired: false,
+          reason: "disabled",
+          message: "Garantie CB non activée pour ce compte"
+        });
+      }
+      
+      // Check applyTo conditions
+      const reservationDate = new Date(data.reservation_date);
+      const dayOfWeek = reservationDate.getDay(); // 0 = Sunday, 6 = Saturday
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 5 || dayOfWeek === 6; // Fri, Sat, Sun
+      
+      if (config.applyTo === 'min_persons' && nbPersons < (config.minPersons || 4)) {
+        return res.json({
+          success: true,
+          guaranteeRequired: false,
+          reason: "min_persons_not_met",
+          message: `Garantie applicable à partir de ${config.minPersons} personnes`,
+          minPersonsRequired: config.minPersons,
+          actualPersons: nbPersons
+        });
+      }
+      
+      if (config.applyTo === 'weekend' && !isWeekend) {
+        return res.json({
+          success: true,
+          guaranteeRequired: false,
+          reason: "not_weekend",
+          message: "Garantie applicable uniquement les week-ends (vendredi, samedi, dimanche)"
         });
       }
       
       if (!config.stripeAccountId) {
-        return res.status(400).json({ 
+        return res.json({ 
+          success: true,
+          guaranteeRequired: false,
+          reason: "stripe_not_connected",
           message: "Compte Stripe non connecté" 
         });
       }
@@ -3299,26 +3338,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const account = await stripe.accounts.retrieve(config.stripeAccountId);
         if (!account.charges_enabled) {
-          return res.status(400).json({ 
+          return res.json({ 
+            success: true,
+            guaranteeRequired: false,
+            reason: "stripe_not_ready",
             message: "Compte Stripe non prêt pour les paiements" 
           });
         }
       } catch (stripeError) {
-        return res.status(400).json({ 
+        return res.json({ 
+          success: true,
+          guaranteeRequired: false,
+          reason: "stripe_error",
           message: "Erreur de vérification du compte Stripe" 
         });
       }
+      
+      // Build config response for N8N email templates
+      const configResponse = {
+        companyName: config.companyName || "Établissement",
+        companyAddress: config.companyAddress || null,
+        companyPhone: config.companyPhone || null,
+        logoUrl: config.logoUrl || null,
+        brandColor: config.brandColor || "#C8B88A",
+        penaltyAmount: config.penaltyAmount || 30,
+        cancellationDelay: config.cancellationDelay || 24,
+        gmailSenderName: config.gmailSenderName || config.companyName || "Réservation",
+        gmailSenderEmail: config.gmailSenderEmail || user?.email || null,
+        termsUrl: config.termsUrl || null,
+      };
+      
+      const frontendUrl = getFrontendUrl();
       
       // Check if session already exists (idempotency)
       const existingSession = await storage.getGuaranteeSessionByReservationId(data.reservation_id);
       if (existingSession) {
         return res.json({
-          session_id: existingSession.id,
-          checkout_url: existingSession.checkoutSessionId 
-            ? `${process.env.PUBLIC_URL || 'https://speedai.fr'}/g/${existingSession.id}`
-            : null,
+          success: true,
+          guaranteeRequired: true,
+          alreadyExists: true,
+          sessionId: existingSession.id,
+          url: `${frontendUrl}/guarantee/validate/${existingSession.id}`,
           status: existingSession.status,
-          already_exists: true,
+          customer: {
+            name: existingSession.customerName,
+            email: existingSession.customerEmail,
+            phone: existingSession.customerPhone,
+            nbPersons: existingSession.nbPersons,
+            reservationDate: data.reservation_date,
+            reservationTime: existingSession.reservationTime,
+          },
+          config: configResponse,
+          penalty: {
+            amountPerPerson: config.penaltyAmount || 30,
+            totalAmount: (config.penaltyAmount || 30) * existingSession.nbPersons,
+            currency: "EUR",
+          },
         });
       }
       
@@ -3327,13 +3402,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         mode: 'setup',
         payment_method_types: ['card'],
         customer_email: data.customer_email,
-        success_url: `${process.env.PUBLIC_URL || 'https://speedai.fr'}/guarantee/confirmation?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${process.env.PUBLIC_URL || 'https://speedai.fr'}/guarantee/annulation`,
+        success_url: `${frontendUrl}/guarantee/confirmation?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${frontendUrl}/guarantee/annulation`,
         metadata: {
           speedai_user_id: userId,
           reservation_id: data.reservation_id,
           customer_name: data.customer_name,
-          nb_persons: String(data.nb_persons || 1),
+          nb_persons: String(nbPersons),
         },
       }, {
         stripeAccount: config.stripeAccountId,
@@ -3346,7 +3421,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         customerName: data.customer_name,
         customerEmail: data.customer_email,
         customerPhone: data.customer_phone,
-        nbPersons: data.nb_persons || 1,
+        nbPersons: nbPersons,
         reservationDate: new Date(data.reservation_date),
         reservationTime: data.reservation_time,
         checkoutSessionId: checkoutSession.id,
@@ -3354,15 +3429,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: 'pending',
       });
       
+      // Return enriched response for N8N
       res.json({
-        session_id: session.id,
-        checkout_url: checkoutSession.url,
-        public_url: `${process.env.PUBLIC_URL || 'https://speedai.fr'}/g/${session.id}`,
+        success: true,
+        guaranteeRequired: true,
+        sessionId: session.id,
+        url: `${frontendUrl}/guarantee/validate/${session.id}`,
+        checkoutUrl: checkoutSession.url,
         status: 'pending',
+        customer: {
+          name: data.customer_name,
+          email: data.customer_email,
+          phone: data.customer_phone,
+          nbPersons: nbPersons,
+          reservationDate: data.reservation_date,
+          reservationTime: data.reservation_time,
+        },
+        config: configResponse,
+        penalty: {
+          amountPerPerson: config.penaltyAmount || 30,
+          totalAmount: (config.penaltyAmount || 30) * nbPersons,
+          currency: "EUR",
+        },
       });
     } catch (error: any) {
       console.error('[Guarantee] Error creating session:', error);
-      res.status(500).json({ message: "Erreur lors de la création de la session" });
+      res.status(500).json({ 
+        success: false,
+        guaranteeRequired: false,
+        message: "Erreur lors de la création de la session" 
+      });
     }
   });
 
