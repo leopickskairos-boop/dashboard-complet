@@ -683,3 +683,205 @@ export const notificationOutputSchema = z.object({
 });
 
 export type NotificationOutput = z.infer<typeof notificationOutputSchema>;
+
+// ===== CB GUARANTEE (ANTI NO-SHOW) TABLES =====
+
+// Guarantee session status enum
+export const guaranteeSessionStatusEnum = pgEnum('guarantee_session_status', [
+  'pending',        // CB demandée, pas encore validée
+  'validated',      // CB enregistrée, résa confirmée
+  'completed',      // Client venu
+  'cancelled',      // Résa annulée
+  'noshow_charged', // No-show, débit réussi
+  'noshow_failed'   // No-show, débit échoué
+]);
+
+// Apply to conditions enum
+export const guaranteeApplyToEnum = pgEnum('guarantee_apply_to', [
+  'all',            // Toutes les réservations
+  'min_persons',    // Minimum X personnes
+  'weekend'         // Weekend seulement
+]);
+
+// Client guarantee configuration table
+export const clientGuaranteeConfig = pgTable("client_guarantee_config", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }).unique(),
+  
+  // Activation
+  enabled: boolean("enabled").notNull().default(false),
+  
+  // Stripe Connect
+  paymentProvider: text("payment_provider").default("stripe"),
+  stripeAccountId: text("stripe_account_id"), // Compte Stripe Connect du client
+  
+  // Paramètres pénalité
+  penaltyAmount: integer("penalty_amount").notNull().default(30), // € par personne
+  cancellationDelay: integer("cancellation_delay").notNull().default(24), // heures avant résa
+  
+  // Conditions d'application
+  applyTo: text("apply_to").notNull().default("all"), // 'all', 'min_persons', 'weekend'
+  minPersons: integer("min_persons").notNull().default(1),
+  
+  // Branding page client
+  logoUrl: text("logo_url"),
+  brandColor: text("brand_color").default("#C8B88A"), // SpeedAI gold
+  
+  // Email expéditeur
+  gmailSenderEmail: text("gmail_sender_email"),
+  gmailSenderName: text("gmail_sender_name"),
+  
+  // CGV
+  termsUrl: text("terms_url"),
+  
+  // Company info (pour page publique)
+  companyName: text("company_name"),
+  companyAddress: text("company_address"),
+  companyPhone: text("company_phone"),
+  
+  // Timestamps
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Insert schema for client guarantee config
+export const insertClientGuaranteeConfigSchema = createInsertSchema(clientGuaranteeConfig).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Types for client guarantee config
+export type InsertClientGuaranteeConfig = z.infer<typeof insertClientGuaranteeConfigSchema>;
+export type ClientGuaranteeConfig = typeof clientGuaranteeConfig.$inferSelect;
+
+// Guarantee sessions table
+export const guaranteeSessions = pgTable("guarantee_sessions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  reservationId: text("reservation_id").notNull().unique(), // ID unique de réservation (N8N)
+  
+  // Infos client final
+  customerName: text("customer_name").notNull(),
+  customerEmail: text("customer_email"),
+  customerPhone: text("customer_phone"),
+  nbPersons: integer("nb_persons").notNull().default(1),
+  reservationDate: timestamp("reservation_date").notNull(),
+  reservationTime: text("reservation_time"), // Heure au format HH:MM
+  
+  // Stripe
+  paymentProvider: text("payment_provider").default("stripe"),
+  checkoutSessionId: text("checkout_session_id"),
+  setupIntentId: text("setup_intent_id"),
+  paymentMethodId: text("payment_method_id"),
+  customerStripeId: text("customer_stripe_id"),
+  
+  // Statuts
+  status: text("status").notNull().default("pending"), // pending, validated, completed, cancelled, noshow_charged, noshow_failed
+  
+  // Montants
+  penaltyAmount: integer("penalty_amount").notNull(), // € par personne
+  chargedAmount: integer("charged_amount"), // Montant réellement débité (centimes)
+  
+  // Dates
+  validatedAt: timestamp("validated_at"),
+  chargedAt: timestamp("charged_at"),
+  
+  // Relances
+  reminderCount: integer("reminder_count").notNull().default(0),
+  lastReminderAt: timestamp("last_reminder_at"),
+  
+  // Timestamps
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Insert schema for guarantee sessions
+export const insertGuaranteeSessionSchema = createInsertSchema(guaranteeSessions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Types for guarantee sessions
+export type InsertGuaranteeSession = z.infer<typeof insertGuaranteeSessionSchema>;
+export type GuaranteeSession = typeof guaranteeSessions.$inferSelect;
+
+// No-show charges table (historique des débits)
+export const noshowCharges = pgTable("noshow_charges", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  guaranteeSessionId: varchar("guarantee_session_id").notNull().references(() => guaranteeSessions.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  
+  // Stripe PaymentIntent
+  paymentIntentId: text("payment_intent_id"),
+  amount: integer("amount").notNull(), // Montant en centimes
+  currency: text("currency").notNull().default("eur"),
+  status: text("status").notNull(), // 'succeeded', 'failed', 'requires_action'
+  failureReason: text("failure_reason"),
+  
+  // Litige
+  disputed: boolean("disputed").notNull().default(false),
+  disputeReason: text("dispute_reason"),
+  
+  // Timestamps
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Insert schema for noshow charges
+export const insertNoshowChargeSchema = createInsertSchema(noshowCharges).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Types for noshow charges
+export type InsertNoshowCharge = z.infer<typeof insertNoshowChargeSchema>;
+export type NoshowCharge = typeof noshowCharges.$inferSelect;
+
+// ===== GUARANTEE API SCHEMAS =====
+
+// Schema for creating a guarantee session (called by N8N)
+export const createGuaranteeSessionSchema = z.object({
+  reservation_id: z.string().min(1, "ID de réservation requis"),
+  customer_name: z.string().min(1, "Nom du client requis"),
+  customer_email: z.string().email("Email invalide").optional(),
+  customer_phone: z.string().optional(),
+  nb_persons: z.number().int().min(1).default(1),
+  reservation_date: z.string(), // ISO date string
+  reservation_time: z.string().optional(), // HH:MM
+});
+
+// Schema for updating guarantee config
+export const updateGuaranteeConfigSchema = z.object({
+  enabled: z.boolean().optional(),
+  penaltyAmount: z.number().int().min(1).optional(),
+  cancellationDelay: z.number().int().min(1).optional(),
+  applyTo: z.enum(['all', 'min_persons', 'weekend']).optional(),
+  minPersons: z.number().int().min(1).optional(),
+  logoUrl: z.string().url().nullable().optional(),
+  brandColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
+  gmailSenderEmail: z.string().email().nullable().optional(),
+  gmailSenderName: z.string().nullable().optional(),
+  termsUrl: z.string().url().nullable().optional(),
+  companyName: z.string().nullable().optional(),
+  companyAddress: z.string().nullable().optional(),
+  companyPhone: z.string().nullable().optional(),
+});
+
+// Schema for validating session after Stripe checkout
+export const validateGuaranteeSessionSchema = z.object({
+  checkout_session_id: z.string().min(1),
+  setup_intent_id: z.string().optional(),
+  customer_stripe_id: z.string().optional(),
+  payment_method_id: z.string().optional(),
+});
+
+// Schema for updating reservation status
+export const updateReservationStatusSchema = z.object({
+  status: z.enum(['attended', 'noshow']),
+});
+
+export type CreateGuaranteeSession = z.infer<typeof createGuaranteeSessionSchema>;
+export type UpdateGuaranteeConfig = z.infer<typeof updateGuaranteeConfigSchema>;
+export type ValidateGuaranteeSession = z.infer<typeof validateGuaranteeSessionSchema>;
+export type UpdateReservationStatus = z.infer<typeof updateReservationStatusSchema>;

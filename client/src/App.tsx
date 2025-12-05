@@ -25,6 +25,14 @@ import SubscriptionExpired from "@/pages/subscription-expired";
 import TrialExpired from "@/pages/trial-expired";
 import NotFound from "@/pages/not-found";
 
+// Guarantee CB Pages
+import GuaranteeSettings from "@/pages/guarantee/GuaranteeSettings";
+import GuaranteeReservations from "@/pages/guarantee/GuaranteeReservations";
+import GuaranteeHistory from "@/pages/guarantee/GuaranteeHistory";
+import GuaranteePage from "@/pages/guarantee/GuaranteePage";
+import GuaranteeConfirmation from "@/pages/guarantee/GuaranteeConfirmation";
+import GuaranteeCancellation from "@/pages/guarantee/GuaranteeCancellation";
+
 function Router() {
   return (
     <Switch>
@@ -85,6 +93,36 @@ function Router() {
 
       <Route path="/subscription-expired" component={SubscriptionExpired} />
       <Route path="/trial-expired" component={TrialExpired} />
+
+      {/* Guarantee CB - Protected dashboard pages */}
+      <Route path="/settings/guarantee">
+        <ProtectedRoute requireVerified={true} requireSubscription={true}>
+          <DashboardLayout>
+            <GuaranteeSettings />
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/guarantee/reservations">
+        <ProtectedRoute requireVerified={true} requireSubscription={true}>
+          <DashboardLayout>
+            <GuaranteeReservations />
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/guarantee/history">
+        <ProtectedRoute requireVerified={true} requireSubscription={true}>
+          <DashboardLayout>
+            <GuaranteeHistory />
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+
+      {/* Guarantee CB - Public pages (no auth required) */}
+      <Route path="/g/:sessionId" component={GuaranteePage} />
+      <Route path="/guarantee/confirmation" component={GuaranteeConfirmation} />
+      <Route path="/guarantee/annulation" component={GuaranteeCancellation} />
 
       <Route component={NotFound} />
     </Switch>

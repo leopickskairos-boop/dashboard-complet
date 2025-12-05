@@ -2915,6 +2915,810 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== CB GUARANTEE (ANTI NO-SHOW) ROUTES =====
+  
+  // Validation schemas for guarantee APIs
+  const guaranteeConfigUpdateSchema = z.object({
+    enabled: z.boolean().optional(),
+    penaltyAmount: z.number().min(1).max(200).optional(),
+    cancellationDelay: z.number().min(1).max(72).optional(),
+    applyTo: z.enum(['all', 'min_persons', 'weekend']).optional(),
+    minPersons: z.number().min(1).max(20).optional(),
+    logoUrl: z.string().url().nullable().optional(),
+    brandColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
+    gmailSenderEmail: z.string().email().nullable().optional(),
+    gmailSenderName: z.string().max(100).nullable().optional(),
+    termsUrl: z.string().url().nullable().optional(),
+    companyName: z.string().max(200).nullable().optional(),
+    companyAddress: z.string().max(500).nullable().optional(),
+    companyPhone: z.string().max(20).nullable().optional(),
+  });
+
+  const guaranteeSessionCreateSchema = z.object({
+    reservation_id: z.string().min(1).max(200),
+    customer_name: z.string().min(1).max(200),
+    customer_email: z.string().email().optional(),
+    customer_phone: z.string().max(20).optional(),
+    nb_persons: z.number().min(1).max(100).optional().default(1),
+    reservation_date: z.string().min(1),
+    reservation_time: z.string().optional(),
+  });
+
+  const guaranteeStatusUpdateSchema = z.object({
+    status: z.enum(['attended', 'noshow']),
+  });
+  
+  // Get guarantee config for current user
+  app.get("/api/guarantee/config", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const config = await storage.getGuaranteeConfig(userId);
+      
+      // Get user info for company defaults
+      const user = await storage.getUser(userId);
+      
+      res.json({
+        config: config || {
+          enabled: false,
+          penaltyAmount: 30,
+          cancellationDelay: 24,
+          applyTo: 'all',
+          minPersons: 1,
+          brandColor: '#C8B88A',
+        },
+        stripeConnected: !!config?.stripeAccountId,
+        user: {
+          email: user?.email,
+        }
+      });
+    } catch (error: any) {
+      console.error('[Guarantee] Error getting config:', error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // Update guarantee config
+  app.put("/api/guarantee/config", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      
+      // Validate request body
+      const validationResult = guaranteeConfigUpdateSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: "Données invalides",
+          errors: validationResult.error.errors
+        });
+      }
+      
+      const updates = validationResult.data;
+      
+      // If enabling, check Stripe is connected and fully set up
+      if (updates.enabled === true) {
+        const existingConfig = await storage.getGuaranteeConfig(userId);
+        if (!existingConfig?.stripeAccountId) {
+          return res.status(400).json({ 
+            message: "Connectez d'abord votre compte Stripe" 
+          });
+        }
+        
+        // Verify Stripe account is ready
+        try {
+          const account = await stripe.accounts.retrieve(existingConfig.stripeAccountId);
+          if (!account.charges_enabled || !account.details_submitted) {
+            return res.status(400).json({ 
+              message: "Veuillez compléter la configuration de votre compte Stripe" 
+            });
+          }
+        } catch (stripeError) {
+          return res.status(400).json({ 
+            message: "Erreur lors de la vérification du compte Stripe" 
+          });
+        }
+      }
+      
+      const config = await storage.upsertGuaranteeConfig(userId, updates);
+      
+      res.json({ 
+        success: true, 
+        config 
+      });
+    } catch (error: any) {
+      console.error('[Guarantee] Error updating config:', error);
+      res.status(500).json({ message: "Erreur lors de la mise à jour" });
+    }
+  });
+
+  // Create Stripe Connect account and get onboarding URL
+  app.post("/api/guarantee/connect-stripe", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "Utilisateur non trouvé" });
+      }
+      
+      // Check if already connected
+      const existingConfig = await storage.getGuaranteeConfig(userId);
+      if (existingConfig?.stripeAccountId) {
+        // Generate new account link for existing account
+        const accountLink = await stripe.accountLinks.create({
+          account: existingConfig.stripeAccountId,
+          refresh_url: `${process.env.DASHBOARD_URL || 'https://speedai.fr'}/settings/guarantee?stripe_refresh=true`,
+          return_url: `${process.env.DASHBOARD_URL || 'https://speedai.fr'}/settings/guarantee?stripe_connected=true`,
+          type: 'account_onboarding',
+        });
+        
+        return res.json({ 
+          url: accountLink.url,
+          accountId: existingConfig.stripeAccountId
+        });
+      }
+      
+      // Create new Stripe Connect Standard account
+      const account = await stripe.accounts.create({
+        type: 'standard',
+        country: 'FR',
+        email: user.email,
+        metadata: {
+          speedai_user_id: userId,
+        },
+        business_profile: {
+          mcc: '5812', // Restaurants
+        },
+      });
+      
+      // Save account ID
+      await storage.upsertGuaranteeConfig(userId, {
+        stripeAccountId: account.id,
+      });
+      
+      // Generate onboarding link
+      const accountLink = await stripe.accountLinks.create({
+        account: account.id,
+        refresh_url: `${process.env.DASHBOARD_URL || 'https://speedai.fr'}/settings/guarantee?stripe_refresh=true`,
+        return_url: `${process.env.DASHBOARD_URL || 'https://speedai.fr'}/settings/guarantee?stripe_connected=true`,
+        type: 'account_onboarding',
+      });
+      
+      res.json({ 
+        url: accountLink.url,
+        accountId: account.id
+      });
+    } catch (error: any) {
+      console.error('[Guarantee] Error creating Stripe Connect:', error);
+      res.status(500).json({ message: "Erreur lors de la connexion Stripe" });
+    }
+  });
+
+  // Get Stripe Connect account status
+  app.get("/api/guarantee/stripe-status", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const config = await storage.getGuaranteeConfig(userId);
+      
+      if (!config?.stripeAccountId) {
+        return res.json({
+          connected: false,
+          detailsSubmitted: false,
+          chargesEnabled: false,
+          payoutsEnabled: false,
+        });
+      }
+      
+      const account = await stripe.accounts.retrieve(config.stripeAccountId);
+      
+      res.json({
+        connected: true,
+        detailsSubmitted: account.details_submitted,
+        chargesEnabled: account.charges_enabled,
+        payoutsEnabled: account.payouts_enabled,
+        businessProfile: account.business_profile,
+      });
+    } catch (error: any) {
+      console.error('[Guarantee] Error getting Stripe status:', error);
+      res.status(500).json({ message: "Erreur lors de la vérification Stripe" });
+    }
+  });
+
+  // Disconnect Stripe Connect account
+  app.post("/api/guarantee/disconnect-stripe", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      
+      await storage.upsertGuaranteeConfig(userId, {
+        stripeAccountId: null,
+        enabled: false,
+      });
+      
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('[Guarantee] Error disconnecting Stripe:', error);
+      res.status(500).json({ message: "Erreur lors de la déconnexion" });
+    }
+  });
+
+  // ===== GUARANTEE SESSIONS (N8N + Dashboard) =====
+  
+  // Create guarantee session (called by N8N via API key)
+  app.post("/api/guarantee/create-session", requireApiKey, async (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      
+      // Validate request body
+      const validationResult = guaranteeSessionCreateSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: "Données invalides",
+          errors: validationResult.error.errors
+        });
+      }
+      
+      const data = validationResult.data;
+      
+      // Get user's guarantee config
+      const config = await storage.getGuaranteeConfig(userId);
+      
+      if (!config || !config.enabled) {
+        return res.status(400).json({ 
+          message: "Garantie CB non activée pour ce compte" 
+        });
+      }
+      
+      if (!config.stripeAccountId) {
+        return res.status(400).json({ 
+          message: "Compte Stripe non connecté" 
+        });
+      }
+      
+      // Verify Stripe account is charges_enabled before creating session
+      try {
+        const account = await stripe.accounts.retrieve(config.stripeAccountId);
+        if (!account.charges_enabled) {
+          return res.status(400).json({ 
+            message: "Compte Stripe non prêt pour les paiements" 
+          });
+        }
+      } catch (stripeError) {
+        return res.status(400).json({ 
+          message: "Erreur de vérification du compte Stripe" 
+        });
+      }
+      
+      // Check if session already exists (idempotency)
+      const existingSession = await storage.getGuaranteeSessionByReservationId(data.reservation_id);
+      if (existingSession) {
+        return res.json({
+          session_id: existingSession.id,
+          checkout_url: existingSession.checkoutSessionId 
+            ? `${process.env.PUBLIC_URL || 'https://speedai.fr'}/g/${existingSession.id}`
+            : null,
+          status: existingSession.status,
+          already_exists: true,
+        });
+      }
+      
+      // Create Stripe Checkout session in setup mode
+      const checkoutSession = await stripe.checkout.sessions.create({
+        mode: 'setup',
+        payment_method_types: ['card'],
+        customer_email: data.customer_email,
+        success_url: `${process.env.PUBLIC_URL || 'https://speedai.fr'}/guarantee/confirmation?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${process.env.PUBLIC_URL || 'https://speedai.fr'}/guarantee/annulation`,
+        metadata: {
+          speedai_user_id: userId,
+          reservation_id: data.reservation_id,
+          customer_name: data.customer_name,
+          nb_persons: String(data.nb_persons || 1),
+        },
+      }, {
+        stripeAccount: config.stripeAccountId,
+      });
+      
+      // Create guarantee session in DB
+      const session = await storage.createGuaranteeSession({
+        userId,
+        reservationId: data.reservation_id,
+        customerName: data.customer_name,
+        customerEmail: data.customer_email,
+        customerPhone: data.customer_phone,
+        nbPersons: data.nb_persons || 1,
+        reservationDate: new Date(data.reservation_date),
+        reservationTime: data.reservation_time,
+        checkoutSessionId: checkoutSession.id,
+        penaltyAmount: config.penaltyAmount,
+        status: 'pending',
+      });
+      
+      res.json({
+        session_id: session.id,
+        checkout_url: checkoutSession.url,
+        public_url: `${process.env.PUBLIC_URL || 'https://speedai.fr'}/g/${session.id}`,
+        status: 'pending',
+      });
+    } catch (error: any) {
+      console.error('[Guarantee] Error creating session:', error);
+      res.status(500).json({ message: "Erreur lors de la création de la session" });
+    }
+  });
+
+  // Get reservations with guarantee (for dashboard)
+  app.get("/api/guarantee/reservations", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const period = (req.query.period as 'today' | 'week' | 'month') || 'week';
+      
+      // Get all sessions
+      const allSessions = await storage.getGuaranteeSessions(userId, { period });
+      
+      // Separate by status
+      const pending = allSessions.filter(s => s.status === 'pending');
+      const validated = allSessions.filter(s => s.status === 'validated');
+      
+      // Get today's validated reservations
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
+      const todayReservations = validated.filter(s => {
+        const resDate = new Date(s.reservationDate);
+        return resDate >= today && resDate < tomorrow;
+      });
+      
+      // Calculate validation rate
+      const totalWithGuarantee = pending.length + validated.length;
+      const validationRate = totalWithGuarantee > 0 
+        ? Math.round((validated.length / totalWithGuarantee) * 100) 
+        : 0;
+      
+      res.json({
+        pending,
+        validated,
+        today: todayReservations,
+        stats: {
+          pendingCount: pending.length,
+          validatedCount: validated.length,
+          todayCount: todayReservations.length,
+          validationRate,
+        }
+      });
+    } catch (error: any) {
+      console.error('[Guarantee] Error getting reservations:', error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // Update reservation status (attended / noshow)
+  app.post("/api/guarantee/reservations/:id/status", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const sessionId = req.params.id;
+      
+      // Validate request body
+      const validationResult = guaranteeStatusUpdateSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: "Statut invalide",
+          errors: validationResult.error.errors
+        });
+      }
+      
+      const { status } = validationResult.data;
+      
+      const session = await storage.getGuaranteeSessionById(sessionId);
+      
+      // Ownership check: ensure session belongs to requesting user
+      if (!session || session.userId !== userId) {
+        return res.status(404).json({ message: "Session non trouvée" });
+      }
+      
+      if (session.status !== 'validated') {
+        return res.status(400).json({ message: "Session non validée" });
+      }
+      
+      if (status === 'attended') {
+        // Mark as completed
+        await storage.updateGuaranteeSession(sessionId, {
+          status: 'completed',
+        });
+        
+        return res.json({ success: true, charged: false });
+      }
+      
+      if (status === 'noshow') {
+        // Get config for Stripe account
+        const config = await storage.getGuaranteeConfig(userId);
+        
+        if (!config?.stripeAccountId) {
+          return res.status(400).json({ message: "Compte Stripe non connecté" });
+        }
+        
+        try {
+          // Get the setup intent to retrieve payment method
+          const setupIntent = await stripe.setupIntents.retrieve(
+            session.setupIntentId!,
+            { stripeAccount: config.stripeAccountId }
+          );
+          
+          const paymentMethodId = setupIntent.payment_method as string;
+          
+          // Calculate amount in cents
+          const amountCents = session.penaltyAmount * session.nbPersons * 100;
+          
+          // Create and confirm PaymentIntent
+          const paymentIntent = await stripe.paymentIntents.create({
+            amount: amountCents,
+            currency: 'eur',
+            customer: session.customerStripeId || undefined,
+            payment_method: paymentMethodId,
+            confirm: true,
+            off_session: true,
+            description: `Pénalité no-show - Réservation du ${new Date(session.reservationDate).toLocaleDateString('fr-FR')}`,
+            metadata: {
+              reservation_id: session.reservationId,
+              session_id: sessionId,
+            },
+          }, {
+            stripeAccount: config.stripeAccountId,
+          });
+          
+          // Update session
+          await storage.updateGuaranteeSession(sessionId, {
+            status: 'noshow_charged',
+            chargedAmount: amountCents,
+            chargedAt: new Date(),
+            paymentMethodId,
+          });
+          
+          // Log charge
+          await storage.createNoshowCharge({
+            guaranteeSessionId: sessionId,
+            userId,
+            paymentIntentId: paymentIntent.id,
+            amount: amountCents,
+            currency: 'eur',
+            status: 'succeeded',
+          });
+          
+          return res.json({ 
+            success: true, 
+            charged: true,
+            amount: amountCents / 100,
+          });
+        } catch (stripeError: any) {
+          console.error('[Guarantee] Stripe charge failed:', stripeError);
+          
+          // Update session as failed
+          await storage.updateGuaranteeSession(sessionId, {
+            status: 'noshow_failed',
+          });
+          
+          // Log failed charge
+          await storage.createNoshowCharge({
+            guaranteeSessionId: sessionId,
+            userId,
+            amount: session.penaltyAmount * session.nbPersons * 100,
+            currency: 'eur',
+            status: 'failed',
+            failureReason: stripeError.message,
+          });
+          
+          return res.json({ 
+            success: false, 
+            error: stripeError.message,
+          });
+        }
+      }
+      
+      res.status(400).json({ message: "Statut invalide" });
+    } catch (error: any) {
+      console.error('[Guarantee] Error updating reservation status:', error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // Resend guarantee link
+  app.post("/api/guarantee/resend/:id", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const sessionId = req.params.id;
+      
+      const session = await storage.getGuaranteeSessionById(sessionId);
+      
+      if (!session || session.userId !== userId) {
+        return res.status(404).json({ message: "Session non trouvée" });
+      }
+      
+      const config = await storage.getGuaranteeConfig(userId);
+      
+      if (!config?.stripeAccountId) {
+        return res.status(400).json({ message: "Compte Stripe non connecté" });
+      }
+      
+      // Create new Stripe Checkout session
+      const checkoutSession = await stripe.checkout.sessions.create({
+        mode: 'setup',
+        payment_method_types: ['card'],
+        customer_email: session.customerEmail || undefined,
+        success_url: `${process.env.PUBLIC_URL || 'https://speedai.fr'}/guarantee/confirmation?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${process.env.PUBLIC_URL || 'https://speedai.fr'}/guarantee/annulation`,
+        metadata: {
+          speedai_user_id: userId,
+          reservation_id: session.reservationId,
+          customer_name: session.customerName,
+          nb_persons: String(session.nbPersons),
+        },
+      }, {
+        stripeAccount: config.stripeAccountId,
+      });
+      
+      // Update session
+      await storage.updateGuaranteeSession(sessionId, {
+        checkoutSessionId: checkoutSession.id,
+        reminderCount: session.reminderCount + 1,
+        lastReminderAt: new Date(),
+      });
+      
+      res.json({
+        success: true,
+        checkout_url: checkoutSession.url,
+        public_url: `${process.env.PUBLIC_URL || 'https://speedai.fr'}/g/${sessionId}`,
+      });
+    } catch (error: any) {
+      console.error('[Guarantee] Error resending link:', error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // Cancel guarantee session
+  app.post("/api/guarantee/cancel/:id", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const sessionId = req.params.id;
+      
+      const session = await storage.getGuaranteeSessionById(sessionId);
+      
+      if (!session || session.userId !== userId) {
+        return res.status(404).json({ message: "Session non trouvée" });
+      }
+      
+      await storage.updateGuaranteeSession(sessionId, {
+        status: 'cancelled',
+      });
+      
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('[Guarantee] Error cancelling session:', error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // ===== GUARANTEE STATS & HISTORY =====
+  
+  // Get guarantee stats
+  app.get("/api/guarantee/stats", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const period = (req.query.period as 'week' | 'month' | 'year' | 'all') || 'month';
+      
+      const stats = await storage.getGuaranteeStats(userId, period);
+      
+      res.json(stats);
+    } catch (error: any) {
+      console.error('[Guarantee] Error getting stats:', error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // Get no-show history
+  app.get("/api/guarantee/history", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const period = (req.query.period as 'week' | 'month' | 'year' | 'all') || 'month';
+      
+      const charges = await storage.getNoshowCharges(userId, period);
+      
+      // Get session details for each charge
+      const chargesWithDetails = await Promise.all(
+        charges.map(async (charge) => {
+          const session = await storage.getGuaranteeSessionById(charge.guaranteeSessionId);
+          return {
+            ...charge,
+            session,
+          };
+        })
+      );
+      
+      res.json(chargesWithDetails);
+    } catch (error: any) {
+      console.error('[Guarantee] Error getting history:', error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // ===== PUBLIC GUARANTEE PAGE =====
+  
+  // Get public session info (no auth required)
+  app.get("/api/guarantee/public/session/:sessionId", async (req, res) => {
+    try {
+      const sessionId = req.params.sessionId;
+      
+      // Validate sessionId format (basic UUID-like check)
+      if (!sessionId || sessionId.length > 100) {
+        return res.status(400).json({ message: "ID de session invalide" });
+      }
+      
+      const session = await storage.getGuaranteeSessionById(sessionId);
+      
+      if (!session) {
+        return res.status(404).json({ message: "Session non trouvée" });
+      }
+      
+      // Check if session has expired (7 days after creation for pending sessions)
+      if (session.status === 'pending') {
+        const createdAt = new Date(session.createdAt);
+        const expiryDate = new Date(createdAt.getTime() + 7 * 24 * 60 * 60 * 1000);
+        if (new Date() > expiryDate) {
+          return res.status(410).json({ message: "Session expirée" });
+        }
+      }
+      
+      // Get config for branding
+      const config = await storage.getGuaranteeConfig(session.userId);
+      
+      res.json({
+        id: session.id,
+        status: session.status,
+        customerName: session.customerName,
+        nbPersons: session.nbPersons,
+        reservationDate: session.reservationDate,
+        reservationTime: session.reservationTime,
+        penaltyAmount: session.penaltyAmount,
+        cancellationDelay: config?.cancellationDelay || 24,
+        logoUrl: config?.logoUrl,
+        brandColor: config?.brandColor || '#C8B88A',
+        companyName: config?.companyName,
+        companyAddress: config?.companyAddress,
+        companyPhone: config?.companyPhone,
+      });
+    } catch (error: any) {
+      console.error('[Guarantee] Error getting public session:', error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // Get checkout URL for public page
+  app.post("/api/guarantee/public/checkout/:sessionId", async (req, res) => {
+    try {
+      const sessionId = req.params.sessionId;
+      
+      // Validate sessionId format
+      if (!sessionId || sessionId.length > 100) {
+        return res.status(400).json({ message: "ID de session invalide" });
+      }
+      
+      const session = await storage.getGuaranteeSessionById(sessionId);
+      
+      if (!session) {
+        return res.status(404).json({ message: "Session non trouvée" });
+      }
+      
+      if (session.status !== 'pending') {
+        return res.status(400).json({ 
+          message: "Cette réservation a déjà été confirmée",
+          status: session.status,
+        });
+      }
+      
+      // Check expiration (7 days)
+      const createdAt = new Date(session.createdAt);
+      const expiryDate = new Date(createdAt.getTime() + 7 * 24 * 60 * 60 * 1000);
+      if (new Date() > expiryDate) {
+        return res.status(410).json({ message: "Session expirée" });
+      }
+      
+      const config = await storage.getGuaranteeConfig(session.userId);
+      
+      if (!config?.stripeAccountId || !session.checkoutSessionId) {
+        return res.status(400).json({ message: "Session de paiement non disponible" });
+      }
+      
+      // Retrieve the checkout session to get the URL
+      const checkoutSession = await stripe.checkout.sessions.retrieve(
+        session.checkoutSessionId,
+        { stripeAccount: config.stripeAccountId }
+      );
+      
+      if (checkoutSession.status === 'complete') {
+        return res.status(400).json({ 
+          message: "Cette réservation a déjà été confirmée" 
+        });
+      }
+      
+      res.json({
+        checkout_url: checkoutSession.url,
+      });
+    } catch (error: any) {
+      console.error('[Guarantee] Error getting checkout URL:', error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // Endpoint to validate session after Stripe checkout - verifies with Stripe directly
+  app.post("/api/guarantee/webhook/checkout-complete", async (req, res) => {
+    try {
+      const { checkout_session_id } = req.body;
+      
+      if (!checkout_session_id || typeof checkout_session_id !== 'string') {
+        return res.status(400).json({ message: "checkout_session_id requis" });
+      }
+      
+      // Find session by checkout session ID
+      const session = await storage.getGuaranteeSessionByCheckoutSessionId(checkout_session_id);
+      
+      if (!session) {
+        return res.status(404).json({ message: "Session non trouvée" });
+      }
+      
+      // Already validated, return success
+      if (session.status === 'validated') {
+        return res.json({ success: true, already_validated: true });
+      }
+      
+      // Get user's config for Stripe account
+      const config = await storage.getGuaranteeConfig(session.userId);
+      
+      if (!config?.stripeAccountId) {
+        return res.status(400).json({ message: "Configuration Stripe manquante" });
+      }
+      
+      // CRITICAL: Verify the checkout session with Stripe directly
+      // This prevents spoofing of checkout completion
+      let stripeCheckoutSession;
+      try {
+        stripeCheckoutSession = await stripe.checkout.sessions.retrieve(
+          checkout_session_id,
+          { 
+            expand: ['setup_intent', 'setup_intent.payment_method'],
+            stripeAccount: config.stripeAccountId 
+          }
+        );
+      } catch (stripeError: any) {
+        console.error('[Guarantee] Stripe verification failed:', stripeError);
+        return res.status(400).json({ message: "Session de paiement invalide" });
+      }
+      
+      // Verify the session is actually complete
+      if (stripeCheckoutSession.status !== 'complete') {
+        return res.status(400).json({ 
+          message: "Session de paiement non complétée",
+          stripe_status: stripeCheckoutSession.status
+        });
+      }
+      
+      // Extract verified data from Stripe response
+      const setupIntent = stripeCheckoutSession.setup_intent as any;
+      const paymentMethodId = setupIntent?.payment_method?.id || setupIntent?.payment_method;
+      const customerStripeId = stripeCheckoutSession.customer as string;
+      
+      // Update session as validated with Stripe-verified data
+      await storage.updateGuaranteeSession(session.id, {
+        status: 'validated',
+        validatedAt: new Date(),
+        setupIntentId: setupIntent?.id,
+        customerStripeId: customerStripeId || null,
+        paymentMethodId: paymentMethodId || null,
+      });
+      
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('[Guarantee] Error validating session:', error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

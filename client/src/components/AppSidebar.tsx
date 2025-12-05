@@ -1,9 +1,10 @@
-import { LayoutDashboard, Bell, User, Shield } from "lucide-react";
+import { LayoutDashboard, Bell, User, Shield, CreditCard, Calendar, History, Settings } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -29,6 +30,24 @@ const menuItems = [
     title: "Mon compte",
     url: "/account",
     icon: User,
+  },
+];
+
+const guaranteeItems = [
+  {
+    title: "Configuration",
+    url: "/settings/guarantee",
+    icon: Settings,
+  },
+  {
+    title: "Réservations",
+    url: "/guarantee/reservations",
+    icon: Calendar,
+  },
+  {
+    title: "Historique",
+    url: "/guarantee/history",
+    icon: History,
   },
 ];
 
@@ -77,6 +96,27 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               )}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel className="flex items-center gap-2 text-[#C8B88A]">
+            <CreditCard className="h-4 w-4" />
+            Garantie CB
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {guaranteeItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild isActive={location === item.url}>
+                    <Link href={item.url} data-testid={`link-guarantee-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                      <item.icon />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

@@ -30,6 +30,15 @@ The project utilizes a modern web stack for a responsive and professional user i
 -   **N8N Logs Visualization**: Admin-only section in the dashboard for monitoring logs from all clients with comprehensive filtering and detailed log viewing.
 -   **Admin Clients Data API**: Comprehensive endpoint for administrators to overview all client data for N8N integration management.
 -   **AI Analytics Deep Insights**: On-demand AI-powered deep analysis for call volume, conversion rate, time slots, and average duration, triggered from dashboard KPI cards.
+-   **CB Guarantee Anti No-Show System**: Complete credit card guarantee system for reservations with:
+    -   Stripe Connect integration for direct payouts to merchants
+    -   N8N API endpoint for creating guarantee sessions from external workflows
+    -   Public customer-facing page for card validation (no auth required)
+    -   Dashboard pages for configuration, reservations management, and no-show history
+    -   Configurable penalty amounts (€1-200/person), cancellation delays (1-72h), and application rules
+    -   Company branding customization (logo, colors)
+    -   Automatic charging for no-shows with failure tracking
+    -   Statistics and recovery metrics
 
 ## External Dependencies
 

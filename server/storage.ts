@@ -7,6 +7,9 @@ import {
   monthlyReports,
   speedaiClients,
   pushSubscriptions,
+  clientGuaranteeConfig,
+  guaranteeSessions,
+  noshowCharges,
   type User, 
   type InsertUser, 
   type Call, 
@@ -20,10 +23,16 @@ import {
   type SpeedaiClient,
   type InsertSpeedaiClient,
   type PushSubscription,
-  type InsertPushSubscription
+  type InsertPushSubscription,
+  type ClientGuaranteeConfig,
+  type InsertClientGuaranteeConfig,
+  type GuaranteeSession,
+  type InsertGuaranteeSession,
+  type NoshowCharge,
+  type InsertNoshowCharge
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, gte, desc, sql, count, isNotNull } from "drizzle-orm";
+import { eq, and, gte, lte, desc, sql, count, isNotNull, or } from "drizzle-orm";
 import { generateApiKey } from "./api-key";
 
 export interface IStorage {
@@ -135,6 +144,31 @@ export interface IStorage {
   deletePushSubscription(endpoint: string): Promise<void>;
   deletePushSubscriptionsByUserId(userId: string): Promise<void>;
   getAllActivePushSubscriptions(): Promise<PushSubscription[]>;
+  
+  // CB Guarantee management
+  getGuaranteeConfig(userId: string): Promise<ClientGuaranteeConfig | undefined>;
+  upsertGuaranteeConfig(userId: string, config: Partial<InsertClientGuaranteeConfig>): Promise<ClientGuaranteeConfig>;
+  
+  // Guarantee sessions
+  getGuaranteeSessions(userId: string, filters?: {
+    status?: string;
+    period?: 'today' | 'week' | 'month';
+  }): Promise<GuaranteeSession[]>;
+  getGuaranteeSessionById(id: string): Promise<GuaranteeSession | undefined>;
+  getGuaranteeSessionByReservationId(reservationId: string): Promise<GuaranteeSession | undefined>;
+  getGuaranteeSessionByCheckoutSessionId(checkoutSessionId: string): Promise<GuaranteeSession | undefined>;
+  createGuaranteeSession(session: InsertGuaranteeSession): Promise<GuaranteeSession>;
+  updateGuaranteeSession(id: string, updates: Partial<GuaranteeSession>): Promise<GuaranteeSession | undefined>;
+  
+  // No-show charges
+  getNoshowCharges(userId: string, period?: 'week' | 'month' | 'year' | 'all'): Promise<NoshowCharge[]>;
+  createNoshowCharge(charge: InsertNoshowCharge): Promise<NoshowCharge>;
+  getGuaranteeStats(userId: string, period?: 'week' | 'month' | 'year' | 'all'): Promise<{
+    noshowCount: number;
+    totalRecovered: number;
+    failedCharges: number;
+    totalAvoided: number;
+  }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -982,6 +1016,237 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(pushSubscriptions)
       .where(eq(pushSubscriptions.isActive, true));
+  }
+
+  // ===== CB Guarantee Management =====
+  
+  async getGuaranteeConfig(userId: string): Promise<ClientGuaranteeConfig | undefined> {
+    const [config] = await db
+      .select()
+      .from(clientGuaranteeConfig)
+      .where(eq(clientGuaranteeConfig.userId, userId));
+    return config || undefined;
+  }
+
+  async upsertGuaranteeConfig(userId: string, config: Partial<InsertClientGuaranteeConfig>): Promise<ClientGuaranteeConfig> {
+    const existing = await this.getGuaranteeConfig(userId);
+    
+    if (existing) {
+      const [updated] = await db
+        .update(clientGuaranteeConfig)
+        .set({
+          ...config,
+          updatedAt: new Date(),
+        })
+        .where(eq(clientGuaranteeConfig.userId, userId))
+        .returning();
+      return updated;
+    }
+    
+    const [created] = await db
+      .insert(clientGuaranteeConfig)
+      .values({
+        userId,
+        ...config,
+      })
+      .returning();
+    return created;
+  }
+
+  // ===== Guarantee Sessions =====
+  
+  async getGuaranteeSessions(userId: string, filters?: {
+    status?: string;
+    period?: 'today' | 'week' | 'month';
+  }): Promise<GuaranteeSession[]> {
+    const conditions = [eq(guaranteeSessions.userId, userId)];
+    
+    if (filters?.status) {
+      conditions.push(eq(guaranteeSessions.status, filters.status));
+    }
+    
+    if (filters?.period) {
+      const now = new Date();
+      let startDate: Date;
+      
+      switch (filters.period) {
+        case 'today':
+          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          break;
+        case 'week':
+          startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case 'month':
+          startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          break;
+      }
+      
+      conditions.push(gte(guaranteeSessions.reservationDate, startDate));
+    }
+    
+    return await db
+      .select()
+      .from(guaranteeSessions)
+      .where(and(...conditions))
+      .orderBy(desc(guaranteeSessions.reservationDate));
+  }
+
+  async getGuaranteeSessionById(id: string): Promise<GuaranteeSession | undefined> {
+    const [session] = await db
+      .select()
+      .from(guaranteeSessions)
+      .where(eq(guaranteeSessions.id, id));
+    return session || undefined;
+  }
+
+  async getGuaranteeSessionByReservationId(reservationId: string): Promise<GuaranteeSession | undefined> {
+    const [session] = await db
+      .select()
+      .from(guaranteeSessions)
+      .where(eq(guaranteeSessions.reservationId, reservationId));
+    return session || undefined;
+  }
+
+  async getGuaranteeSessionByCheckoutSessionId(checkoutSessionId: string): Promise<GuaranteeSession | undefined> {
+    const [session] = await db
+      .select()
+      .from(guaranteeSessions)
+      .where(eq(guaranteeSessions.checkoutSessionId, checkoutSessionId));
+    return session || undefined;
+  }
+
+  async createGuaranteeSession(session: InsertGuaranteeSession): Promise<GuaranteeSession> {
+    const [created] = await db
+      .insert(guaranteeSessions)
+      .values(session)
+      .returning();
+    return created;
+  }
+
+  async updateGuaranteeSession(id: string, updates: Partial<GuaranteeSession>): Promise<GuaranteeSession | undefined> {
+    const [updated] = await db
+      .update(guaranteeSessions)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(guaranteeSessions.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  // ===== No-Show Charges =====
+  
+  async getNoshowCharges(userId: string, period?: 'week' | 'month' | 'year' | 'all'): Promise<NoshowCharge[]> {
+    const conditions = [eq(noshowCharges.userId, userId)];
+    
+    if (period && period !== 'all') {
+      const now = new Date();
+      let startDate: Date;
+      
+      switch (period) {
+        case 'week':
+          startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case 'month':
+          startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          break;
+        case 'year':
+          startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+          break;
+      }
+      
+      conditions.push(gte(noshowCharges.createdAt, startDate));
+    }
+    
+    return await db
+      .select()
+      .from(noshowCharges)
+      .where(and(...conditions))
+      .orderBy(desc(noshowCharges.createdAt));
+  }
+
+  async createNoshowCharge(charge: InsertNoshowCharge): Promise<NoshowCharge> {
+    const [created] = await db
+      .insert(noshowCharges)
+      .values(charge)
+      .returning();
+    return created;
+  }
+
+  async getGuaranteeStats(userId: string, period?: 'week' | 'month' | 'year' | 'all'): Promise<{
+    noshowCount: number;
+    totalRecovered: number;
+    failedCharges: number;
+    totalAvoided: number;
+  }> {
+    const conditions = [eq(noshowCharges.userId, userId)];
+    
+    if (period && period !== 'all') {
+      const now = new Date();
+      let startDate: Date;
+      
+      switch (period) {
+        case 'week':
+          startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case 'month':
+          startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          break;
+        case 'year':
+          startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+          break;
+      }
+      
+      conditions.push(gte(noshowCharges.createdAt, startDate));
+    }
+    
+    const charges = await db
+      .select()
+      .from(noshowCharges)
+      .where(and(...conditions));
+    
+    const noshowCount = charges.length;
+    const totalRecovered = charges
+      .filter(c => c.status === 'succeeded')
+      .reduce((sum, c) => sum + c.amount, 0);
+    const failedCharges = charges.filter(c => c.status === 'failed').length;
+    
+    // Estimate avoided no-shows (cancellations after CB validation)
+    const sessionConditions = [eq(guaranteeSessions.userId, userId)];
+    if (period && period !== 'all') {
+      const now = new Date();
+      let startDate: Date;
+      switch (period) {
+        case 'week':
+          startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case 'month':
+          startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          break;
+        case 'year':
+          startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+          break;
+      }
+      sessionConditions.push(gte(guaranteeSessions.createdAt, startDate));
+    }
+    
+    const cancelledSessions = await db
+      .select()
+      .from(guaranteeSessions)
+      .where(and(...sessionConditions, eq(guaranteeSessions.status, 'cancelled')));
+    
+    const totalAvoided = cancelledSessions.reduce(
+      (sum, s) => sum + (s.penaltyAmount * s.nbPersons * 100),
+      0
+    );
+    
+    return {
+      noshowCount,
+      totalRecovered,
+      failedCharges,
+      totalAvoided,
+    };
   }
 }
 
