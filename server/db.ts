@@ -6,9 +6,13 @@ import * as schema from "@shared/schema";
 
 neonConfig.webSocketConstructor = ws;
 
+// Check for DATABASE_URL with helpful error message for deployment
 if (!process.env.DATABASE_URL) {
+  console.error('❌ [DATABASE] DATABASE_URL environment variable is not set.');
+  console.error('   For deployment, ensure DATABASE_URL is added to your deployment secrets.');
+  console.error('   Navigate to: Deployments pane → Secrets tab → Add DATABASE_URL');
   throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
+    "DATABASE_URL must be set. Did you forget to provision a database or configure deployment secrets?",
   );
 }
 
