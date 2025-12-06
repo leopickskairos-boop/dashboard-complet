@@ -657,6 +657,99 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           break;
         }
+
+        case "checkout.session.completed": {
+          const checkoutSession = event.data.object as Stripe.Checkout.Session;
+          
+          // Only handle CB Guarantee sessions (mode: setup)
+          if (checkoutSession.mode === 'setup') {
+            console.log('🔔 [Stripe Webhook] CB Guarantee checkout completed:', checkoutSession.id);
+            
+            try {
+              // Find the guarantee session by checkout_session_id
+              const guaranteeSession = await storage.getGuaranteeSessionByCheckoutSessionId(checkoutSession.id);
+              
+              if (!guaranteeSession) {
+                console.log('⚠️ [Stripe Webhook] Guarantee session not found for checkout:', checkoutSession.id);
+                // Don't fail webhook - session might have been deleted
+                break;
+              }
+              
+              // Only process pending sessions
+              if (guaranteeSession.status !== 'pending') {
+                console.log('ℹ️ [Stripe Webhook] Session already processed, status:', guaranteeSession.status);
+                break;
+              }
+              
+              // Retrieve setup intent to get payment method ID
+              let paymentMethodId = null;
+              if (checkoutSession.setup_intent) {
+                try {
+                  // Get config for Stripe account
+                  const config = await storage.getGuaranteeConfig(guaranteeSession.userId);
+                  if (config?.stripeAccountId) {
+                    const setupIntent = await stripe.setupIntents.retrieve(
+                      checkoutSession.setup_intent as string,
+                      { stripeAccount: config.stripeAccountId }
+                    );
+                    paymentMethodId = setupIntent.payment_method as string;
+                  }
+                } catch (setupErr) {
+                  console.error('⚠️ [Stripe Webhook] Error retrieving setup intent:', setupErr);
+                }
+              }
+              
+              // Update session to validated status
+              const updatedSession = await storage.updateGuaranteeSession(guaranteeSession.id, {
+                status: 'validated',
+                validatedAt: new Date(),
+                setupIntentId: checkoutSession.setup_intent as string,
+                customerStripeId: checkoutSession.customer as string,
+                paymentMethodId: paymentMethodId,
+              });
+              
+              if (!updatedSession) {
+                console.error('❌ [Stripe Webhook] Failed to update session:', guaranteeSession.id);
+                // Still respond 200 to Stripe, but log the error
+                break;
+              }
+              
+              console.log('✅ [Stripe Webhook] Session validated:', guaranteeSession.id);
+              
+              // Call N8N webhook to trigger Calendar + confirmation workflow
+              const N8N_WEBHOOK_CB_VALIDEE = process.env.N8N_WEBHOOK_CB_VALIDEE;
+              
+              if (N8N_WEBHOOK_CB_VALIDEE) {
+                try {
+                  const n8nResponse = await fetch(N8N_WEBHOOK_CB_VALIDEE, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      sessionId: guaranteeSession.id,
+                      reservationId: guaranteeSession.reservationId,
+                      customerName: guaranteeSession.customerName,
+                      customerEmail: guaranteeSession.customerEmail,
+                      customerPhone: guaranteeSession.customerPhone,
+                      nbPersons: guaranteeSession.nbPersons,
+                      event: 'cb_validated',
+                    }),
+                  });
+                  
+                  console.log('✅ [N8N] Webhook called for CB validation:', guaranteeSession.id, 'Response:', n8nResponse.status);
+                } catch (n8nError) {
+                  console.error('❌ [N8N] Error calling webhook:', n8nError);
+                  // Don't fail the Stripe webhook - N8N call is non-blocking
+                }
+              } else {
+                console.log('ℹ️ [N8N] N8N_WEBHOOK_CB_VALIDEE not configured, skipping webhook call');
+              }
+            } catch (cbError) {
+              console.error('❌ [Stripe Webhook] Error processing CB Guarantee:', cbError);
+              // Still respond 200 to prevent Stripe retries, but log the error
+            }
+          }
+          break;
+        }
       }
 
       res.json({ received: true });
@@ -3754,6 +3847,124 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('[Guarantee] Error getting history:', error);
       res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // ===== N8N GUARANTEE SESSION DETAILS (for workflow after CB validation) =====
+  
+  // Get session details for N8N workflow (after CB validation)
+  // This endpoint is used by N8N to get all info needed for Calendar event + confirmation emails
+  app.get("/api/guarantee/session-details/:sessionId", async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      
+      // Validate N8N Master Key
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ 
+          success: false, 
+          error: "Missing authorization header" 
+        });
+      }
+      
+      const apiKey = authHeader.split(' ')[1];
+      const N8N_MASTER_KEY = process.env.N8N_MASTER_API_KEY;
+      
+      if (!N8N_MASTER_KEY || apiKey !== N8N_MASTER_KEY) {
+        return res.status(401).json({ 
+          success: false, 
+          error: "Invalid API key" 
+        });
+      }
+      
+      const sessionId = req.params.sessionId;
+      
+      // Validate sessionId format
+      if (!sessionId || sessionId.length > 100) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "Invalid session ID" 
+        });
+      }
+      
+      // Get the session
+      const session = await storage.getGuaranteeSessionById(sessionId);
+      
+      if (!session) {
+        return res.status(404).json({ 
+          success: false, 
+          error: "Session not found" 
+        });
+      }
+      
+      // Get the config for this user
+      const config = await storage.getGuaranteeConfig(session.userId);
+      
+      if (!config) {
+        return res.status(404).json({ 
+          success: false, 
+          error: "Client config not found" 
+        });
+      }
+      
+      // Get user info for additional contact details
+      const user = await storage.getUser(session.userId);
+      
+      // Calculate reservation end time (reservation time + 2 hours by default)
+      let reservationTimeEnd = null;
+      if (session.reservationTime) {
+        const [hours, minutes] = session.reservationTime.split(':').map(Number);
+        const endHours = hours + 2; // Default 2 hours duration
+        reservationTimeEnd = `${String(endHours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+      }
+      
+      // Format date for response
+      const reservationDate = session.reservationDate 
+        ? new Date(session.reservationDate).toISOString().split('T')[0]
+        : null;
+      
+      const response = {
+        success: true,
+        sessionId: session.id,
+        status: session.status,
+        customer: {
+          name: session.customerName,
+          email: session.customerEmail,
+          phone: session.customerPhone,
+          nbPersons: session.nbPersons,
+          reservationDate: reservationDate,
+          reservationTime: session.reservationTime,
+          reservationTimeEnd: reservationTimeEnd,
+        },
+        config: {
+          companyName: config.companyName || null,
+          companyAddress: config.companyAddress || null,
+          companyPhone: config.companyPhone || null,
+          logoUrl: config.logoUrl || null,
+          brandColor: config.brandColor || '#C8B88A',
+          penaltyAmount: config.penaltyAmount,
+          cancellationDelay: config.cancellationDelay,
+          gmailSenderName: config.gmailSenderName || null,
+          gmailSenderEmail: config.gmailSenderEmail || user?.email || null,
+          calendarId: null, // Will be added when user connects their Google Calendar
+        },
+        penalty: {
+          amountPerPerson: session.penaltyAmount,
+          totalAmount: session.penaltyAmount * session.nbPersons,
+          currency: 'EUR',
+        },
+        reservationId: session.reservationId,
+        validatedAt: session.validatedAt,
+      };
+      
+      console.log('✅ [N8N] Session details retrieved for:', sessionId);
+      
+      res.json(response);
+    } catch (error: any) {
+      console.error('[N8N] Error getting session details:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: "Server error" 
+      });
     }
   });
 
