@@ -119,7 +119,7 @@ export default function ReviewsStats() {
 
       {/* KPI Cards */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card className="border-border/50 bg-card/50">
+        <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2.5 rounded-xl bg-[#C8B88A]/10">
@@ -136,7 +136,7 @@ export default function ReviewsStats() {
           </CardContent>
         </Card>
 
-        <Card className="border-border/50 bg-card/50">
+        <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2.5 rounded-xl bg-[#4CEFAD]/10">
@@ -153,7 +153,7 @@ export default function ReviewsStats() {
           </CardContent>
         </Card>
 
-        <Card className="border-border/50 bg-card/50">
+        <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2.5 rounded-xl bg-blue-500/10">
@@ -170,7 +170,7 @@ export default function ReviewsStats() {
           </CardContent>
         </Card>
 
-        <Card className="border-border/50 bg-card/50">
+        <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2.5 rounded-xl bg-purple-500/10">
@@ -192,7 +192,7 @@ export default function ReviewsStats() {
 
       {/* Charts */}
       <div className="grid gap-5 md:grid-cols-2">
-        <Card className="border-border/50 bg-card/50">
+        <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-semibold">Distribution des notes</CardTitle>
             <CardDescription className="text-xs">Répartition des avis par note attribuée</CardDescription>
@@ -222,7 +222,7 @@ export default function ReviewsStats() {
           </CardContent>
         </Card>
 
-        <Card className="border-border/50 bg-card/50">
+        <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-semibold">Analyse des sentiments</CardTitle>
             <CardDescription className="text-xs">Tonalité générale détectée par IA</CardDescription>
@@ -264,7 +264,7 @@ export default function ReviewsStats() {
       </div>
 
       {/* Platform Performance */}
-      <Card className="border-border/50 bg-card/50">
+      <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
         <CardHeader className="pb-3">
           <CardTitle className="text-base font-semibold">Performance par plateforme</CardTitle>
           <CardDescription className="text-xs">Comparez votre réputation sur chaque plateforme d'avis</CardDescription>

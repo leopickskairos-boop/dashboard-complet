@@ -577,7 +577,7 @@ export default function GuaranteeSettings() {
         </div>
       </div>
 
-      <Card className="bg-gradient-to-b from-[#0D0F12] to-[#090A0D] border-white/5">
+      <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -615,7 +615,7 @@ export default function GuaranteeSettings() {
         {sections.map((section) => (
           <Card 
             key={section.key}
-            className="bg-gradient-to-b from-[#0D0F12] to-[#090A0D] border-white/5 overflow-hidden"
+            className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] overflow-hidden"
           >
             <button
               onClick={() => toggleSection(section.key)}

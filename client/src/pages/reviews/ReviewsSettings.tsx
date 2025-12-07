@@ -213,7 +213,7 @@ export default function ReviewsSettings() {
           <h1 className="text-lg font-semibold text-foreground">Configuration des Avis</h1>
           <p className="text-xs text-muted-foreground mt-0.5">Paramétrez votre collecte d'avis</p>
         </div>
-        <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-card/50 border border-border/50">
+        <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-gradient-to-br from-[#1A1C1F] to-[#151618] border border-white/[0.06]">
           <span className="text-sm text-muted-foreground">Système activé</span>
           <Switch
             checked={config?.enabled || false}
@@ -224,7 +224,7 @@ export default function ReviewsSettings() {
       </div>
 
       <div className="grid gap-5 md:grid-cols-2">
-        <Card className="border-border/50 bg-card/50">
+        <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
           <CardHeader className="pb-4">
             <CardTitle className="flex items-center gap-2 text-base font-semibold">
               <div className="p-1.5 rounded-lg bg-[#C8B88A]/10">
@@ -313,7 +313,7 @@ export default function ReviewsSettings() {
           </CardContent>
         </Card>
 
-        <Card className="border-border/50 bg-card/50">
+        <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
           <CardHeader className="pb-4">
             <CardTitle className="flex items-center gap-2 text-base font-semibold">
               <div className="p-1.5 rounded-lg bg-[#C8B88A]/10">
@@ -366,7 +366,7 @@ export default function ReviewsSettings() {
       </div>
 
       {/* Incentives Section */}
-      <Card className="border-border/50 bg-card/50">
+      <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-base font-semibold">
@@ -636,7 +636,7 @@ export default function ReviewsSettings() {
         </Card>
 
       {/* Platforms Section */}
-      <Card className="border-border/50 bg-card/50">
+      <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
         <CardHeader className="pb-4">
           <CardTitle className="flex items-center gap-2 text-base font-semibold">
             <div className="p-1.5 rounded-lg bg-[#C8B88A]/10">

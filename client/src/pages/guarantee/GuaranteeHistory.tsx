@@ -123,7 +123,7 @@ export default function GuaranteeHistory() {
       </div>
 
       <div className="grid grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-b from-[#0D0F12] to-[#090A0D] border-white/5">
+        <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
           <CardContent className="p-5">
             <div className="flex items-center justify-between mb-3">
               <div className="h-10 w-10 rounded-xl bg-[#4CEFAD]/10 flex items-center justify-center">
@@ -138,7 +138,7 @@ export default function GuaranteeHistory() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-b from-[#0D0F12] to-[#090A0D] border-white/5">
+        <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
           <CardContent className="p-5">
             <div className="flex items-center justify-between mb-3">
               <div className="h-10 w-10 rounded-xl bg-red-500/10 flex items-center justify-center">
@@ -150,7 +150,7 @@ export default function GuaranteeHistory() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-b from-[#0D0F12] to-[#090A0D] border-white/5">
+        <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
           <CardContent className="p-5">
             <div className="flex items-center justify-between mb-3">
               <div className="h-10 w-10 rounded-xl bg-[#C8B88A]/10 flex items-center justify-center">
@@ -164,7 +164,7 @@ export default function GuaranteeHistory() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-b from-[#0D0F12] to-[#090A0D] border-white/5">
+        <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
           <CardContent className="p-5">
             <div className="flex items-center justify-between mb-3">
               <div className="h-10 w-10 rounded-xl bg-orange-500/10 flex items-center justify-center">
@@ -177,7 +177,7 @@ export default function GuaranteeHistory() {
         </Card>
       </div>
 
-      <Card className="bg-gradient-to-b from-[#0D0F12] to-[#090A0D] border-white/5">
+      <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
         <CardHeader>
           <CardTitle className="text-lg font-semibold text-white">
             Détail des no-shows

@@ -231,7 +231,7 @@ export default function ReviewsCampaigns() {
 
       {/* KPI Cards */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card className="border-border/50 bg-card/50">
+        <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2.5 rounded-xl bg-blue-500/10">
@@ -246,7 +246,7 @@ export default function ReviewsCampaigns() {
           </CardContent>
         </Card>
 
-        <Card className="border-border/50 bg-card/50">
+        <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2.5 rounded-xl bg-[#C8B88A]/10">
@@ -261,7 +261,7 @@ export default function ReviewsCampaigns() {
           </CardContent>
         </Card>
 
-        <Card className="border-border/50 bg-card/50">
+        <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2.5 rounded-xl bg-[#4CEFAD]/10">
@@ -276,7 +276,7 @@ export default function ReviewsCampaigns() {
           </CardContent>
         </Card>
 
-        <Card className="border-border/50 bg-card/50">
+        <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2.5 rounded-xl bg-purple-500/10">
@@ -293,7 +293,7 @@ export default function ReviewsCampaigns() {
       </div>
 
       {/* Requests Table */}
-      <Card className="border-border/50 bg-card/50">
+      <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
         <CardHeader className="pb-4">
           <CardTitle className="text-base font-semibold">Historique des demandes</CardTitle>
           <CardDescription className="text-xs">

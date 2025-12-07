@@ -311,7 +311,7 @@ export default function GuaranteeReservations() {
       </div>
 
       <div className="grid grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-b from-[#0D0F12] to-[#090A0D] border-white/5">
+        <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-xl bg-[#C8B88A]/10 flex items-center justify-center">
@@ -324,7 +324,7 @@ export default function GuaranteeReservations() {
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-b from-[#0D0F12] to-[#090A0D] border-white/5">
+        <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-xl bg-[#4CEFAD]/10 flex items-center justify-center">
@@ -337,7 +337,7 @@ export default function GuaranteeReservations() {
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-b from-[#0D0F12] to-[#090A0D] border-white/5">
+        <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
@@ -350,7 +350,7 @@ export default function GuaranteeReservations() {
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-b from-[#0D0F12] to-[#090A0D] border-white/5">
+        <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
@@ -366,7 +366,7 @@ export default function GuaranteeReservations() {
       </div>
 
       {data?.today && data.today.length > 0 && (
-        <Card className="bg-gradient-to-b from-[#0D0F12] to-[#090A0D] border-white/5">
+        <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
           <CardHeader className="pb-4">
             <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
               <Calendar className="h-5 w-5 text-purple-400" />
@@ -389,7 +389,7 @@ export default function GuaranteeReservations() {
       )}
 
       {data?.pending && data.pending.length > 0 && (
-        <Card className="bg-gradient-to-b from-[#0D0F12] to-[#090A0D] border-white/5">
+        <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
           <CardHeader className="pb-4">
             <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
               <Clock className="h-5 w-5 text-[#C8B88A]" />
@@ -412,7 +412,7 @@ export default function GuaranteeReservations() {
       )}
 
       {data?.validated && data.validated.length > 0 && (
-        <Card className="bg-gradient-to-b from-[#0D0F12] to-[#090A0D] border-white/5">
+        <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
           <CardHeader className="pb-4">
             <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
               <Check className="h-5 w-5 text-[#4CEFAD]" />
@@ -434,7 +434,7 @@ export default function GuaranteeReservations() {
       )}
 
       {(!data?.pending?.length && !data?.validated?.length) && (
-        <Card className="bg-gradient-to-b from-[#0D0F12] to-[#090A0D] border-white/5">
+        <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
           <CardContent className="p-12 text-center">
             <Shield className="h-12 w-12 text-gray-600 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-white mb-2">Aucune réservation</h3>
