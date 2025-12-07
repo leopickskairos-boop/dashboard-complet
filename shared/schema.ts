@@ -1092,10 +1092,12 @@ export type ReviewRequest = typeof reviewRequests.$inferSelect;
 export const reviews = pgTable("reviews", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  sourceId: varchar("source_id"), // Reference to review_sources (optional, added later)
   
   // Plateforme
   platform: text("platform").notNull(), // 'google', 'tripadvisor', 'facebook', 'yelp', etc.
   platformReviewId: text("platform_review_id"),
+  reviewUrl: text("review_url"), // Direct URL to the review
   
   // Contenu
   rating: integer("rating").notNull(), // 1-5
@@ -1234,3 +1236,144 @@ export type CreateReviewIncentive = z.infer<typeof createReviewIncentiveSchema>;
 export type CreateReviewRequest = z.infer<typeof createReviewRequestSchema>;
 export type RespondToReview = z.infer<typeof respondToReviewSchema>;
 export type ReviewStatsQuery = z.infer<typeof reviewStatsQuerySchema>;
+
+// ===== REVIEW SOURCES (Platform Connections) =====
+
+// Review source platform enum
+export const reviewSourcePlatformEnum = pgEnum('review_source_platform', [
+  'google',
+  'facebook', 
+  'tripadvisor'
+]);
+
+// Review source connection status enum
+export const reviewSourceStatusEnum = pgEnum('review_source_status', [
+  'pending',      // OAuth started but not completed
+  'connected',    // Successfully connected
+  'error',        // Connection error
+  'expired',      // Token expired
+  'disconnected'  // User disconnected
+]);
+
+// Review sources table (platform connections per user)
+export const reviewSources = pgTable("review_sources", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  
+  // Platform info
+  platform: text("platform").notNull(), // 'google', 'facebook', 'tripadvisor'
+  displayName: text("display_name"), // Business name on that platform
+  platformLocationId: text("platform_location_id"), // Google Place ID, FB Page ID, TA Location ID
+  platformUrl: text("platform_url"), // Direct URL to the business page
+  
+  // Connection status
+  connectionStatus: text("connection_status").notNull().default("pending"),
+  connectionError: text("connection_error"),
+  
+  // OAuth tokens (encrypted)
+  accessToken: text("access_token"),
+  refreshToken: text("refresh_token"),
+  tokenExpiry: timestamp("token_expiry"),
+  tokenScopes: text("token_scopes"),
+  
+  // Sync info
+  lastSyncAt: timestamp("last_sync_at"),
+  lastSyncStatus: text("last_sync_status"), // 'success', 'error', 'partial'
+  lastSyncError: text("last_sync_error"),
+  syncCursor: text("sync_cursor"), // Pagination cursor for next sync
+  
+  // Stats
+  totalReviewsCount: integer("total_reviews_count").default(0),
+  averageRating: integer("average_rating"), // Stored as integer * 10 (e.g., 45 = 4.5)
+  
+  // Metadata
+  metadata: jsonb("metadata"), // Platform-specific extra data
+  
+  // Timestamps
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Insert schema for review sources
+export const insertReviewSourceSchema = createInsertSchema(reviewSources).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Types for review sources
+export type InsertReviewSource = z.infer<typeof insertReviewSourceSchema>;
+export type ReviewSource = typeof reviewSources.$inferSelect;
+
+// ===== REVIEW SYNC LOGS =====
+
+// Sync log status enum
+export const syncLogStatusEnum = pgEnum('sync_log_status', [
+  'running',
+  'success',
+  'partial',
+  'error'
+]);
+
+// Review sync logs table
+export const reviewSyncLogs = pgTable("review_sync_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sourceId: varchar("source_id").notNull().references(() => reviewSources.id, { onDelete: 'cascade' }),
+  
+  // Timing
+  startedAt: timestamp("started_at").notNull().defaultNow(),
+  completedAt: timestamp("completed_at"),
+  
+  // Status
+  status: text("status").notNull().default("running"), // 'running', 'success', 'partial', 'error'
+  errorMessage: text("error_message"),
+  
+  // Stats
+  fetchedCount: integer("fetched_count").default(0),
+  newCount: integer("new_count").default(0),
+  updatedCount: integer("updated_count").default(0),
+  
+  // Request info
+  requestUrl: text("request_url"),
+  responseCode: integer("response_code"),
+});
+
+// Insert schema for sync logs
+export const insertReviewSyncLogSchema = createInsertSchema(reviewSyncLogs).omit({
+  id: true,
+  startedAt: true,
+});
+
+// Types for sync logs
+export type InsertReviewSyncLog = z.infer<typeof insertReviewSyncLogSchema>;
+export type ReviewSyncLog = typeof reviewSyncLogs.$inferSelect;
+
+// ===== REVIEW SOURCES API SCHEMAS =====
+
+// Schema for connecting TripAdvisor (just URL)
+export const connectTripAdvisorSchema = z.object({
+  tripadvisorUrl: z.string().url("URL TripAdvisor invalide"),
+  displayName: z.string().min(1).max(255).optional(),
+});
+
+// Schema for initiating Google OAuth
+export const initiateGoogleOAuthSchema = z.object({
+  redirectUri: z.string().url().optional(),
+});
+
+// Schema for initiating Facebook OAuth
+export const initiateFacebookOAuthSchema = z.object({
+  redirectUri: z.string().url().optional(),
+});
+
+// Schema for manual sync trigger
+export const triggerSyncSchema = z.object({
+  sourceId: z.string().uuid(),
+  fullSync: z.boolean().default(false),
+});
+
+// Types
+export type ConnectTripAdvisor = z.infer<typeof connectTripAdvisorSchema>;
+export type InitiateGoogleOAuth = z.infer<typeof initiateGoogleOAuthSchema>;
+export type InitiateFacebookOAuth = z.infer<typeof initiateFacebookOAuthSchema>;
+export type TriggerSync = z.infer<typeof triggerSyncSchema>;

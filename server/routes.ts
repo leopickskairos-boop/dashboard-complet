@@ -5046,19 +5046,537 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // OAuth stub endpoints (501 Not Implemented for Phase 2)
-  app.get("/api/reviews/oauth/google/connect", requireAuth, async (req, res) => {
-    res.status(501).json({ 
-      message: "Connexion Google Business Profile disponible prochainement",
-      status: "not_implemented"
-    });
+  // ===== REVIEW SOURCES (Platform Connections) =====
+
+  // Get all connected review sources for user
+  app.get("/api/reviews/sources", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "Non authentifié" });
+      }
+
+      const sources = await storage.getReviewSources(userId);
+      res.json(sources);
+    } catch (error: any) {
+      console.error("[ReviewSources] Error getting sources:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
   });
 
+  // Connect TripAdvisor (URL-based, no OAuth)
+  app.post("/api/reviews/sources/tripadvisor/connect", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "Non authentifié" });
+      }
+
+      const { tripadvisorUrl, displayName } = req.body;
+
+      if (!tripadvisorUrl) {
+        return res.status(400).json({ message: "URL TripAdvisor requise" });
+      }
+
+      // Check if TripAdvisor API key is configured
+      if (!process.env.TRIPADVISOR_API_KEY) {
+        return res.status(503).json({ 
+          message: "API TripAdvisor non configurée",
+          setupRequired: true
+        });
+      }
+
+      // Import TripAdvisor service
+      const { createTripAdvisorService } = await import('./services/tripadvisor');
+      const taService = createTripAdvisorService();
+      
+      if (!taService) {
+        return res.status(503).json({ message: "Service TripAdvisor non disponible" });
+      }
+
+      // Extract location ID from URL
+      const locationId = taService.extractLocationIdFromUrl(tripadvisorUrl);
+      
+      if (!locationId) {
+        return res.status(400).json({ 
+          message: "URL TripAdvisor invalide. Exemple: https://www.tripadvisor.fr/Restaurant_Review-g187147-d15626754-..."
+        });
+      }
+
+      // Check if already connected
+      const existing = await storage.getReviewSourceByPlatform(userId, 'tripadvisor');
+      if (existing) {
+        return res.status(409).json({ 
+          message: "TripAdvisor déjà connecté. Déconnectez d'abord pour reconnecter.",
+          existingSource: existing
+        });
+      }
+
+      // Verify location exists on TripAdvisor
+      const locationDetails = await taService.getLocationDetails(locationId);
+      
+      if (!locationDetails) {
+        return res.status(404).json({ 
+          message: "Établissement non trouvé sur TripAdvisor. Vérifiez l'URL."
+        });
+      }
+
+      // Create source
+      const source = await storage.createReviewSource({
+        userId,
+        platform: 'tripadvisor',
+        displayName: displayName || locationDetails.name,
+        platformLocationId: locationId,
+        platformUrl: tripadvisorUrl,
+        connectionStatus: 'connected',
+        totalReviewsCount: parseInt(locationDetails.num_reviews) || 0,
+        averageRating: locationDetails.rating ? Math.round(parseFloat(locationDetails.rating) * 10) : null,
+        metadata: {
+          address: locationDetails.address_obj?.address_string,
+          category: locationDetails.category?.name,
+          cuisine: locationDetails.cuisine?.map(c => c.name),
+          ranking: locationDetails.ranking_data?.ranking_string,
+        },
+      });
+
+      console.log(`✅ [ReviewSources] TripAdvisor connected for user ${userId}: ${locationDetails.name}`);
+
+      res.json({
+        success: true,
+        source,
+        locationDetails: {
+          name: locationDetails.name,
+          address: locationDetails.address_obj?.address_string,
+          rating: locationDetails.rating,
+          reviewCount: locationDetails.num_reviews,
+        }
+      });
+
+    } catch (error: any) {
+      console.error("[ReviewSources] TripAdvisor connect error:", error);
+      res.status(500).json({ message: "Erreur lors de la connexion TripAdvisor" });
+    }
+  });
+
+  // Disconnect a review source
+  app.delete("/api/reviews/sources/:sourceId", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "Non authentifié" });
+      }
+
+      const { sourceId } = req.params;
+      
+      const source = await storage.getReviewSourceById(sourceId, userId);
+      if (!source) {
+        return res.status(404).json({ message: "Source non trouvée" });
+      }
+
+      await storage.deleteReviewSource(sourceId, userId);
+
+      console.log(`✅ [ReviewSources] Source ${source.platform} disconnected for user ${userId}`);
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("[ReviewSources] Delete source error:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // Trigger manual sync for a source
+  app.post("/api/reviews/sources/:sourceId/sync", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "Non authentifié" });
+      }
+
+      const { sourceId } = req.params;
+      
+      const source = await storage.getReviewSourceById(sourceId, userId);
+      if (!source) {
+        return res.status(404).json({ message: "Source non trouvée" });
+      }
+
+      if (source.connectionStatus !== 'connected') {
+        return res.status(400).json({ message: "Source non connectée" });
+      }
+
+      // Import sync service
+      const { syncReviewSource } = await import('./services/review-sync');
+      
+      // Start sync (async, don't wait)
+      syncReviewSource(source).catch(err => {
+        console.error(`[ReviewSources] Sync error for ${sourceId}:`, err);
+      });
+
+      res.json({ 
+        success: true, 
+        message: "Synchronisation démarrée",
+        status: 'syncing'
+      });
+    } catch (error: any) {
+      console.error("[ReviewSources] Sync trigger error:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // Get sync logs for a source
+  app.get("/api/reviews/sources/:sourceId/logs", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "Non authentifié" });
+      }
+
+      const { sourceId } = req.params;
+      
+      const source = await storage.getReviewSourceById(sourceId, userId);
+      if (!source) {
+        return res.status(404).json({ message: "Source non trouvée" });
+      }
+
+      const logs = await storage.getSyncLogs(sourceId, 20);
+      res.json(logs);
+    } catch (error: any) {
+      console.error("[ReviewSources] Get sync logs error:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // Get all recent sync logs for user
+  app.get("/api/reviews/sync-logs", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "Non authentifié" });
+      }
+
+      const sources = await storage.getReviewSources(userId);
+      const allLogs = [];
+      
+      for (const source of sources) {
+        const logs = await storage.getSyncLogs(source.id, 10);
+        allLogs.push(...logs);
+      }
+
+      // Sort by date descending
+      allLogs.sort((a, b) => new Date(b.syncedAt).getTime() - new Date(a.syncedAt).getTime());
+      
+      res.json(allLogs.slice(0, 20));
+    } catch (error: any) {
+      console.error("[ReviewSyncLogs] Get all error:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // Sync all sources at once
+  app.post("/api/reviews/sources/sync-all", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "Non authentifié" });
+      }
+
+      const sources = await storage.getReviewSources(userId);
+      const activeSources = sources.filter(s => s.connectionStatus === 'connected');
+
+      if (activeSources.length === 0) {
+        return res.status(400).json({ message: "Aucune source active à synchroniser" });
+      }
+
+      const { syncReviewSource } = await import('./services/review-sync');
+
+      // Start sync for all sources (async)
+      for (const source of activeSources) {
+        syncReviewSource(source).catch(err => {
+          console.error(`[ReviewSources] Sync-all error for ${source.id}:`, err);
+        });
+      }
+
+      res.json({ 
+        success: true, 
+        message: `Synchronisation lancée pour ${activeSources.length} source(s)`,
+        sourcesCount: activeSources.length
+      });
+    } catch (error: any) {
+      console.error("[ReviewSources] Sync-all error:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // Google OAuth - Initiate connection
+  app.get("/api/reviews/oauth/google/connect", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "Non authentifié" });
+      }
+
+      // Check if OAuth is configured
+      if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+        return res.status(503).json({ 
+          message: "OAuth Google non configuré",
+          setupRequired: true,
+          requiredSecrets: ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET']
+        });
+      }
+
+      const { generateGoogleOAuthUrl } = await import('./services/google-business');
+      
+      const frontendUrl = process.env.FRONTEND_URL || `https://${req.headers.host}`;
+      const redirectUri = `${frontendUrl}/api/reviews/oauth/google/callback`;
+      const state = Buffer.from(JSON.stringify({ userId })).toString('base64');
+
+      const authUrl = generateGoogleOAuthUrl(redirectUri, state);
+      
+      res.json({ authUrl });
+    } catch (error: any) {
+      console.error("[GoogleOAuth] Connect error:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // Google OAuth - Callback
+  app.get("/api/reviews/oauth/google/callback", async (req, res) => {
+    try {
+      const { code, state, error } = req.query;
+
+      if (error) {
+        console.error("[GoogleOAuth] Auth error:", error);
+        return res.redirect('/reviews/settings?error=google_auth_failed');
+      }
+
+      if (!code || !state) {
+        return res.redirect('/reviews/settings?error=missing_params');
+      }
+
+      // Decode state to get userId
+      let stateData;
+      try {
+        stateData = JSON.parse(Buffer.from(state as string, 'base64').toString());
+      } catch {
+        return res.redirect('/reviews/settings?error=invalid_state');
+      }
+
+      const userId = stateData.userId;
+      if (!userId) {
+        return res.redirect('/reviews/settings?error=no_user');
+      }
+
+      const { exchangeGoogleAuthCode, GoogleBusinessService } = await import('./services/google-business');
+      
+      const frontendUrl = process.env.FRONTEND_URL || `https://${req.headers.host}`;
+      const redirectUri = `${frontendUrl}/api/reviews/oauth/google/callback`;
+
+      const tokens = await exchangeGoogleAuthCode(code as string, redirectUri);
+      
+      if (!tokens) {
+        return res.redirect('/reviews/settings?error=token_exchange_failed');
+      }
+
+      // Get accounts and locations
+      const service = new GoogleBusinessService(tokens.accessToken);
+      const accounts = await service.listAccounts();
+
+      if (accounts.length === 0) {
+        return res.redirect('/reviews/settings?error=no_google_accounts');
+      }
+
+      // For now, use first account's first location
+      // TODO: Add UI to select location
+      const firstAccount = accounts[0];
+      const locations = await service.listLocations(firstAccount.name);
+
+      if (locations.length === 0) {
+        return res.redirect('/reviews/settings?error=no_google_locations');
+      }
+
+      const firstLocation = locations[0];
+
+      // Check if already connected
+      const existing = await storage.getReviewSourceByPlatform(userId, 'google');
+      if (existing) {
+        // Update existing
+        await storage.updateReviewSource(existing.id, userId, {
+          accessToken: tokens.accessToken,
+          refreshToken: tokens.refreshToken,
+          tokenExpiry: new Date(Date.now() + tokens.expiresIn * 1000),
+          connectionStatus: 'connected',
+          connectionError: null,
+          displayName: firstLocation.title || firstLocation.locationName,
+          platformLocationId: firstLocation.name,
+          platformUrl: firstLocation.metadata?.mapsUri || null,
+          metadata: {
+            accountName: firstAccount.name,
+            locationName: firstLocation.name,
+            placeId: firstLocation.metadata?.placeId,
+          },
+        });
+      } else {
+        // Create new
+        await storage.createReviewSource({
+          userId,
+          platform: 'google',
+          displayName: firstLocation.title || firstLocation.locationName,
+          platformLocationId: firstLocation.name,
+          platformUrl: firstLocation.metadata?.mapsUri || null,
+          connectionStatus: 'connected',
+          accessToken: tokens.accessToken,
+          refreshToken: tokens.refreshToken,
+          tokenExpiry: new Date(Date.now() + tokens.expiresIn * 1000),
+          tokenScopes: 'business.manage',
+          metadata: {
+            accountName: firstAccount.name,
+            locationName: firstLocation.name,
+            placeId: firstLocation.metadata?.placeId,
+          },
+        });
+      }
+
+      console.log(`✅ [GoogleOAuth] Connected for user ${userId}: ${firstLocation.title}`);
+      
+      res.redirect('/reviews/settings?success=google_connected');
+    } catch (error: any) {
+      console.error("[GoogleOAuth] Callback error:", error);
+      res.redirect('/reviews/settings?error=callback_failed');
+    }
+  });
+
+  // Facebook OAuth - Initiate connection
   app.get("/api/reviews/oauth/facebook/connect", requireAuth, async (req, res) => {
-    res.status(501).json({ 
-      message: "Connexion Facebook Pages disponible prochainement",
-      status: "not_implemented"
-    });
+    try {
+      const userId = req.session?.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "Non authentifié" });
+      }
+
+      // Check if OAuth is configured
+      if (!process.env.FACEBOOK_APP_ID || !process.env.FACEBOOK_APP_SECRET) {
+        return res.status(503).json({ 
+          message: "OAuth Facebook non configuré",
+          setupRequired: true,
+          requiredSecrets: ['FACEBOOK_APP_ID', 'FACEBOOK_APP_SECRET']
+        });
+      }
+
+      const { generateFacebookOAuthUrl } = await import('./services/facebook-pages');
+      
+      const frontendUrl = process.env.FRONTEND_URL || `https://${req.headers.host}`;
+      const redirectUri = `${frontendUrl}/api/reviews/oauth/facebook/callback`;
+      const state = Buffer.from(JSON.stringify({ userId })).toString('base64');
+
+      const authUrl = generateFacebookOAuthUrl(redirectUri, state);
+      
+      res.json({ authUrl });
+    } catch (error: any) {
+      console.error("[FacebookOAuth] Connect error:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // Facebook OAuth - Callback
+  app.get("/api/reviews/oauth/facebook/callback", async (req, res) => {
+    try {
+      const { code, state, error_reason } = req.query;
+
+      if (error_reason) {
+        console.error("[FacebookOAuth] Auth error:", error_reason);
+        return res.redirect('/reviews/settings?error=facebook_auth_failed');
+      }
+
+      if (!code || !state) {
+        return res.redirect('/reviews/settings?error=missing_params');
+      }
+
+      // Decode state
+      let stateData;
+      try {
+        stateData = JSON.parse(Buffer.from(state as string, 'base64').toString());
+      } catch {
+        return res.redirect('/reviews/settings?error=invalid_state');
+      }
+
+      const userId = stateData.userId;
+      if (!userId) {
+        return res.redirect('/reviews/settings?error=no_user');
+      }
+
+      const { exchangeFacebookAuthCode, getLongLivedToken, FacebookPagesService } = await import('./services/facebook-pages');
+      
+      const frontendUrl = process.env.FRONTEND_URL || `https://${req.headers.host}`;
+      const redirectUri = `${frontendUrl}/api/reviews/oauth/facebook/callback`;
+
+      const shortLivedToken = await exchangeFacebookAuthCode(code as string, redirectUri);
+      
+      if (!shortLivedToken) {
+        return res.redirect('/reviews/settings?error=token_exchange_failed');
+      }
+
+      // Exchange for long-lived token
+      const longLivedToken = await getLongLivedToken(shortLivedToken.accessToken);
+      const finalToken = longLivedToken || shortLivedToken;
+
+      // Get user's pages
+      const service = new FacebookPagesService(finalToken.accessToken);
+      const pages = await service.getUserPages();
+
+      if (pages.length === 0) {
+        return res.redirect('/reviews/settings?error=no_facebook_pages');
+      }
+
+      // For now, use first page
+      // TODO: Add UI to select page
+      const firstPage = pages[0];
+
+      // Check if already connected
+      const existing = await storage.getReviewSourceByPlatform(userId, 'facebook');
+      if (existing) {
+        // Update existing
+        await storage.updateReviewSource(existing.id, userId, {
+          accessToken: firstPage.access_token, // Page access token
+          tokenExpiry: new Date(Date.now() + finalToken.expiresIn * 1000),
+          connectionStatus: 'connected',
+          connectionError: null,
+          displayName: firstPage.name,
+          platformLocationId: firstPage.id,
+          platformUrl: firstPage.link || `https://facebook.com/${firstPage.id}`,
+          totalReviewsCount: firstPage.rating_count || 0,
+          averageRating: firstPage.overall_star_rating ? Math.round(firstPage.overall_star_rating * 10) : null,
+          metadata: {
+            category: firstPage.category,
+            userAccessToken: finalToken.accessToken,
+          },
+        });
+      } else {
+        // Create new
+        await storage.createReviewSource({
+          userId,
+          platform: 'facebook',
+          displayName: firstPage.name,
+          platformLocationId: firstPage.id,
+          platformUrl: firstPage.link || `https://facebook.com/${firstPage.id}`,
+          connectionStatus: 'connected',
+          accessToken: firstPage.access_token,
+          tokenExpiry: new Date(Date.now() + finalToken.expiresIn * 1000),
+          tokenScopes: 'pages_read_user_content,pages_read_engagement',
+          totalReviewsCount: firstPage.rating_count || 0,
+          averageRating: firstPage.overall_star_rating ? Math.round(firstPage.overall_star_rating * 10) : null,
+          metadata: {
+            category: firstPage.category,
+            userAccessToken: finalToken.accessToken,
+          },
+        });
+      }
+
+      console.log(`✅ [FacebookOAuth] Connected for user ${userId}: ${firstPage.name}`);
+      
+      res.redirect('/reviews/settings?success=facebook_connected');
+    } catch (error: any) {
+      console.error("[FacebookOAuth] Callback error:", error);
+      res.redirect('/reviews/settings?error=callback_failed');
+    }
   });
 
   const httpServer = createServer(app);

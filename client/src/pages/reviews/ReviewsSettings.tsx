@@ -12,9 +12,505 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Settings, Clock, MessageSquare, Globe, Loader2, Save, ExternalLink, AlertCircle, Gift, Plus, Trash2, Star, Percent, Coffee, Tag } from "lucide-react";
+import { Settings, Clock, MessageSquare, Globe, Loader2, Save, ExternalLink, AlertCircle, Gift, Plus, Trash2, Star, Percent, Coffee, Tag, RefreshCw, Link2, Unlink, CheckCircle2, XCircle, Wifi } from "lucide-react";
 import { SiGoogle, SiFacebook, SiTripadvisor, SiYelp } from "react-icons/si";
-import type { ReviewConfig, ReviewIncentive } from "@shared/schema";
+import type { ReviewConfig, ReviewIncentive, ReviewSource, ReviewSyncLog } from "@shared/schema";
+import { formatDistanceToNow } from "date-fns";
+import { fr } from "date-fns/locale";
+
+function PlatformConnectionsSection() {
+  const { toast } = useToast();
+  const [tripadvisorUrl, setTripadvisorUrl] = useState("");
+  const [showTripAdvisorDialog, setShowTripAdvisorDialog] = useState(false);
+
+  const { data: sources = [], isLoading: loadingSources } = useQuery<ReviewSource[]>({
+    queryKey: ["/api/reviews/sources"],
+  });
+
+  const { data: syncLogs = [], isLoading: loadingLogs } = useQuery<ReviewSyncLog[]>({
+    queryKey: ["/api/reviews/sync-logs"],
+  });
+
+  const connectGoogleMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("GET", "/api/reviews/oauth/google/connect");
+      const data = await response.json();
+      window.location.href = data.authUrl;
+    },
+    onError: () => {
+      toast({
+        title: "Erreur",
+        description: "Impossible de se connecter à Google Business Profile",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const connectFacebookMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("GET", "/api/reviews/oauth/facebook/connect");
+      const data = await response.json();
+      window.location.href = data.authUrl;
+    },
+    onError: () => {
+      toast({
+        title: "Erreur",
+        description: "Impossible de se connecter à Facebook",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const connectTripAdvisorMutation = useMutation({
+    mutationFn: async (tripadvisorUrl: string) => {
+      return await apiRequest("POST", "/api/reviews/sources/tripadvisor/connect", { tripadvisorUrl });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/reviews/sources"] });
+      toast({
+        title: "TripAdvisor connecté",
+        description: "Votre établissement a été ajouté.",
+      });
+      setShowTripAdvisorDialog(false);
+      setTripadvisorUrl("");
+    },
+    onError: () => {
+      toast({
+        title: "Erreur",
+        description: "Impossible de connecter TripAdvisor",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const disconnectMutation = useMutation({
+    mutationFn: async (sourceId: string) => {
+      return await apiRequest("DELETE", `/api/reviews/sources/${sourceId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/reviews/sources"] });
+      toast({
+        title: "Plateforme déconnectée",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erreur",
+        description: "Impossible de déconnecter la plateforme",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const syncMutation = useMutation({
+    mutationFn: async (sourceId: string) => {
+      return await apiRequest("POST", `/api/reviews/sources/${sourceId}/sync`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/reviews/sources"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/reviews/sync-logs"] });
+      toast({
+        title: "Synchronisation lancée",
+        description: "Les avis sont en cours de récupération.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erreur",
+        description: "Impossible de synchroniser les avis",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const syncAllMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("POST", "/api/reviews/sources/sync-all");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/reviews/sources"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/reviews/sync-logs"] });
+      toast({
+        title: "Synchronisation globale lancée",
+        description: "Tous vos avis sont en cours de récupération.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erreur",
+        description: "Impossible de synchroniser les avis",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const getPlatformIcon = (platform: string) => {
+    switch (platform) {
+      case "google":
+        return <SiGoogle className="h-4 w-4 text-red-500" />;
+      case "facebook":
+        return <SiFacebook className="h-4 w-4 text-blue-600" />;
+      case "tripadvisor":
+        return <SiTripadvisor className="h-4 w-4 text-green-600" />;
+      default:
+        return <Globe className="h-4 w-4" />;
+    }
+  };
+
+  const getPlatformName = (platform: string) => {
+    switch (platform) {
+      case "google":
+        return "Google Business Profile";
+      case "facebook":
+        return "Facebook";
+      case "tripadvisor":
+        return "TripAdvisor";
+      default:
+        return platform;
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "active":
+        return (
+          <Badge className="bg-[#4CEFAD]/10 text-[#4CEFAD] border-[#4CEFAD]/20 text-[10px]">
+            <CheckCircle2 className="h-3 w-3 mr-1" />
+            Connecté
+          </Badge>
+        );
+      case "error":
+        return (
+          <Badge variant="destructive" className="text-[10px]">
+            <XCircle className="h-3 w-3 mr-1" />
+            Erreur
+          </Badge>
+        );
+      case "pending":
+        return (
+          <Badge variant="secondary" className="text-[10px]">
+            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+            En attente
+          </Badge>
+        );
+      default:
+        return null;
+    }
+  };
+
+  const connectedSources = sources.filter(s => s.status === "active");
+  const lastSync = syncLogs.length > 0 ? syncLogs[0] : null;
+
+  return (
+    <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] md:col-span-2">
+      <CardHeader className="pb-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2 text-base font-semibold">
+              <div className="p-1.5 rounded-lg bg-[#4CEFAD]/10">
+                <Wifi className="h-4 w-4 text-[#4CEFAD]" />
+              </div>
+              Agrégation des Avis
+            </CardTitle>
+            <CardDescription className="text-xs mt-1">
+              Connectez vos plateformes pour centraliser tous vos avis
+            </CardDescription>
+          </div>
+          {connectedSources.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => syncAllMutation.mutate()}
+              disabled={syncAllMutation.isPending}
+              data-testid="button-sync-all"
+            >
+              {syncAllMutation.isPending ? (
+                <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+              )}
+              Synchroniser tout
+            </Button>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-5 pt-0">
+        <div className="grid gap-3 md:grid-cols-3">
+          <PlatformCard
+            name="Google Business Profile"
+            icon={<SiGoogle className="h-5 w-5 text-red-500" />}
+            description="Récupérez vos avis Google"
+            source={sources.find(s => s.platform === "google")}
+            onConnect={() => connectGoogleMutation.mutate()}
+            onDisconnect={(id) => disconnectMutation.mutate(id)}
+            onSync={(id) => syncMutation.mutate(id)}
+            isConnecting={connectGoogleMutation.isPending}
+            isSyncing={syncMutation.isPending}
+          />
+
+          <PlatformCard
+            name="Facebook"
+            icon={<SiFacebook className="h-5 w-5 text-blue-600" />}
+            description="Récupérez vos avis Facebook"
+            source={sources.find(s => s.platform === "facebook")}
+            onConnect={() => connectFacebookMutation.mutate()}
+            onDisconnect={(id) => disconnectMutation.mutate(id)}
+            onSync={(id) => syncMutation.mutate(id)}
+            isConnecting={connectFacebookMutation.isPending}
+            isSyncing={syncMutation.isPending}
+          />
+
+          <div className="p-4 rounded-xl border border-border/40 bg-muted/10 hover:bg-muted/15 transition-colors">
+            <div className="flex items-start gap-3 mb-3">
+              <div className="p-2 rounded-lg bg-green-500/10">
+                <SiTripadvisor className="h-5 w-5 text-green-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="text-sm font-medium">TripAdvisor</h4>
+                <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                  Récupérez vos avis TripAdvisor
+                </p>
+              </div>
+            </div>
+
+            {sources.find(s => s.platform === "tripadvisor") ? (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  {getStatusBadge(sources.find(s => s.platform === "tripadvisor")?.status || "")}
+                  <span className="text-[10px] text-muted-foreground">
+                    {sources.find(s => s.platform === "tripadvisor")?.reviewCount || 0} avis
+                  </span>
+                </div>
+                <div className="flex gap-1.5">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="flex-1 h-7 text-xs"
+                    onClick={() => {
+                      const source = sources.find(s => s.platform === "tripadvisor");
+                      if (source) syncMutation.mutate(source.id);
+                    }}
+                    disabled={syncMutation.isPending}
+                    data-testid="button-sync-tripadvisor"
+                  >
+                    <RefreshCw className="h-3 w-3 mr-1" />
+                    Sync
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="flex-1 h-7 text-xs text-destructive hover:text-destructive"
+                    onClick={() => {
+                      const source = sources.find(s => s.platform === "tripadvisor");
+                      if (source) disconnectMutation.mutate(source.id);
+                    }}
+                    data-testid="button-disconnect-tripadvisor"
+                  >
+                    <Unlink className="h-3 w-3 mr-1" />
+                    Déconnecter
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <Dialog open={showTripAdvisorDialog} onOpenChange={setShowTripAdvisorDialog}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="w-full h-8" data-testid="button-connect-tripadvisor">
+                    <Link2 className="h-3.5 w-3.5 mr-1.5" />
+                    Connecter
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      <SiTripadvisor className="h-5 w-5 text-green-600" />
+                      Connecter TripAdvisor
+                    </DialogTitle>
+                    <DialogDescription>
+                      Entrez l'URL de votre page TripAdvisor pour récupérer vos avis.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label>URL TripAdvisor</Label>
+                      <Input
+                        value={tripadvisorUrl}
+                        onChange={(e) => setTripadvisorUrl(e.target.value)}
+                        placeholder="https://www.tripadvisor.fr/Restaurant_Review-g187147-d..."
+                        data-testid="input-tripadvisor-url-dialog"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Copiez l'URL de votre page TripAdvisor depuis votre navigateur
+                      </p>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button
+                      onClick={() => connectTripAdvisorMutation.mutate(tripadvisorUrl)}
+                      disabled={!tripadvisorUrl || connectTripAdvisorMutation.isPending}
+                    >
+                      {connectTripAdvisorMutation.isPending && (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      )}
+                      Connecter
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
+        </div>
+
+        {lastSync && (
+          <div className="p-3 bg-muted/20 rounded-lg border border-border/30">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <RefreshCw className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">Dernière synchronisation</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-xs">
+                  {formatDistanceToNow(new Date(lastSync.syncedAt), { addSuffix: true, locale: fr })}
+                </span>
+                {lastSync.status === "success" ? (
+                  <Badge className="bg-[#4CEFAD]/10 text-[#4CEFAD] border-[#4CEFAD]/20 text-[10px]">
+                    {lastSync.reviewsFetched} avis récupérés
+                  </Badge>
+                ) : (
+                  <Badge variant="destructive" className="text-[10px]">
+                    Échec
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {connectedSources.length === 0 && (
+          <div className="p-4 bg-muted/30 rounded-lg border border-border/30 text-center">
+            <AlertCircle className="h-8 w-8 text-muted-foreground/50 mx-auto mb-2" />
+            <p className="text-sm text-muted-foreground">
+              Connectez au moins une plateforme pour commencer à centraliser vos avis
+            </p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+interface PlatformCardProps {
+  name: string;
+  icon: React.ReactNode;
+  description: string;
+  source?: ReviewSource;
+  onConnect: () => void;
+  onDisconnect: (id: string) => void;
+  onSync: (id: string) => void;
+  isConnecting: boolean;
+  isSyncing: boolean;
+}
+
+function PlatformCard({
+  name,
+  icon,
+  description,
+  source,
+  onConnect,
+  onDisconnect,
+  onSync,
+  isConnecting,
+  isSyncing,
+}: PlatformCardProps) {
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "active":
+        return (
+          <Badge className="bg-[#4CEFAD]/10 text-[#4CEFAD] border-[#4CEFAD]/20 text-[10px]">
+            <CheckCircle2 className="h-3 w-3 mr-1" />
+            Connecté
+          </Badge>
+        );
+      case "error":
+        return (
+          <Badge variant="destructive" className="text-[10px]">
+            <XCircle className="h-3 w-3 mr-1" />
+            Erreur
+          </Badge>
+        );
+      case "pending":
+        return (
+          <Badge variant="secondary" className="text-[10px]">
+            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+            En attente
+          </Badge>
+        );
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="p-4 rounded-xl border border-border/40 bg-muted/10 hover:bg-muted/15 transition-colors">
+      <div className="flex items-start gap-3 mb-3">
+        <div className="p-2 rounded-lg bg-muted/30">{icon}</div>
+        <div className="flex-1 min-w-0">
+          <h4 className="text-sm font-medium">{name}</h4>
+          <p className="text-xs text-muted-foreground mt-0.5 truncate">{description}</p>
+        </div>
+      </div>
+
+      {source ? (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            {getStatusBadge(source.status)}
+            <span className="text-[10px] text-muted-foreground">
+              {source.reviewCount || 0} avis
+            </span>
+          </div>
+          <div className="flex gap-1.5">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="flex-1 h-7 text-xs"
+              onClick={() => onSync(source.id)}
+              disabled={isSyncing}
+              data-testid={`button-sync-${name.toLowerCase().replace(/ /g, "-")}`}
+            >
+              <RefreshCw className="h-3 w-3 mr-1" />
+              Sync
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="flex-1 h-7 text-xs text-destructive hover:text-destructive"
+              onClick={() => onDisconnect(source.id)}
+              data-testid={`button-disconnect-${name.toLowerCase().replace(/ /g, "-")}`}
+            >
+              <Unlink className="h-3 w-3 mr-1" />
+              Déconnecter
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full h-8"
+          onClick={onConnect}
+          disabled={isConnecting}
+          data-testid={`button-connect-${name.toLowerCase().replace(/ /g, "-")}`}
+        >
+          {isConnecting ? (
+            <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+          ) : (
+            <Link2 className="h-3.5 w-3.5 mr-1.5" />
+          )}
+          Connecter
+        </Button>
+      )}
+    </div>
+  );
+}
 
 const INCENTIVE_TYPES = [
   { value: "percentage", label: "Réduction (%)", icon: Percent },
@@ -771,19 +1267,10 @@ export default function ReviewsSettings() {
               </div>
           </div>
 
-          <div className="mt-4 p-3 bg-muted/30 rounded-lg border border-border/30">
-            <div className="flex items-start gap-2.5">
-              <AlertCircle className="h-4 w-4 text-muted-foreground/70 mt-0.5 flex-shrink-0" />
-              <div>
-                <p className="text-xs font-medium text-foreground/80">Connexions API (bientôt)</p>
-                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-                  Synchronisation automatique avec Google Business Profile et Facebook pour récupérer vos avis en temps réel.
-                </p>
-              </div>
-            </div>
-          </div>
         </CardContent>
       </Card>
+
+      <PlatformConnectionsSection />
     </div>
   );
 }

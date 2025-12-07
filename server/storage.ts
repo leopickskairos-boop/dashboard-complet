@@ -15,6 +15,8 @@ import {
   reviewRequests,
   reviews,
   reviewAlerts,
+  reviewSources,
+  reviewSyncLogs,
   type User, 
   type InsertUser, 
   type Call, 
@@ -44,7 +46,11 @@ import {
   type Review,
   type InsertReview,
   type ReviewAlert,
-  type InsertReviewAlert
+  type InsertReviewAlert,
+  type ReviewSource,
+  type InsertReviewSource,
+  type ReviewSyncLog,
+  type InsertReviewSyncLog
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lte, desc, sql, count, isNotNull, or } from "drizzle-orm";
@@ -251,6 +257,24 @@ export interface IStorage {
   // Review alerts
   getReviewAlerts(userId: string): Promise<ReviewAlert[]>;
   upsertReviewAlerts(userId: string, alerts: Partial<InsertReviewAlert>[]): Promise<void>;
+  
+  // Review sources (platform connections)
+  getReviewSources(userId: string): Promise<ReviewSource[]>;
+  getReviewSourceById(id: string, userId: string): Promise<ReviewSource | undefined>;
+  getReviewSourceByPlatform(userId: string, platform: string): Promise<ReviewSource | undefined>;
+  getAllConnectedSources(): Promise<ReviewSource[]>;
+  createReviewSource(source: InsertReviewSource): Promise<ReviewSource>;
+  updateReviewSource(id: string, userId: string, updates: Partial<ReviewSource>): Promise<ReviewSource | undefined>;
+  deleteReviewSource(id: string, userId: string): Promise<void>;
+  
+  // Review sync logs
+  createSyncLog(log: InsertReviewSyncLog): Promise<ReviewSyncLog>;
+  updateSyncLog(id: string, updates: Partial<ReviewSyncLog>): Promise<ReviewSyncLog | undefined>;
+  getSyncLogs(sourceId: string, limit?: number): Promise<ReviewSyncLog[]>;
+  
+  // Reviews with source
+  getReviewByPlatformId(platformReviewId: string, platform: string): Promise<Review | undefined>;
+  upsertReviewFromPlatform(review: InsertReview): Promise<Review>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1743,6 +1767,126 @@ export class DatabaseStorage implements IStorage {
           .values({ ...alert, userId, alertType: alert.alertType });
       }
     }
+  }
+
+  // ===== REVIEW SOURCES =====
+
+  async getReviewSources(userId: string): Promise<ReviewSource[]> {
+    return await db
+      .select()
+      .from(reviewSources)
+      .where(eq(reviewSources.userId, userId))
+      .orderBy(desc(reviewSources.createdAt));
+  }
+
+  async getReviewSourceById(id: string, userId: string): Promise<ReviewSource | undefined> {
+    const [source] = await db
+      .select()
+      .from(reviewSources)
+      .where(and(eq(reviewSources.id, id), eq(reviewSources.userId, userId)));
+    return source || undefined;
+  }
+
+  async getReviewSourceByPlatform(userId: string, platform: string): Promise<ReviewSource | undefined> {
+    const [source] = await db
+      .select()
+      .from(reviewSources)
+      .where(and(eq(reviewSources.userId, userId), eq(reviewSources.platform, platform)));
+    return source || undefined;
+  }
+
+  async getAllConnectedSources(): Promise<ReviewSource[]> {
+    return await db
+      .select()
+      .from(reviewSources)
+      .where(eq(reviewSources.connectionStatus, 'connected'));
+  }
+
+  async createReviewSource(source: InsertReviewSource): Promise<ReviewSource> {
+    const [created] = await db
+      .insert(reviewSources)
+      .values(source)
+      .returning();
+    return created;
+  }
+
+  async updateReviewSource(id: string, userId: string, updates: Partial<ReviewSource>): Promise<ReviewSource | undefined> {
+    const [updated] = await db
+      .update(reviewSources)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(eq(reviewSources.id, id), eq(reviewSources.userId, userId)))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteReviewSource(id: string, userId: string): Promise<void> {
+    await db
+      .delete(reviewSources)
+      .where(and(eq(reviewSources.id, id), eq(reviewSources.userId, userId)));
+  }
+
+  // ===== REVIEW SYNC LOGS =====
+
+  async createSyncLog(log: InsertReviewSyncLog): Promise<ReviewSyncLog> {
+    const [created] = await db
+      .insert(reviewSyncLogs)
+      .values(log)
+      .returning();
+    return created;
+  }
+
+  async updateSyncLog(id: string, updates: Partial<ReviewSyncLog>): Promise<ReviewSyncLog | undefined> {
+    const [updated] = await db
+      .update(reviewSyncLogs)
+      .set(updates)
+      .where(eq(reviewSyncLogs.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async getSyncLogs(sourceId: string, limit: number = 10): Promise<ReviewSyncLog[]> {
+    return await db
+      .select()
+      .from(reviewSyncLogs)
+      .where(eq(reviewSyncLogs.sourceId, sourceId))
+      .orderBy(desc(reviewSyncLogs.startedAt))
+      .limit(limit);
+  }
+
+  // ===== REVIEWS WITH PLATFORM ID =====
+
+  async getReviewByPlatformId(platformReviewId: string, platform: string): Promise<Review | undefined> {
+    const [review] = await db
+      .select()
+      .from(reviews)
+      .where(and(
+        eq(reviews.platformReviewId, platformReviewId),
+        eq(reviews.platform, platform)
+      ));
+    return review || undefined;
+  }
+
+  async upsertReviewFromPlatform(review: InsertReview): Promise<Review> {
+    // Check if review already exists
+    if (review.platformReviewId) {
+      const existing = await this.getReviewByPlatformId(review.platformReviewId, review.platform);
+      if (existing) {
+        // Update existing review
+        const [updated] = await db
+          .update(reviews)
+          .set({ ...review, updatedAt: new Date() })
+          .where(eq(reviews.id, existing.id))
+          .returning();
+        return updated;
+      }
+    }
+    
+    // Create new review
+    const [created] = await db
+      .insert(reviews)
+      .values(review)
+      .returning();
+    return created;
   }
 }
 
