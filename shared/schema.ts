@@ -885,3 +885,349 @@ export type CreateGuaranteeSession = z.infer<typeof createGuaranteeSessionSchema
 export type UpdateGuaranteeConfig = z.infer<typeof updateGuaranteeConfigSchema>;
 export type ValidateGuaranteeSession = z.infer<typeof validateGuaranteeSessionSchema>;
 export type UpdateReservationStatus = z.infer<typeof updateReservationStatusSchema>;
+
+// ===== REVIEW & REPUTATION SYSTEM TABLES =====
+
+// Review timing mode enum
+export const reviewTimingModeEnum = pgEnum('review_timing_mode', [
+  'smart',        // IA détermine le meilleur moment
+  'fixed_delay',  // X heures après le RDV
+  'fixed_time'    // Heure fixe chaque jour
+]);
+
+// Review incentive type enum
+export const reviewIncentiveTypeEnum = pgEnum('review_incentive_type', [
+  'percentage',     // -10%
+  'fixed_amount',   // -5€
+  'free_item',      // Dessert offert
+  'lottery',        // Tirage au sort
+  'loyalty_points', // Points fidélité
+  'custom'          // Personnalisé
+]);
+
+// Review request status enum
+export const reviewRequestStatusEnum = pgEnum('review_request_status', [
+  'pending',    // En attente de planification
+  'scheduled',  // Planifié
+  'sent',       // Envoyé
+  'clicked',    // Lien cliqué
+  'confirmed',  // Avis confirmé
+  'expired'     // Expiré
+]);
+
+// Review sentiment enum
+export const reviewSentimentEnum = pgEnum('review_sentiment', [
+  'very_positive',
+  'positive',
+  'neutral',
+  'negative',
+  'very_negative'
+]);
+
+// Review alert type enum
+export const reviewAlertTypeEnum = pgEnum('review_alert_type', [
+  'negative_review',   // Nouvel avis négatif
+  'new_5_star',        // Nouvel avis 5 étoiles
+  'no_response_48h',   // Pas de réponse depuis 48h
+  'weekly_report',     // Rapport hebdomadaire
+  'rating_drop'        // Baisse de note moyenne
+]);
+
+// Review configuration table
+export const reviewConfig = pgTable("review_config", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }).unique(),
+  
+  // Activation
+  enabled: boolean("enabled").notNull().default(false),
+  
+  // Timing d'envoi
+  timingMode: text("timing_mode").notNull().default("smart"), // 'smart', 'fixed_delay', 'fixed_time'
+  fixedDelayHours: integer("fixed_delay_hours").notNull().default(24),
+  fixedTime: text("fixed_time").default("18:00"), // HH:MM
+  sendWindowStart: text("send_window_start").default("10:00"),
+  sendWindowEnd: text("send_window_end").default("20:00"),
+  avoidWeekends: boolean("avoid_weekends").notNull().default(false),
+  
+  // Message personnalisé
+  smsMessage: text("sms_message"),
+  emailSubject: text("email_subject"),
+  emailMessage: text("email_message"),
+  
+  // Plateformes (liens directs)
+  googlePlaceId: text("google_place_id"),
+  googleReviewUrl: text("google_review_url"),
+  tripadvisorUrl: text("tripadvisor_url"),
+  facebookPageUrl: text("facebook_page_url"),
+  pagesJaunesUrl: text("pages_jaunes_url"),
+  doctolibUrl: text("doctolib_url"),
+  yelpUrl: text("yelp_url"),
+  
+  // Connexions API (OAuth) - stub pour phase 2
+  googleBusinessConnected: boolean("google_business_connected").notNull().default(false),
+  googleBusinessToken: jsonb("google_business_token"),
+  googleBusinessAccountId: text("google_business_account_id"),
+  googleBusinessLocationId: text("google_business_location_id"),
+  
+  facebookConnected: boolean("facebook_connected").notNull().default(false),
+  facebookToken: jsonb("facebook_token"),
+  facebookPageId: text("facebook_page_id"),
+  
+  // Priorité des plateformes
+  platformsPriority: jsonb("platforms_priority").default(['google', 'tripadvisor', 'facebook']),
+  
+  // Timestamps
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Insert schema for review config
+export const insertReviewConfigSchema = createInsertSchema(reviewConfig).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Types for review config
+export type InsertReviewConfig = z.infer<typeof insertReviewConfigSchema>;
+export type ReviewConfig = typeof reviewConfig.$inferSelect;
+
+// Review incentives table
+export const reviewIncentives = pgTable("review_incentives", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  
+  // Type d'incitation
+  type: text("type").notNull(), // 'percentage', 'fixed_amount', 'free_item', 'lottery', 'loyalty_points', 'custom'
+  
+  // Valeurs selon le type
+  percentageValue: integer("percentage_value"),
+  fixedAmountValue: integer("fixed_amount_value"), // Centimes
+  freeItemName: text("free_item_name"),
+  lotteryPrize: text("lottery_prize"),
+  loyaltyPointsValue: integer("loyalty_points_value"),
+  customDescription: text("custom_description"),
+  
+  // Conditions
+  validityDays: integer("validity_days").notNull().default(30),
+  singleUse: boolean("single_use").notNull().default(true),
+  minimumPurchase: integer("minimum_purchase").default(0), // Centimes
+  
+  // Message affiché
+  displayMessage: text("display_message"),
+  
+  // Statut
+  isActive: boolean("is_active").notNull().default(true),
+  isDefault: boolean("is_default").notNull().default(false),
+  
+  // Timestamps
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Insert schema for review incentives
+export const insertReviewIncentiveSchema = createInsertSchema(reviewIncentives).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Types for review incentives
+export type InsertReviewIncentive = z.infer<typeof insertReviewIncentiveSchema>;
+export type ReviewIncentive = typeof reviewIncentives.$inferSelect;
+
+// Review requests table
+export const reviewRequests = pgTable("review_requests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  
+  // Infos client
+  customerName: text("customer_name"),
+  customerEmail: text("customer_email"),
+  customerPhone: text("customer_phone"),
+  
+  // Lien réservation
+  reservationId: text("reservation_id"),
+  reservationDate: timestamp("reservation_date"),
+  reservationTime: text("reservation_time"), // HH:MM
+  
+  // Envoi
+  scheduledAt: timestamp("scheduled_at"),
+  sentAt: timestamp("sent_at"),
+  sendMethod: text("send_method").notNull().default("both"), // 'sms', 'email', 'both'
+  
+  // Tracking
+  trackingToken: text("tracking_token").unique(),
+  linkClickedAt: timestamp("link_clicked_at"),
+  platformClicked: text("platform_clicked"),
+  
+  // Confirmation
+  reviewConfirmedAt: timestamp("review_confirmed_at"),
+  reviewConfirmedPlatform: text("review_confirmed_platform"),
+  
+  // Incitation
+  incentiveId: varchar("incentive_id").references(() => reviewIncentives.id, { onDelete: 'set null' }),
+  promoCode: text("promo_code"),
+  promoCodeUsedAt: timestamp("promo_code_used_at"),
+  
+  // Statut
+  status: text("status").notNull().default("pending"), // 'pending', 'scheduled', 'sent', 'clicked', 'confirmed', 'expired'
+  
+  // Timestamps
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Insert schema for review requests
+export const insertReviewRequestSchema = createInsertSchema(reviewRequests).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Types for review requests
+export type InsertReviewRequest = z.infer<typeof insertReviewRequestSchema>;
+export type ReviewRequest = typeof reviewRequests.$inferSelect;
+
+// Reviews table (centralized from all platforms)
+export const reviews = pgTable("reviews", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  
+  // Plateforme
+  platform: text("platform").notNull(), // 'google', 'tripadvisor', 'facebook', 'yelp', etc.
+  platformReviewId: text("platform_review_id"),
+  
+  // Contenu
+  rating: integer("rating").notNull(), // 1-5
+  content: text("content"),
+  reviewerName: text("reviewer_name"),
+  reviewerAvatarUrl: text("reviewer_avatar_url"),
+  reviewDate: timestamp("review_date"),
+  
+  // Réponse
+  responseText: text("response_text"),
+  responseDate: timestamp("response_date"),
+  responseStatus: text("response_status").notNull().default("none"), // 'none', 'draft', 'published'
+  
+  // Analyse IA
+  sentiment: text("sentiment"), // 'very_positive', 'positive', 'neutral', 'negative', 'very_negative'
+  themes: jsonb("themes"), // Array of detected themes
+  aiSummary: text("ai_summary"),
+  aiSuggestedResponse: text("ai_suggested_response"),
+  
+  // Matching
+  matchedRequestId: varchar("matched_request_id").references(() => reviewRequests.id, { onDelete: 'set null' }),
+  
+  // Statut
+  isRead: boolean("is_read").notNull().default(false),
+  isFlagged: boolean("is_flagged").notNull().default(false),
+  
+  // Timestamps
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Insert schema for reviews
+export const insertReviewSchema = createInsertSchema(reviews).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Types for reviews
+export type InsertReview = z.infer<typeof insertReviewSchema>;
+export type Review = typeof reviews.$inferSelect;
+
+// Review alerts configuration table
+export const reviewAlerts = pgTable("review_alerts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  
+  alertType: text("alert_type").notNull(), // 'negative_review', 'new_5_star', 'no_response_48h', 'weekly_report', 'rating_drop'
+  
+  isEnabled: boolean("is_enabled").notNull().default(true),
+  emailNotification: boolean("email_notification").notNull().default(true),
+  smsNotification: boolean("sms_notification").notNull().default(false),
+  pushNotification: boolean("push_notification").notNull().default(true),
+  
+  thresholdValue: integer("threshold_value"), // Pour rating_drop: seuil en points (ex: 3 = -0.3)
+  
+  // Timestamps
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Insert schema for review alerts
+export const insertReviewAlertSchema = createInsertSchema(reviewAlerts).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Types for review alerts
+export type InsertReviewAlert = z.infer<typeof insertReviewAlertSchema>;
+export type ReviewAlert = typeof reviewAlerts.$inferSelect;
+
+// ===== REVIEW API SCHEMAS =====
+
+// Schema for updating review config
+export const updateReviewConfigSchema = z.object({
+  enabled: z.boolean().optional(),
+  timingMode: z.enum(['smart', 'fixed_delay', 'fixed_time']).optional(),
+  fixedDelayHours: z.number().int().min(1).max(168).optional(),
+  fixedTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/).optional(),
+  sendWindowStart: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/).optional(),
+  sendWindowEnd: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/).optional(),
+  avoidWeekends: z.boolean().optional(),
+  smsMessage: z.string().max(160).nullable().optional(),
+  emailSubject: z.string().max(255).nullable().optional(),
+  emailMessage: z.string().nullable().optional(),
+  googlePlaceId: z.string().nullable().optional(),
+  googleReviewUrl: z.string().url().nullable().optional(),
+  tripadvisorUrl: z.string().url().nullable().optional(),
+  facebookPageUrl: z.string().url().nullable().optional(),
+  pagesJaunesUrl: z.string().url().nullable().optional(),
+  doctolibUrl: z.string().url().nullable().optional(),
+  yelpUrl: z.string().url().nullable().optional(),
+  platformsPriority: z.array(z.string()).optional(),
+});
+
+// Schema for creating review incentive
+export const createReviewIncentiveSchema = z.object({
+  type: z.enum(['percentage', 'fixed_amount', 'free_item', 'lottery', 'loyalty_points', 'custom']),
+  percentageValue: z.number().int().min(1).max(100).optional(),
+  fixedAmountValue: z.number().int().min(1).optional(),
+  freeItemName: z.string().max(255).optional(),
+  lotteryPrize: z.string().max(255).optional(),
+  loyaltyPointsValue: z.number().int().min(1).optional(),
+  customDescription: z.string().optional(),
+  validityDays: z.number().int().min(1).max(365).default(30),
+  singleUse: z.boolean().default(true),
+  minimumPurchase: z.number().int().min(0).default(0),
+  displayMessage: z.string().max(255),
+});
+
+// Schema for creating review request manually
+export const createReviewRequestSchema = z.object({
+  customerName: z.string().min(1).max(100),
+  customerEmail: z.string().email().optional(),
+  customerPhone: z.string().optional(),
+  reservationId: z.string().optional(),
+  reservationDate: z.string().datetime().optional(),
+  reservationTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/).optional(),
+  sendMethod: z.enum(['sms', 'email', 'both']).default('both'),
+  incentiveId: z.string().uuid().optional(),
+});
+
+// Schema for responding to a review
+export const respondToReviewSchema = z.object({
+  responseText: z.string().min(1).max(2000),
+  publish: z.boolean().default(false),
+});
+
+// Schema for review stats query
+export const reviewStatsQuerySchema = z.object({
+  period: z.enum(['week', 'month', 'year', 'all']).default('month'),
+});
+
+// Types
+export type UpdateReviewConfig = z.infer<typeof updateReviewConfigSchema>;
+export type CreateReviewIncentive = z.infer<typeof createReviewIncentiveSchema>;
+export type CreateReviewRequest = z.infer<typeof createReviewRequestSchema>;
+export type RespondToReview = z.infer<typeof respondToReviewSchema>;
+export type ReviewStatsQuery = z.infer<typeof reviewStatsQuerySchema>;

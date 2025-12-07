@@ -1,0 +1,394 @@
+# 🌟 PROMPT REPLIT - Système Avis & Réputation Complet (Partie 1/2)
+
+---
+
+## CONTEXTE
+
+Je développe SpeedAI, un service d'IA réceptionniste. J'ai besoin d'ajouter un **système complet de gestion des avis** pour aider mes clients à :
+1. Collecter plus d'avis automatiquement après chaque RDV
+2. Centraliser tous leurs avis (Google, TripAdvisor, Facebook, etc.)
+3. Analyser leur réputation avec des insights IA
+4. Répondre aux avis facilement
+
+---
+
+## BASE DE DONNÉES
+
+### Table : review_config
+
+```sql
+CREATE TABLE review_config (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id) UNIQUE,
+  
+  -- Activation
+  enabled BOOLEAN DEFAULT FALSE,
+  
+  -- Timing d'envoi
+  timing_mode VARCHAR(20) DEFAULT 'smart', -- 'smart', 'fixed_delay', 'fixed_time'
+  fixed_delay_hours INTEGER DEFAULT 24,
+  fixed_time TIME DEFAULT '18:00',
+  send_window_start TIME DEFAULT '10:00',
+  send_window_end TIME DEFAULT '20:00',
+  avoid_weekends BOOLEAN DEFAULT FALSE,
+  
+  -- Message personnalisé
+  sms_message TEXT,
+  email_subject VARCHAR(255),
+  email_message TEXT,
+  
+  -- Plateformes (liens directs)
+  google_place_id VARCHAR(255),
+  google_review_url VARCHAR(500),
+  tripadvisor_url VARCHAR(500),
+  facebook_page_url VARCHAR(500),
+  pages_jaunes_url VARCHAR(500),
+  doctolib_url VARCHAR(500),
+  yelp_url VARCHAR(500),
+  
+  -- Connexions API (OAuth)
+  google_business_connected BOOLEAN DEFAULT FALSE,
+  google_business_token JSONB,
+  google_business_account_id VARCHAR(255),
+  google_business_location_id VARCHAR(255),
+  
+  facebook_connected BOOLEAN DEFAULT FALSE,
+  facebook_token JSONB,
+  facebook_page_id VARCHAR(255),
+  
+  -- Priorité des plateformes dans le message
+  platforms_priority JSONB DEFAULT '["google", "tripadvisor", "facebook"]',
+  
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+### Table : review_incentives
+
+```sql
+CREATE TABLE review_incentives (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id),
+  
+  -- Type d'incitation
+  type VARCHAR(30) NOT NULL,
+  -- Types: 'percentage', 'fixed_amount', 'free_item', 'lottery', 'loyalty_points', 'custom'
+  
+  -- Valeurs selon le type
+  percentage_value INTEGER,
+  fixed_amount_value DECIMAL(10,2),
+  free_item_name VARCHAR(255),
+  lottery_prize VARCHAR(255),
+  loyalty_points_value INTEGER,
+  custom_description TEXT,
+  
+  -- Conditions
+  validity_days INTEGER DEFAULT 30,
+  single_use BOOLEAN DEFAULT TRUE,
+  minimum_purchase DECIMAL(10,2) DEFAULT 0,
+  
+  -- Message affiché
+  display_message VARCHAR(255),
+  
+  -- Statut
+  is_active BOOLEAN DEFAULT TRUE,
+  is_default BOOLEAN DEFAULT FALSE,
+  
+  created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+### Table : review_requests
+
+```sql
+CREATE TABLE review_requests (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id),
+  
+  -- Infos client
+  customer_name VARCHAR(100),
+  customer_email VARCHAR(255),
+  customer_phone VARCHAR(20),
+  
+  -- Lien réservation
+  reservation_id VARCHAR(100),
+  reservation_date DATE,
+  reservation_time TIME,
+  
+  -- Envoi
+  scheduled_at TIMESTAMP,
+  sent_at TIMESTAMP,
+  send_method VARCHAR(10) DEFAULT 'both',
+  
+  -- Tracking
+  tracking_token VARCHAR(100) UNIQUE,
+  link_clicked_at TIMESTAMP,
+  platform_clicked VARCHAR(50),
+  
+  -- Confirmation
+  review_confirmed_at TIMESTAMP,
+  review_confirmed_platform VARCHAR(50),
+  
+  -- Incitation
+  incentive_id UUID REFERENCES review_incentives(id),
+  promo_code VARCHAR(50),
+  promo_code_used_at TIMESTAMP,
+  
+  -- Statut
+  status VARCHAR(20) DEFAULT 'pending',
+  -- Statuts: 'pending', 'scheduled', 'sent', 'clicked', 'confirmed', 'expired'
+  
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_review_requests_user ON review_requests(user_id);
+CREATE INDEX idx_review_requests_status ON review_requests(status);
+CREATE INDEX idx_review_requests_tracking ON review_requests(tracking_token);
+CREATE INDEX idx_review_requests_scheduled ON review_requests(scheduled_at);
+```
+
+### Table : reviews
+
+```sql
+CREATE TABLE reviews (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id),
+  
+  -- Plateforme
+  platform VARCHAR(50) NOT NULL,
+  platform_review_id VARCHAR(255),
+  
+  -- Contenu
+  rating INTEGER NOT NULL,
+  content TEXT,
+  reviewer_name VARCHAR(100),
+  reviewer_avatar_url VARCHAR(500),
+  review_date TIMESTAMP,
+  
+  -- Réponse
+  response_text TEXT,
+  response_date TIMESTAMP,
+  response_status VARCHAR(20) DEFAULT 'none',
+  
+  -- Analyse IA
+  sentiment VARCHAR(20),
+  themes JSONB,
+  ai_summary TEXT,
+  ai_suggested_response TEXT,
+  
+  -- Matching
+  matched_request_id UUID REFERENCES review_requests(id),
+  
+  -- Statut
+  is_read BOOLEAN DEFAULT FALSE,
+  is_flagged BOOLEAN DEFAULT FALSE,
+  
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  
+  UNIQUE(user_id, platform, platform_review_id)
+);
+
+CREATE INDEX idx_reviews_user ON reviews(user_id);
+CREATE INDEX idx_reviews_platform ON reviews(platform);
+CREATE INDEX idx_reviews_rating ON reviews(rating);
+CREATE INDEX idx_reviews_date ON reviews(review_date);
+```
+
+### Table : review_alerts
+
+```sql
+CREATE TABLE review_alerts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id),
+  
+  alert_type VARCHAR(50) NOT NULL,
+  -- Types: 'negative_review', 'new_5_star', 'no_response_48h', 'weekly_report', 'rating_drop'
+  
+  is_enabled BOOLEAN DEFAULT TRUE,
+  email_notification BOOLEAN DEFAULT TRUE,
+  sms_notification BOOLEAN DEFAULT FALSE,
+  push_notification BOOLEAN DEFAULT TRUE,
+  
+  threshold_value DECIMAL,
+  
+  created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+---
+
+## API ENDPOINTS
+
+### Configuration
+
+```
+GET /api/reviews/config
+→ Récupérer la config
+
+PATCH /api/reviews/config
+→ Mettre à jour
+Body: { enabled, timing_mode, fixed_delay_hours, sms_message, google_review_url, ... }
+
+POST /api/reviews/config/test-message
+→ Envoyer un test
+Body: { phone, email }
+```
+
+### Connexion plateformes
+
+```
+POST /api/reviews/connect/google
+→ Initier OAuth Google Business
+Response: { auth_url }
+
+GET /api/reviews/connect/google/callback
+→ Callback OAuth
+
+POST /api/reviews/disconnect/google
+→ Déconnecter
+
+GET /api/reviews/google/locations
+→ Liste des établissements
+Response: { locations: [{ id, name, address }] }
+
+POST /api/reviews/google/select-location
+→ Sélectionner établissement
+Body: { location_id }
+```
+
+### Incitations
+
+```
+GET /api/reviews/incentives
+→ Liste des offres
+
+POST /api/reviews/incentives
+→ Créer une offre
+Body: {
+  type: "percentage" | "fixed_amount" | "free_item" | "lottery" | "loyalty_points" | "custom",
+  percentage_value: 10,
+  display_message: "Recevez -10% !",
+  validity_days: 30,
+  single_use: true
+}
+
+PATCH /api/reviews/incentives/:id
+→ Modifier
+
+DELETE /api/reviews/incentives/:id
+→ Supprimer
+
+POST /api/reviews/incentives/:id/set-default
+→ Définir par défaut
+```
+
+### Demandes d'avis
+
+```
+GET /api/reviews/requests
+→ Liste
+Query: { status, date_from, date_to, page, limit }
+
+POST /api/reviews/requests
+→ Créer manuellement
+Body: { customer_name, customer_email, customer_phone }
+
+POST /api/reviews/requests/:id/resend
+→ Renvoyer
+
+POST /api/reviews/requests/:id/cancel
+→ Annuler
+```
+
+### Avis
+
+```
+GET /api/reviews
+→ Liste des avis
+Query: { platform, rating_min, rating_max, date_from, date_to, sentiment, is_read, search, page, limit }
+
+GET /api/reviews/:id
+→ Détails
+
+PATCH /api/reviews/:id
+→ Mettre à jour
+Body: { is_read, is_flagged }
+
+POST /api/reviews/:id/respond
+→ Répondre
+Body: { response_text, publish: true/false }
+
+POST /api/reviews/:id/ai-suggest-response
+→ Suggestion IA
+Response: { suggested_response }
+```
+
+### Statistiques
+
+```
+GET /api/reviews/stats
+Query: { period: 'week' | 'month' | 'year' | 'all' }
+Response: {
+  global_score: 4.6,
+  total_reviews: 93,
+  new_reviews_period: 12,
+  response_rate: 42,
+  platforms: {
+    google: { score: 4.7, count: 52 },
+    tripadvisor: { score: 4.5, count: 23 },
+    facebook: { score: 4.8, count: 18 }
+  },
+  rating_distribution: { 5: 62, 4: 18, 3: 8, 2: 3, 1: 2 },
+  sentiment_distribution: { very_positive: 45, positive: 30, neutral: 10, negative: 6, very_negative: 2 }
+}
+
+GET /api/reviews/stats/evolution
+Query: { period, granularity: 'day' | 'week' | 'month' }
+Response: {
+  data: [
+    { date: '2024-01', avg_rating: 4.5, count: 8 },
+    { date: '2024-02', avg_rating: 4.6, count: 12 }
+  ]
+}
+
+GET /api/reviews/stats/campaign
+Response: {
+  requests_sent: 156,
+  link_clicks: 89,
+  click_rate: 57,
+  reviews_confirmed: 42,
+  conversion_rate: 27,
+  promos_generated: 42,
+  promos_used: 38,
+  estimated_revenue: 850
+}
+
+GET /api/reviews/insights
+Response: {
+  strengths: [
+    { theme: "cuisine", percentage: 89, sample_quotes: ["Délicieux"] }
+  ],
+  weaknesses: [
+    { theme: "attente", mentions: 12, suggestion: "Optimiser le service" }
+  ],
+  trends: [
+    { term: "risotto", change: "+340%", type: "positive" }
+  ],
+  suggestions: [
+    "Votre risotto est très populaire !",
+    "3 avis négatifs non répondus"
+  ]
+}
+```
+
+### Alertes
+
+```
+GET /api/reviews/alerts
+→ Liste des alertes
+
+PATCH /api/reviews/alerts
+Body: { alerts: [{ alert_type, is_enabled, email_notification }] }
+```

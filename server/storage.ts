@@ -10,6 +10,11 @@ import {
   clientGuaranteeConfig,
   guaranteeSessions,
   noshowCharges,
+  reviewConfig,
+  reviewIncentives,
+  reviewRequests,
+  reviews,
+  reviewAlerts,
   type User, 
   type InsertUser, 
   type Call, 
@@ -29,7 +34,17 @@ import {
   type GuaranteeSession,
   type InsertGuaranteeSession,
   type NoshowCharge,
-  type InsertNoshowCharge
+  type InsertNoshowCharge,
+  type ReviewConfig,
+  type InsertReviewConfig,
+  type ReviewIncentive,
+  type InsertReviewIncentive,
+  type ReviewRequest,
+  type InsertReviewRequest,
+  type Review,
+  type InsertReview,
+  type ReviewAlert,
+  type InsertReviewAlert
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lte, desc, sql, count, isNotNull, or } from "drizzle-orm";
@@ -169,6 +184,70 @@ export interface IStorage {
     failedCharges: number;
     totalAvoided: number;
   }>;
+  
+  // ===== REVIEW & REPUTATION SYSTEM =====
+  
+  // Review config
+  getReviewConfig(userId: string): Promise<ReviewConfig | undefined>;
+  upsertReviewConfig(userId: string, config: Partial<InsertReviewConfig>): Promise<ReviewConfig>;
+  
+  // Review incentives
+  getReviewIncentives(userId: string): Promise<ReviewIncentive[]>;
+  getReviewIncentiveById(id: string, userId: string): Promise<ReviewIncentive | undefined>;
+  createReviewIncentive(incentive: InsertReviewIncentive): Promise<ReviewIncentive>;
+  updateReviewIncentive(id: string, userId: string, updates: Partial<ReviewIncentive>): Promise<ReviewIncentive | undefined>;
+  deleteReviewIncentive(id: string, userId: string): Promise<void>;
+  setDefaultIncentive(id: string, userId: string): Promise<void>;
+  
+  // Review requests
+  getReviewRequests(userId: string, filters?: {
+    status?: string;
+    dateFrom?: Date;
+    dateTo?: Date;
+    limit?: number;
+    offset?: number;
+  }): Promise<ReviewRequest[]>;
+  getReviewRequestById(id: string, userId: string): Promise<ReviewRequest | undefined>;
+  getReviewRequestByToken(token: string): Promise<ReviewRequest | undefined>;
+  createReviewRequest(request: InsertReviewRequest): Promise<ReviewRequest>;
+  updateReviewRequest(id: string, updates: Partial<ReviewRequest>): Promise<ReviewRequest | undefined>;
+  getReviewRequestStats(userId: string): Promise<{
+    requestsSent: number;
+    linkClicks: number;
+    clickRate: number;
+    reviewsConfirmed: number;
+    conversionRate: number;
+    promosGenerated: number;
+    promosUsed: number;
+  }>;
+  
+  // Reviews
+  getReviews(userId: string, filters?: {
+    platform?: string;
+    ratingMin?: number;
+    ratingMax?: number;
+    sentiment?: string;
+    isRead?: boolean;
+    search?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<Review[]>;
+  getReviewById(id: string, userId: string): Promise<Review | undefined>;
+  createReview(review: InsertReview): Promise<Review>;
+  updateReview(id: string, userId: string, updates: Partial<Review>): Promise<Review | undefined>;
+  getReviewStats(userId: string, period?: 'week' | 'month' | 'year' | 'all'): Promise<{
+    globalScore: number;
+    totalReviews: number;
+    newReviewsPeriod: number;
+    responseRate: number;
+    platforms: Record<string, { score: number; count: number }>;
+    ratingDistribution: Record<number, number>;
+    sentimentDistribution: Record<string, number>;
+  }>;
+  
+  // Review alerts
+  getReviewAlerts(userId: string): Promise<ReviewAlert[]>;
+  upsertReviewAlerts(userId: string, alerts: Partial<InsertReviewAlert>[]): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1247,6 +1326,386 @@ export class DatabaseStorage implements IStorage {
       failedCharges,
       totalAvoided,
     };
+  }
+
+  // ===== REVIEW & REPUTATION SYSTEM IMPLEMENTATIONS =====
+
+  async getReviewConfig(userId: string): Promise<ReviewConfig | undefined> {
+    const [config] = await db
+      .select()
+      .from(reviewConfig)
+      .where(eq(reviewConfig.userId, userId));
+    return config || undefined;
+  }
+
+  async upsertReviewConfig(userId: string, config: Partial<InsertReviewConfig>): Promise<ReviewConfig> {
+    const existing = await this.getReviewConfig(userId);
+    
+    if (existing) {
+      const [updated] = await db
+        .update(reviewConfig)
+        .set({ ...config, updatedAt: new Date() })
+        .where(eq(reviewConfig.userId, userId))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db
+        .insert(reviewConfig)
+        .values({ ...config, userId })
+        .returning();
+      return created;
+    }
+  }
+
+  async getReviewIncentives(userId: string): Promise<ReviewIncentive[]> {
+    return await db
+      .select()
+      .from(reviewIncentives)
+      .where(eq(reviewIncentives.userId, userId))
+      .orderBy(desc(reviewIncentives.createdAt));
+  }
+
+  async getReviewIncentiveById(id: string, userId: string): Promise<ReviewIncentive | undefined> {
+    const [incentive] = await db
+      .select()
+      .from(reviewIncentives)
+      .where(and(eq(reviewIncentives.id, id), eq(reviewIncentives.userId, userId)));
+    return incentive || undefined;
+  }
+
+  async createReviewIncentive(incentive: InsertReviewIncentive): Promise<ReviewIncentive> {
+    const [created] = await db
+      .insert(reviewIncentives)
+      .values(incentive)
+      .returning();
+    return created;
+  }
+
+  async updateReviewIncentive(id: string, userId: string, updates: Partial<ReviewIncentive>): Promise<ReviewIncentive | undefined> {
+    const [updated] = await db
+      .update(reviewIncentives)
+      .set(updates)
+      .where(and(eq(reviewIncentives.id, id), eq(reviewIncentives.userId, userId)))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteReviewIncentive(id: string, userId: string): Promise<void> {
+    await db
+      .delete(reviewIncentives)
+      .where(and(eq(reviewIncentives.id, id), eq(reviewIncentives.userId, userId)));
+  }
+
+  async setDefaultIncentive(id: string, userId: string): Promise<void> {
+    // First, unset all defaults for this user
+    await db
+      .update(reviewIncentives)
+      .set({ isDefault: false })
+      .where(eq(reviewIncentives.userId, userId));
+    
+    // Then set the new default
+    await db
+      .update(reviewIncentives)
+      .set({ isDefault: true })
+      .where(and(eq(reviewIncentives.id, id), eq(reviewIncentives.userId, userId)));
+  }
+
+  async getReviewRequests(userId: string, filters?: {
+    status?: string;
+    dateFrom?: Date;
+    dateTo?: Date;
+    limit?: number;
+    offset?: number;
+  }): Promise<ReviewRequest[]> {
+    const conditions = [eq(reviewRequests.userId, userId)];
+    
+    if (filters?.status) {
+      conditions.push(eq(reviewRequests.status, filters.status));
+    }
+    if (filters?.dateFrom) {
+      conditions.push(gte(reviewRequests.createdAt, filters.dateFrom));
+    }
+    if (filters?.dateTo) {
+      conditions.push(lte(reviewRequests.createdAt, filters.dateTo));
+    }
+    
+    let query = db
+      .select()
+      .from(reviewRequests)
+      .where(and(...conditions))
+      .orderBy(desc(reviewRequests.createdAt));
+    
+    if (filters?.limit) {
+      query = query.limit(filters.limit) as typeof query;
+    }
+    if (filters?.offset) {
+      query = query.offset(filters.offset) as typeof query;
+    }
+    
+    return await query;
+  }
+
+  async getReviewRequestById(id: string, userId: string): Promise<ReviewRequest | undefined> {
+    const [request] = await db
+      .select()
+      .from(reviewRequests)
+      .where(and(eq(reviewRequests.id, id), eq(reviewRequests.userId, userId)));
+    return request || undefined;
+  }
+
+  async getReviewRequestByToken(token: string): Promise<ReviewRequest | undefined> {
+    const [request] = await db
+      .select()
+      .from(reviewRequests)
+      .where(eq(reviewRequests.trackingToken, token));
+    return request || undefined;
+  }
+
+  async createReviewRequest(request: InsertReviewRequest): Promise<ReviewRequest> {
+    const [created] = await db
+      .insert(reviewRequests)
+      .values(request)
+      .returning();
+    return created;
+  }
+
+  async updateReviewRequest(id: string, updates: Partial<ReviewRequest>): Promise<ReviewRequest | undefined> {
+    const [updated] = await db
+      .update(reviewRequests)
+      .set(updates)
+      .where(eq(reviewRequests.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async getReviewRequestStats(userId: string): Promise<{
+    requestsSent: number;
+    linkClicks: number;
+    clickRate: number;
+    reviewsConfirmed: number;
+    conversionRate: number;
+    promosGenerated: number;
+    promosUsed: number;
+  }> {
+    const allRequests = await db
+      .select()
+      .from(reviewRequests)
+      .where(eq(reviewRequests.userId, userId));
+    
+    const requestsSent = allRequests.filter(r => r.sentAt).length;
+    const linkClicks = allRequests.filter(r => r.linkClickedAt).length;
+    const reviewsConfirmed = allRequests.filter(r => r.reviewConfirmedAt).length;
+    const promosGenerated = allRequests.filter(r => r.promoCode).length;
+    const promosUsed = allRequests.filter(r => r.promoCodeUsedAt).length;
+    
+    return {
+      requestsSent,
+      linkClicks,
+      clickRate: requestsSent > 0 ? Math.round((linkClicks / requestsSent) * 100) : 0,
+      reviewsConfirmed,
+      conversionRate: requestsSent > 0 ? Math.round((reviewsConfirmed / requestsSent) * 100) : 0,
+      promosGenerated,
+      promosUsed,
+    };
+  }
+
+  async getReviews(userId: string, filters?: {
+    platform?: string;
+    ratingMin?: number;
+    ratingMax?: number;
+    sentiment?: string;
+    isRead?: boolean;
+    search?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<Review[]> {
+    const conditions = [eq(reviews.userId, userId)];
+    
+    if (filters?.platform) {
+      conditions.push(eq(reviews.platform, filters.platform));
+    }
+    if (filters?.ratingMin) {
+      conditions.push(gte(reviews.rating, filters.ratingMin));
+    }
+    if (filters?.ratingMax) {
+      conditions.push(lte(reviews.rating, filters.ratingMax));
+    }
+    if (filters?.sentiment) {
+      conditions.push(eq(reviews.sentiment, filters.sentiment));
+    }
+    if (typeof filters?.isRead === 'boolean') {
+      conditions.push(eq(reviews.isRead, filters.isRead));
+    }
+    
+    let query = db
+      .select()
+      .from(reviews)
+      .where(and(...conditions))
+      .orderBy(desc(reviews.reviewDate));
+    
+    if (filters?.limit) {
+      query = query.limit(filters.limit) as typeof query;
+    }
+    if (filters?.offset) {
+      query = query.offset(filters.offset) as typeof query;
+    }
+    
+    const result = await query;
+    
+    // Filter by search if provided (in-memory since Drizzle doesn't support ILIKE easily)
+    if (filters?.search) {
+      const searchLower = filters.search.toLowerCase();
+      return result.filter(r => 
+        r.content?.toLowerCase().includes(searchLower) ||
+        r.reviewerName?.toLowerCase().includes(searchLower)
+      );
+    }
+    
+    return result;
+  }
+
+  async getReviewById(id: string, userId: string): Promise<Review | undefined> {
+    const [review] = await db
+      .select()
+      .from(reviews)
+      .where(and(eq(reviews.id, id), eq(reviews.userId, userId)));
+    return review || undefined;
+  }
+
+  async createReview(review: InsertReview): Promise<Review> {
+    const [created] = await db
+      .insert(reviews)
+      .values(review)
+      .returning();
+    return created;
+  }
+
+  async updateReview(id: string, userId: string, updates: Partial<Review>): Promise<Review | undefined> {
+    const [updated] = await db
+      .update(reviews)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(eq(reviews.id, id), eq(reviews.userId, userId)))
+      .returning();
+    return updated || undefined;
+  }
+
+  async getReviewStats(userId: string, period?: 'week' | 'month' | 'year' | 'all'): Promise<{
+    globalScore: number;
+    totalReviews: number;
+    newReviewsPeriod: number;
+    responseRate: number;
+    platforms: Record<string, { score: number; count: number }>;
+    ratingDistribution: Record<number, number>;
+    sentimentDistribution: Record<string, number>;
+  }> {
+    const conditions = [eq(reviews.userId, userId)];
+    
+    let periodStartDate: Date | null = null;
+    if (period && period !== 'all') {
+      const now = new Date();
+      switch (period) {
+        case 'week':
+          periodStartDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case 'month':
+          periodStartDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          break;
+        case 'year':
+          periodStartDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+          break;
+      }
+    }
+    
+    const allReviews = await db
+      .select()
+      .from(reviews)
+      .where(and(...conditions));
+    
+    const totalReviews = allReviews.length;
+    const globalScore = totalReviews > 0 
+      ? Math.round((allReviews.reduce((sum, r) => sum + r.rating, 0) / totalReviews) * 10) / 10
+      : 0;
+    
+    const newReviewsPeriod = periodStartDate 
+      ? allReviews.filter(r => r.reviewDate && r.reviewDate >= periodStartDate!).length
+      : totalReviews;
+    
+    const reviewsWithResponse = allReviews.filter(r => r.responseStatus === 'published').length;
+    const responseRate = totalReviews > 0 ? Math.round((reviewsWithResponse / totalReviews) * 100) : 0;
+    
+    // Aggregate by platform
+    const platforms: Record<string, { score: number; count: number }> = {};
+    allReviews.forEach(r => {
+      if (!platforms[r.platform]) {
+        platforms[r.platform] = { score: 0, count: 0 };
+      }
+      platforms[r.platform].count++;
+      platforms[r.platform].score += r.rating;
+    });
+    Object.keys(platforms).forEach(p => {
+      platforms[p].score = Math.round((platforms[p].score / platforms[p].count) * 10) / 10;
+    });
+    
+    // Rating distribution
+    const ratingDistribution: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    allReviews.forEach(r => {
+      if (r.rating >= 1 && r.rating <= 5) {
+        ratingDistribution[r.rating]++;
+      }
+    });
+    
+    // Sentiment distribution
+    const sentimentDistribution: Record<string, number> = {
+      very_positive: 0,
+      positive: 0,
+      neutral: 0,
+      negative: 0,
+      very_negative: 0
+    };
+    allReviews.forEach(r => {
+      if (r.sentiment && sentimentDistribution.hasOwnProperty(r.sentiment)) {
+        sentimentDistribution[r.sentiment]++;
+      }
+    });
+    
+    return {
+      globalScore,
+      totalReviews,
+      newReviewsPeriod,
+      responseRate,
+      platforms,
+      ratingDistribution,
+      sentimentDistribution,
+    };
+  }
+
+  async getReviewAlerts(userId: string): Promise<ReviewAlert[]> {
+    return await db
+      .select()
+      .from(reviewAlerts)
+      .where(eq(reviewAlerts.userId, userId));
+  }
+
+  async upsertReviewAlerts(userId: string, alerts: Partial<InsertReviewAlert>[]): Promise<void> {
+    for (const alert of alerts) {
+      if (!alert.alertType) continue;
+      
+      const existing = await db
+        .select()
+        .from(reviewAlerts)
+        .where(and(eq(reviewAlerts.userId, userId), eq(reviewAlerts.alertType, alert.alertType)));
+      
+      if (existing.length > 0) {
+        await db
+          .update(reviewAlerts)
+          .set(alert)
+          .where(and(eq(reviewAlerts.userId, userId), eq(reviewAlerts.alertType, alert.alertType)));
+      } else {
+        await db
+          .insert(reviewAlerts)
+          .values({ ...alert, userId, alertType: alert.alertType });
+      }
+    }
   }
 }
 
