@@ -127,10 +127,10 @@ export default function ReviewsCampaigns() {
   return (
     <div className="space-y-5 pb-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between pl-1">
         <div>
-          <h1 className="text-xl font-semibold text-foreground">Campagnes d'avis</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Suivez et gérez vos demandes d'avis clients</p>
+          <h1 className="text-lg font-semibold text-foreground">Campagnes d'avis</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">Gérez vos demandes d'avis clients</p>
         </div>
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogTrigger asChild>

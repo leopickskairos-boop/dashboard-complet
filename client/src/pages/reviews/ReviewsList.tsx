@@ -133,11 +133,11 @@ export default function ReviewsList() {
   }
 
   return (
-    <div className="space-y-6 pb-10">
-      <div className="flex items-center justify-between">
+    <div className="space-y-5 pb-8">
+      <div className="flex items-center justify-between pl-1">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Tous les avis</h1>
-          <p className="text-muted-foreground">Consultez et gérez vos avis clients</p>
+          <h1 className="text-lg font-semibold text-foreground">Tous les avis</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">Consultez et gérez vos avis clients</p>
         </div>
       </div>
 

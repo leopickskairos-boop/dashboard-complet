@@ -99,10 +99,10 @@ export default function ReviewsStats() {
   return (
     <div className="space-y-5 pb-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between pl-1">
         <div>
-          <h1 className="text-xl font-semibold text-foreground">Statistiques des avis</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Analysez votre réputation en ligne et identifiez les axes d'amélioration</p>
+          <h1 className="text-lg font-semibold text-foreground">Statistiques des avis</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">Analysez votre réputation en ligne</p>
         </div>
         <Select value={period} onValueChange={setPeriod}>
           <SelectTrigger className="w-[160px] h-9 text-xs" data-testid="select-period">
