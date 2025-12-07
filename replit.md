@@ -50,10 +50,12 @@ The project utilizes a modern web stack for a responsive and professional user i
     -   Incentive system with 6 types: percentage, fixed_amount, free_item, lottery, loyalty_points, custom
     -   Tracking system with unique tokens (format: rv_{timestamp}_{random})
     -   Public pages for customers to select review platforms and confirm submission
-    -   Automatic promo code generation after review confirmation
+    -   Incentive display on public page (shows offer with validity period)
+    -   Automatic promo code generation after review confirmation (format: MERCI-{6_CHARS})
     -   Configurable timing modes: smart (AI), fixed_delay, fixed_time
     -   Multi-platform support: Google, TripAdvisor, Facebook, Yelp, Doctolib, Pages Jaunes
     -   Alert configuration for negative reviews, 5-star reviews, response delays
+    -   Company name personalization in emails/SMS via review_config.companyName
     -   Full API documentation available at: docs/REVIEWS_SYSTEM_DOCUMENTATION.md
 
 ## Technical Documentation

@@ -4615,6 +4615,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const config = await storage.getReviewConfig(request.userId);
       
+      // Récupérer l'incentive si elle existe
+      let incentive = null;
+      if (request.incentiveId) {
+        incentive = await storage.getReviewIncentiveById(request.incentiveId, request.userId);
+      }
+      
       res.json({
         platforms: {
           google: config?.googleReviewUrl,
@@ -4626,6 +4632,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
         priority: config?.platformsPriority || ['google', 'tripadvisor', 'facebook'],
         customerName: request.customerName,
+        incentive: incentive ? {
+          displayMessage: incentive.displayMessage,
+          type: incentive.type,
+          validityDays: incentive.validityDays,
+        } : null,
       });
     } catch (error: any) {
       console.error("[Reviews] Error tracking link:", error);

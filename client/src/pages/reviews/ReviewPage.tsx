@@ -16,6 +16,11 @@ interface PlatformData {
   };
   priority: string[];
   customerName?: string;
+  incentive?: {
+    displayMessage: string;
+    type: string;
+    validityDays: number;
+  } | null;
 }
 
 export default function ReviewPage() {
@@ -209,6 +214,17 @@ export default function ReviewPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
+          {data?.incentive && (
+            <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 rounded-xl mb-4">
+              <div className="flex items-center justify-center gap-2 text-amber-800 dark:text-amber-200">
+                <Gift className="h-5 w-5" />
+                <span className="font-semibold">{data.incentive.displayMessage}</span>
+              </div>
+              <p className="text-xs text-center text-amber-600 dark:text-amber-400 mt-1">
+                Valable {data.incentive.validityDays} jours
+              </p>
+            </div>
+          )}
           {sortedPlatforms.length > 0 ? (
             <>
               {sortedPlatforms.map(([platform, url]) => (

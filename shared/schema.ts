@@ -949,6 +949,9 @@ export const reviewConfig = pgTable("review_config", {
   sendWindowEnd: text("send_window_end").default("20:00"),
   avoidWeekends: boolean("avoid_weekends").notNull().default(false),
   
+  // Informations entreprise
+  companyName: text("company_name"),
+  
   // Message personnalisé
   smsMessage: text("sms_message"),
   emailSubject: text("email_subject"),

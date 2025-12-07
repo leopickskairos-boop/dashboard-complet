@@ -63,6 +63,8 @@ Configuration globale du système d'avis pour chaque utilisateur. **Relation 1:1
 | `send_window_start` | TEXT | OUI | `'10:00'` | Début fenêtre d'envoi HH:MM |
 | `send_window_end` | TEXT | OUI | `'20:00'` | Fin fenêtre d'envoi HH:MM |
 | `avoid_weekends` | BOOLEAN | NON | `false` | Éviter envoi le weekend |
+| **Informations entreprise** |
+| `company_name` | TEXT | OUI | `null` | Nom de l'entreprise (pour emails/SMS) |
 | **Messages personnalisés** |
 | `sms_message` | TEXT | OUI | `null` | Template SMS personnalisé |
 | `email_subject` | TEXT | OUI | `null` | Objet email personnalisé |
