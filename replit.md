@@ -45,7 +45,7 @@ The project utilizes a modern web stack for a responsive and professional user i
     -   Automatic charging for no-shows with failure tracking
     -   Statistics and recovery metrics
 -   **Reviews & Reputation Management System**: Complete review collection and management system with:
-    -   5-table architecture (review_config, review_incentives, review_requests, reviews, review_alerts)
+    -   7-table architecture (review_config, review_incentives, review_requests, reviews, review_alerts, review_sources, review_sync_logs)
     -   Automated review request sending via email (SMS prepared)
     -   Incentive system with 6 types: percentage, fixed_amount, free_item, lottery, loyalty_points, custom
     -   Tracking system with unique tokens (format: rv_{timestamp}_{random})
@@ -57,6 +57,15 @@ The project utilizes a modern web stack for a responsive and professional user i
     -   Alert configuration for negative reviews, 5-star reviews, response delays
     -   Company name personalization in emails/SMS via review_config.companyName
     -   Full API documentation available at: docs/REVIEWS_SYSTEM_DOCUMENTATION.md
+    -   **Multi-Platform Review Aggregation**:
+        -   Centralized review collection from Google Business Profile, Facebook, TripAdvisor
+        -   OAuth flows for Google and Facebook platform connections
+        -   URL-based TripAdvisor integration with Location ID extraction
+        -   Automated daily sync at 4:00 AM Paris time via cron job
+        -   Manual sync trigger capability per source or globally
+        -   Sync logs with status tracking (success, error, reviewsFetched)
+        -   Platform connection UI in ReviewsSettings with status badges
+        -   ReviewsList with platform, rating, and search filters
 
 ## Technical Documentation
 
