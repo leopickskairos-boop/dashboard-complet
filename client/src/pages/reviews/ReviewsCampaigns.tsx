@@ -97,21 +97,22 @@ export default function ReviewsCampaigns() {
   });
 
   const getStatusBadge = (status: string) => {
+    const baseClasses = "text-[10px] px-2 py-0.5 font-medium border-0";
     switch (status) {
       case "pending":
-        return <Badge variant="secondary">En attente</Badge>;
+        return <Badge className={`${baseClasses} bg-slate-500/15 text-slate-400`}>En attente</Badge>;
       case "scheduled":
-        return <Badge variant="outline">Planifié</Badge>;
+        return <Badge className={`${baseClasses} bg-amber-500/15 text-amber-400`}>Planifié</Badge>;
       case "sent":
-        return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">Envoyé</Badge>;
+        return <Badge className={`${baseClasses} bg-blue-500/15 text-blue-400`}>Envoyé</Badge>;
       case "clicked":
-        return <Badge className="bg-[#C8B88A]/20 text-[#C8B88A] border-[#C8B88A]/30">Cliqué</Badge>;
+        return <Badge className={`${baseClasses} bg-[#C8B88A]/15 text-[#C8B88A]`}>Cliqué</Badge>;
       case "confirmed":
-        return <Badge className="bg-[#4CEFAD]/20 text-[#4CEFAD] border-[#4CEFAD]/30">Avis confirmé</Badge>;
+        return <Badge className={`${baseClasses} bg-[#4CEFAD]/15 text-[#4CEFAD]`}>Converti</Badge>;
       case "expired":
-        return <Badge variant="destructive">Expiré</Badge>;
+        return <Badge className={`${baseClasses} bg-red-500/15 text-red-400`}>Expiré</Badge>;
       default:
-        return <Badge variant="secondary">{status}</Badge>;
+        return <Badge className={`${baseClasses} bg-slate-500/15 text-slate-400`}>{status}</Badge>;
     }
   };
 
@@ -124,11 +125,12 @@ export default function ReviewsCampaigns() {
   }
 
   return (
-    <div className="space-y-6 pb-10">
+    <div className="space-y-5 pb-8">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Campagnes d'avis</h1>
-          <p className="text-muted-foreground">Gérez vos demandes d'avis clients</p>
+          <h1 className="text-xl font-semibold text-foreground">Campagnes d'avis</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Suivez et gérez vos demandes d'avis clients</p>
         </div>
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogTrigger asChild>
@@ -227,144 +229,157 @@ export default function ReviewsCampaigns() {
         </Dialog>
       </div>
 
+      {/* KPI Cards */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-lg bg-blue-500/10">
-                <Send className="h-6 w-6 text-blue-400" />
+        <Card className="border-border/50 bg-card/50">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-blue-500/10">
+                <Send className="h-5 w-5 text-blue-400" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats?.requestsSent || 0}</p>
-                <p className="text-sm text-muted-foreground">Demandes envoyées</p>
+                <p className="text-xs text-muted-foreground">Demandes envoyées</p>
               </div>
             </div>
+            <p className="text-[10px] text-muted-foreground/70 mt-2">Total des sollicitations envoyées</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-lg bg-[#C8B88A]/10">
-                <MousePointer className="h-6 w-6 text-[#C8B88A]" />
+        <Card className="border-border/50 bg-card/50">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-[#C8B88A]/10">
+                <MousePointer className="h-5 w-5 text-[#C8B88A]" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats?.clickRate || 0}%</p>
-                <p className="text-sm text-muted-foreground">Taux de clic</p>
+                <p className="text-xs text-muted-foreground">Taux de clic</p>
               </div>
             </div>
+            <p className="text-[10px] text-muted-foreground/70 mt-2">Clients ayant cliqué sur le lien</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-lg bg-[#4CEFAD]/10">
-                <CheckCircle2 className="h-6 w-6 text-[#4CEFAD]" />
+        <Card className="border-border/50 bg-card/50">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-[#4CEFAD]/10">
+                <CheckCircle2 className="h-5 w-5 text-[#4CEFAD]" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats?.conversionRate || 0}%</p>
-                <p className="text-sm text-muted-foreground">Taux de conversion</p>
+                <p className="text-xs text-muted-foreground">Taux de conversion</p>
               </div>
             </div>
+            <p className="text-[10px] text-muted-foreground/70 mt-2">Avis effectivement laissés</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-lg bg-purple-500/10">
-                <Ticket className="h-6 w-6 text-purple-400" />
+        <Card className="border-border/50 bg-card/50">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-purple-500/10">
+                <Ticket className="h-5 w-5 text-purple-400" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats?.promosUsed || 0}/{stats?.promosGenerated || 0}</p>
-                <p className="text-sm text-muted-foreground">Promos utilisées</p>
+                <p className="text-xs text-muted-foreground">Promos utilisées</p>
               </div>
             </div>
+            <p className="text-[10px] text-muted-foreground/70 mt-2">Codes promo utilisés / générés</p>
           </CardContent>
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Historique des demandes</CardTitle>
-          <CardDescription>
-            Liste de toutes vos demandes d'avis
+      {/* Requests Table */}
+      <Card className="border-border/50 bg-card/50">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-base font-semibold">Historique des demandes</CardTitle>
+          <CardDescription className="text-xs">
+            Suivi détaillé de toutes vos sollicitations d'avis
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-0">
           {requests && requests.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Client</TableHead>
-                  <TableHead>Contact</TableHead>
-                  <TableHead>Statut</TableHead>
-                  <TableHead>Date d'envoi</TableHead>
-                  <TableHead>Code promo</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {requests.map((request) => (
-                  <TableRow key={request.id} data-testid={`row-request-${request.id}`}>
-                    <TableCell className="font-medium">{request.customerName}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        {request.customerEmail && (
-                          <span className="flex items-center gap-1">
-                            <Mail className="h-3 w-3" />
-                            {request.customerEmail}
-                          </span>
-                        )}
-                        {request.customerPhone && (
-                          <span className="flex items-center gap-1">
-                            <Phone className="h-3 w-3" />
-                            {request.customerPhone}
-                          </span>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>{getStatusBadge(request.status)}</TableCell>
-                    <TableCell>
-                      {request.sentAt ? format(new Date(request.sentAt), "dd/MM/yyyy HH:mm", { locale: fr }) : "-"}
-                    </TableCell>
-                    <TableCell>
-                      {request.promoCode ? (
-                        <Badge variant="outline" className="font-mono">
-                          {request.promoCode}
-                        </Badge>
-                      ) : "-"}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {request.status === "pending" && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => sendMutation.mutate(request.id)}
-                          disabled={sendMutation.isPending}
-                          data-testid={`button-send-${request.id}`}
-                        >
-                          {sendMutation.isPending ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <>
-                              <Send className="h-4 w-4 mr-1" />
-                              Envoyer
-                            </>
-                          )}
-                        </Button>
-                      )}
-                    </TableCell>
+            <div className="rounded-xl border border-border/40 overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/30 hover:bg-muted/30">
+                    <TableHead className="text-xs font-medium">Client</TableHead>
+                    <TableHead className="text-xs font-medium">Contact</TableHead>
+                    <TableHead className="text-xs font-medium">Statut</TableHead>
+                    <TableHead className="text-xs font-medium">Date d'envoi</TableHead>
+                    <TableHead className="text-xs font-medium">Code promo</TableHead>
+                    <TableHead className="text-xs font-medium text-right">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {requests.map((request) => (
+                    <TableRow key={request.id} className="hover:bg-muted/20" data-testid={`row-request-${request.id}`}>
+                      <TableCell className="font-medium text-sm">{request.customerName}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-0.5 text-xs text-muted-foreground">
+                          {request.customerEmail && (
+                            <span className="flex items-center gap-1.5">
+                              <Mail className="h-3 w-3" />
+                              {request.customerEmail}
+                            </span>
+                          )}
+                          {request.customerPhone && (
+                            <span className="flex items-center gap-1.5">
+                              <Phone className="h-3 w-3" />
+                              {request.customerPhone}
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>{getStatusBadge(request.status)}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {request.sentAt ? format(new Date(request.sentAt), "dd/MM/yyyy HH:mm", { locale: fr }) : "-"}
+                      </TableCell>
+                      <TableCell>
+                        {request.promoCode ? (
+                          <Badge variant="outline" className="font-mono text-[10px] px-1.5 py-0 border-border/50">
+                            {request.promoCode}
+                          </Badge>
+                        ) : <span className="text-xs text-muted-foreground">-</span>}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {request.status === "pending" && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => sendMutation.mutate(request.id)}
+                            disabled={sendMutation.isPending}
+                            className="h-7 text-xs"
+                            data-testid={`button-send-${request.id}`}
+                          >
+                            {sendMutation.isPending ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <>
+                                <Send className="h-3.5 w-3.5 mr-1" />
+                                Envoyer
+                              </>
+                            )}
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           ) : (
-            <div className="text-center py-12 text-muted-foreground">
-              <Send className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>Aucune demande d'avis pour le moment</p>
-              <p className="text-sm mt-1">Créez votre première demande pour commencer</p>
+            <div className="flex flex-col items-center justify-center py-12 px-6 rounded-xl border border-dashed border-border/60 bg-muted/20">
+              <div className="p-3 rounded-full bg-blue-500/10 mb-4">
+                <Send className="h-6 w-6 text-blue-400/60" />
+              </div>
+              <p className="text-sm font-medium text-foreground/80">Aucune demande d'avis</p>
+              <p className="text-xs text-muted-foreground mt-1 text-center max-w-xs">
+                Créez votre première demande pour solliciter un avis client
+              </p>
             </div>
           )}
         </CardContent>

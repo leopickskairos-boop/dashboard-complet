@@ -1,0 +1,123 @@
+Je veux que tu améliores uniquement le VISUEL de mon dashboard, sans JAMAIS modifier :
+
+- la logique métier,
+- les fonctionnalités,
+- les routes,
+- les endpoints,
+- la structure de données,
+- le contenu dynamique,
+- les workflows,
+- les formulaires,
+- la logique React/TS.
+
+Tu modifies UNIQUEMENT la présentation visuelle (UI), via le code CSS/Tailwind/ShadCN, la disposition des composants, les espacements, les bordures, les radius, les couleurs, les typographies, l’organisation des sections, la hiérarchie visuelle et les empty states.
+
+Respect strict de mon identité visuelle :
+
+• Dark mode premium (inspiration Linear + Anthropic)
+• Fond : #050509 / #06070A
+• Panels : #0E1015 ou #111320
+• Borders : rgba(255,255,255,0.04)
+• Accent color : bleu-vert moderne (subtil, pas saturé)
+• Warning : orange doux
+• Typographie : Inter / Manrope (sobre et professionnelle)
+• Rayons : 10–12 px
+• Espacement interne standard : 20 px
+• Espacement entre sections : 24 px
+• Micro-shadows très légers (subtiles)
+• Hover states doux
+• Tags pastel premium (jamais flashy)
+
+OBJECTIF GLOBAL :
+Rendre l’interface plus professionnelle, plus lisible, plus simple à comprendre, plus “premium SaaS”, tout en conservant exactement le même comportement.
+
+ACTIONS À APPLIQUER PAGE PAR PAGE :
+
+━━━━━━━━━━━━━━━━━━━━━━
+1) PAGE “Configuration des Avis”
+━━━━━━━━━━━━━━━━━━━━━━
+
+• Réduire la hauteur des cards.
+• Harmoniser l'espacement interne (padding 20px).
+• Améliorer la hiérarchie visuelle : titres 18–20px semi-bold, sous-titres 14px gris clair.
+• Ajouter de courtes descriptions sous chaque titre (explication business).
+• Réduire les espaces verticaux entre sections.
+• Offres incitatives : transformer l’état vide en empty-state premium (icône fine + message concis).
+• Regrouper les liens plateformes en cards plus compactes, en 2 colonnes, avec icône à gauche de chaque plateforme.
+• Fluidifier le layout en réduisant les marges trop grandes.
+
+Ne rien changer à la logique de formulaire.
+
+━━━━━━━━━━━━━━━━━━━━━━
+2) PAGE “Campagnes”
+━━━━━━━━━━━━━━━━━━━━━━
+
+• Revoir les cartes KPI en haut : plus compactes, légère bordure premium, mini description sous le chiffre.
+• Ajouter badges de statut (Envoyé / Ouvert / Converti) avec couleurs pastel.
+• Améliorer lecture du tableau (meilleure gestion du spacing, alignements).
+• Conserver EXACTEMENT le même mapping de données.
+
+━━━━━━━━━━━━━━━━━━━━━━
+3) PAGE “Statistiques des Avis”
+━━━━━━━━━━━━━━━━━━━━━━
+
+• Réduire hauteur des sections trop grandes.
+• Ajouter un header KPI plus impactant (note globale, total avis, avis 5*, taux de réponse).
+• Ajouter sous-titres explicatifs (“Analysez votre réputation en ligne”).
+• Améliorer visuel des graphs (contraste, labels minimalistes).
+• Analyse des sentiments : empty-state premium.
+• Performance par plateforme : cartes horizontales compactes.
+• Ajouter une section "Insights" (texte statique, pas dynamique) pour guider l’utilisateur — juste UI, pas logique.
+
+Aucune modification JS/TS, juste visuel.
+
+━━━━━━━━━━━━━━━━━━━━━━
+RÈGLES STRICTES
+━━━━━━━━━━━━━━━━━━━━━━
+
+1. Tu NE touches JAMAIS :
+   • au contenu des variables
+   • aux handlers
+   • aux useState / useEffect
+   • aux props
+   • aux appels API
+   • aux endpoints N8N / Retell / Stripe
+
+2. Tu ne rajoutes AUCUNE logique.
+   Tu modifies uniquement la présentation.
+
+3. Si tu dois restructurer un composant :
+   • Tu gardes toutes les fonctions existantes
+   • Tu conserves tous les IDs, names, bindings de formulaire
+   • Tu ne modifies que la disposition visuelle.
+
+4. Si un choix visuel nécessite un changement de className :
+   • Tu modifies uniquement les classNames Tailwind.
+   • Jamais le JS.
+
+5. Tu appliques une cohérence visuelle sur TOUTES les pages :
+   • même paddings
+   • même radius
+   • même tonalité de gris
+   • même typographie
+
+━━━━━━━━━━━━━━━━━━━━━━
+OBJECTIF FINAL
+━━━━━━━━━━━━━━━━━━━━━━
+
+Le dashboard doit paraître :
+
+• plus professionnel  
+• plus simple visuellement  
+• plus organisé  
+• plus premium  
+• plus lisible  
+• plus cohérent  
+• plus rassurant pour un client B2B  
+
+… tout en conservant 100% du comportement, des workflows et du code métier existants.
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+Maintenant, analyse mon code existant A L’ÉCRAN, et propose uniquement des modifications UI conformes à mes directives ci-dessus.
+Ne touche jamais au backend ni à la logique métier.

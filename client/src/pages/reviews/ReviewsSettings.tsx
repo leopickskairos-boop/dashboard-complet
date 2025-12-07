@@ -206,13 +206,14 @@ export default function ReviewsSettings() {
   }
 
   return (
-    <div className="space-y-6 pb-10">
+    <div className="space-y-5 pb-8">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Configuration des Avis</h1>
-          <p className="text-muted-foreground">Gérez vos paramètres de collecte d'avis</p>
+          <h1 className="text-xl font-semibold text-foreground">Configuration des Avis</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Paramétrez votre système de collecte d'avis clients</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-card/50 border border-border/50">
           <span className="text-sm text-muted-foreground">Système activé</span>
           <Switch
             checked={config?.enabled || false}
@@ -222,18 +223,20 @@ export default function ReviewsSettings() {
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-[#C8B88A]" />
+      <div className="grid gap-5 md:grid-cols-2">
+        <Card className="border-border/50 bg-card/50">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2 text-base font-semibold">
+              <div className="p-1.5 rounded-lg bg-[#C8B88A]/10">
+                <Clock className="h-4 w-4 text-[#C8B88A]" />
+              </div>
               Timing d'envoi
             </CardTitle>
-            <CardDescription>
-              Configurez quand envoyer les demandes d'avis
+            <CardDescription className="text-xs">
+              Définissez le meilleur moment pour solliciter vos clients
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 pt-0">
             <div className="space-y-2">
               <Label>Mode de timing</Label>
               <Select
@@ -310,17 +313,19 @@ export default function ReviewsSettings() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MessageSquare className="h-5 w-5 text-[#C8B88A]" />
+        <Card className="border-border/50 bg-card/50">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2 text-base font-semibold">
+              <div className="p-1.5 rounded-lg bg-[#C8B88A]/10">
+                <MessageSquare className="h-4 w-4 text-[#C8B88A]" />
+              </div>
               Messages personnalisés
             </CardTitle>
-            <CardDescription>
-              Personnalisez vos messages d'invitation
+            <CardDescription className="text-xs">
+              Personnalisez le ton et le contenu de vos invitations
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 pt-0">
             <div className="space-y-2">
               <Label>Message SMS (160 car. max)</Label>
               <Textarea
@@ -359,17 +364,19 @@ export default function ReviewsSettings() {
           </CardContent>
         </Card>
 
-        <Card className="md:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Gift className="h-5 w-5 text-[#C8B88A]" />
+        <Card className="md:col-span-2 border-border/50 bg-card/50">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2 text-base font-semibold">
+              <div className="p-1.5 rounded-lg bg-[#C8B88A]/10">
+                <Gift className="h-4 w-4 text-[#C8B88A]" />
+              </div>
               Offres incitatives
             </CardTitle>
-            <CardDescription>
-              Créez des offres pour inciter vos clients à laisser un avis
+            <CardDescription className="text-xs">
+              Encouragez vos clients à laisser un avis avec des récompenses attractives
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 pt-0">
             <div className="flex justify-end">
               <Dialog open={showNewIncentiveDialog} onOpenChange={setShowNewIncentiveDialog}>
                 <DialogTrigger asChild>
@@ -515,17 +522,21 @@ export default function ReviewsSettings() {
             </div>
 
             {loadingIncentives ? (
-              <div className="flex justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-[#C8B88A]" />
+              <div className="flex justify-center py-6">
+                <Loader2 className="h-5 w-5 animate-spin text-[#C8B88A]" />
               </div>
             ) : incentives.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <Gift className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                <p>Aucune offre créée</p>
-                <p className="text-sm">Créez une offre pour inciter vos clients à laisser un avis</p>
+              <div className="flex flex-col items-center justify-center py-10 px-6 rounded-xl border border-dashed border-border/60 bg-muted/20">
+                <div className="p-3 rounded-full bg-[#C8B88A]/10 mb-4">
+                  <Gift className="h-6 w-6 text-[#C8B88A]/60" />
+                </div>
+                <p className="text-sm font-medium text-foreground/80">Aucune offre configurée</p>
+                <p className="text-xs text-muted-foreground mt-1 text-center max-w-xs">
+                  Créez votre première offre incitative pour booster le taux de réponse de vos clients
+                </p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {incentives.map((incentive) => {
                   const IconComponent = getIncentiveIcon(incentive.type);
                   const getIncentiveLabel = () => {
@@ -545,33 +556,35 @@ export default function ReviewsSettings() {
                   return (
                     <div
                       key={incentive.id}
-                      className={`flex items-center justify-between p-4 rounded-lg border ${
-                        incentive.isDefault ? "border-[#C8B88A] bg-[#C8B88A]/5" : "border-border"
+                      className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
+                        incentive.isDefault 
+                          ? "border-[#C8B88A]/40 bg-[#C8B88A]/5" 
+                          : "border-border/50 bg-muted/20 hover:bg-muted/30"
                       }`}
                       data-testid={`incentive-card-${incentive.id}`}
                     >
-                      <div className="flex items-center gap-4">
-                        <div className={`p-2 rounded-lg ${incentive.isActive ? "bg-[#C8B88A]/20" : "bg-muted"}`}>
-                          <IconComponent className={`h-5 w-5 ${incentive.isActive ? "text-[#C8B88A]" : "text-muted-foreground"}`} />
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-lg ${incentive.isActive ? "bg-[#C8B88A]/15" : "bg-muted/50"}`}>
+                          <IconComponent className={`h-4 w-4 ${incentive.isActive ? "text-[#C8B88A]" : "text-muted-foreground"}`} />
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="font-medium">{getIncentiveLabel()}</span>
+                            <span className="text-sm font-medium">{getIncentiveLabel()}</span>
                             {incentive.isDefault && (
-                              <Badge variant="secondary" className="bg-[#C8B88A]/20 text-[#C8B88A]">
-                                Par défaut
+                              <Badge variant="secondary" className="bg-[#C8B88A]/15 text-[#C8B88A] border-0 text-[10px] px-1.5 py-0">
+                                Défaut
                               </Badge>
                             )}
                             {!incentive.isActive && (
-                              <Badge variant="outline" className="text-muted-foreground">
+                              <Badge variant="outline" className="text-muted-foreground border-border/50 text-[10px] px-1.5 py-0">
                                 Inactif
                               </Badge>
                             )}
                           </div>
-                          <p className="text-sm text-muted-foreground">{incentive.displayMessage}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{incentive.displayMessage}</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5">
                         <Switch
                           checked={incentive.isActive}
                           onCheckedChange={(checked) => 
@@ -581,24 +594,25 @@ export default function ReviewsSettings() {
                         />
                         {!incentive.isDefault && incentive.isActive && (
                           <Button
-                            variant="outline"
-                            size="sm"
+                            variant="ghost"
+                            size="icon"
                             onClick={() => setDefaultMutation.mutate(incentive.id)}
                             disabled={setDefaultMutation.isPending}
+                            className="h-8 w-8 text-muted-foreground hover:text-[#C8B88A]"
                             data-testid={`button-set-default-${incentive.id}`}
                           >
-                            <Star className="h-4 w-4" />
+                            <Star className="h-3.5 w-3.5" />
                           </Button>
                         )}
                         <Button
                           variant="ghost"
-                          size="sm"
+                          size="icon"
                           onClick={() => deleteIncentiveMutation.mutate(incentive.id)}
                           disabled={deleteIncentiveMutation.isPending}
-                          className="text-destructive hover:text-destructive"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
                           data-testid={`button-delete-incentive-${incentive.id}`}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </div>
                     </div>
@@ -607,14 +621,13 @@ export default function ReviewsSettings() {
               </div>
             )}
 
-            <div className="mt-4 p-4 bg-muted/50 rounded-lg">
-              <div className="flex items-start gap-3">
-                <Gift className="h-5 w-5 text-[#C8B88A] mt-0.5" />
+            <div className="mt-3 p-3 bg-muted/30 rounded-xl border border-border/30">
+              <div className="flex items-start gap-2.5">
+                <Gift className="h-4 w-4 text-[#C8B88A]/70 mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className="text-sm font-medium">Comment ça fonctionne ?</p>
-                  <p className="text-sm text-muted-foreground">
-                    L'offre par défaut (ou celle sélectionnée) sera automatiquement incluse dans les SMS et emails 
-                    envoyés à vos clients avec un encadré visible avant le bouton "Laisser mon avis".
+                  <p className="text-xs font-medium text-foreground/80">Comment ça fonctionne ?</p>
+                  <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                    L'offre par défaut sera automatiquement incluse dans les SMS et emails avec un encadré visible.
                   </p>
                 </div>
               </div>
@@ -622,141 +635,148 @@ export default function ReviewsSettings() {
           </CardContent>
         </Card>
 
-        <Card className="md:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Globe className="h-5 w-5 text-[#C8B88A]" />
+        <Card className="md:col-span-2 border-border/50 bg-card/50">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2 text-base font-semibold">
+              <div className="p-1.5 rounded-lg bg-[#C8B88A]/10">
+                <Globe className="h-4 w-4 text-[#C8B88A]" />
+              </div>
               Liens vers les plateformes
             </CardTitle>
-            <CardDescription>
-              Configurez les liens directs vers vos pages d'avis sur chaque plateforme
+            <CardDescription className="text-xs">
+              Redirigez vos clients vers vos profils d'avis en ligne
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="grid gap-6 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <SiGoogle className="h-4 w-4 text-red-500" />
+          <CardContent className="pt-0">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="p-3 rounded-xl border border-border/40 bg-muted/20 hover:bg-muted/30 transition-colors">
+                <Label className="flex items-center gap-2 text-xs font-medium mb-2">
+                  <SiGoogle className="h-3.5 w-3.5 text-red-500" />
                   Google Business
                 </Label>
                 <div className="flex gap-2">
                   <Input
                     value={config?.googleReviewUrl || ""}
                     onChange={(e) => handleSaveSettings("googleReviewUrl", e.target.value)}
-                    placeholder="https://g.page/r/votre-etablissement/review"
+                    placeholder="https://g.page/r/..."
+                    className="text-xs h-8"
                     data-testid="input-google-url"
                   />
                   {config?.googleReviewUrl && (
-                    <Button variant="outline" size="icon" asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
                       <a href={config.googleReviewUrl} target="_blank" rel="noopener noreferrer">
-                        <ExternalLink className="h-4 w-4" />
+                        <ExternalLink className="h-3.5 w-3.5" />
                       </a>
                     </Button>
                   )}
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <SiTripadvisor className="h-4 w-4 text-green-600" />
+              <div className="p-3 rounded-xl border border-border/40 bg-muted/20 hover:bg-muted/30 transition-colors">
+                <Label className="flex items-center gap-2 text-xs font-medium mb-2">
+                  <SiTripadvisor className="h-3.5 w-3.5 text-green-600" />
                   TripAdvisor
                 </Label>
                 <div className="flex gap-2">
                   <Input
                     value={config?.tripadvisorUrl || ""}
                     onChange={(e) => handleSaveSettings("tripadvisorUrl", e.target.value)}
-                    placeholder="https://www.tripadvisor.com/..."
+                    placeholder="https://tripadvisor.com/..."
+                    className="text-xs h-8"
                     data-testid="input-tripadvisor-url"
                   />
                   {config?.tripadvisorUrl && (
-                    <Button variant="outline" size="icon" asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
                       <a href={config.tripadvisorUrl} target="_blank" rel="noopener noreferrer">
-                        <ExternalLink className="h-4 w-4" />
+                        <ExternalLink className="h-3.5 w-3.5" />
                       </a>
                     </Button>
                   )}
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <SiFacebook className="h-4 w-4 text-blue-600" />
+              <div className="p-3 rounded-xl border border-border/40 bg-muted/20 hover:bg-muted/30 transition-colors">
+                <Label className="flex items-center gap-2 text-xs font-medium mb-2">
+                  <SiFacebook className="h-3.5 w-3.5 text-blue-600" />
                   Facebook
                 </Label>
                 <div className="flex gap-2">
                   <Input
                     value={config?.facebookPageUrl || ""}
                     onChange={(e) => handleSaveSettings("facebookPageUrl", e.target.value)}
-                    placeholder="https://www.facebook.com/votre-page/reviews"
+                    placeholder="https://facebook.com/..."
+                    className="text-xs h-8"
                     data-testid="input-facebook-url"
                   />
                   {config?.facebookPageUrl && (
-                    <Button variant="outline" size="icon" asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
                       <a href={config.facebookPageUrl} target="_blank" rel="noopener noreferrer">
-                        <ExternalLink className="h-4 w-4" />
+                        <ExternalLink className="h-3.5 w-3.5" />
                       </a>
                     </Button>
                   )}
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <SiYelp className="h-4 w-4 text-red-600" />
+              <div className="p-3 rounded-xl border border-border/40 bg-muted/20 hover:bg-muted/30 transition-colors">
+                <Label className="flex items-center gap-2 text-xs font-medium mb-2">
+                  <SiYelp className="h-3.5 w-3.5 text-red-600" />
                   Yelp
                 </Label>
                 <div className="flex gap-2">
                   <Input
                     value={config?.yelpUrl || ""}
                     onChange={(e) => handleSaveSettings("yelpUrl", e.target.value)}
-                    placeholder="https://www.yelp.com/biz/..."
+                    placeholder="https://yelp.com/biz/..."
+                    className="text-xs h-8"
                     data-testid="input-yelp-url"
                   />
                   {config?.yelpUrl && (
-                    <Button variant="outline" size="icon" asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
                       <a href={config.yelpUrl} target="_blank" rel="noopener noreferrer">
-                        <ExternalLink className="h-4 w-4" />
+                        <ExternalLink className="h-3.5 w-3.5" />
                       </a>
                     </Button>
                   )}
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <Globe className="h-4 w-4 text-yellow-600" />
+              <div className="p-3 rounded-xl border border-border/40 bg-muted/20 hover:bg-muted/30 transition-colors">
+                <Label className="flex items-center gap-2 text-xs font-medium mb-2">
+                  <Globe className="h-3.5 w-3.5 text-yellow-600" />
                   Pages Jaunes
                 </Label>
                 <Input
                   value={config?.pagesJaunesUrl || ""}
                   onChange={(e) => handleSaveSettings("pagesJaunesUrl", e.target.value)}
-                  placeholder="https://www.pagesjaunes.fr/..."
+                  placeholder="https://pagesjaunes.fr/..."
+                  className="text-xs h-8"
                   data-testid="input-pagesjaunes-url"
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <Globe className="h-4 w-4 text-blue-400" />
+              <div className="p-3 rounded-xl border border-border/40 bg-muted/20 hover:bg-muted/30 transition-colors">
+                <Label className="flex items-center gap-2 text-xs font-medium mb-2">
+                  <Globe className="h-3.5 w-3.5 text-blue-400" />
                   Doctolib
                 </Label>
                 <Input
                   value={config?.doctolibUrl || ""}
                   onChange={(e) => handleSaveSettings("doctolibUrl", e.target.value)}
-                  placeholder="https://www.doctolib.fr/..."
+                  placeholder="https://doctolib.fr/..."
+                  className="text-xs h-8"
                   data-testid="input-doctolib-url"
                 />
               </div>
             </div>
 
-            <div className="mt-6 p-4 bg-muted/50 rounded-lg">
-              <div className="flex items-start gap-3">
-                <AlertCircle className="h-5 w-5 text-muted-foreground mt-0.5" />
+            <div className="mt-4 p-3 bg-muted/30 rounded-xl border border-border/30">
+              <div className="flex items-start gap-2.5">
+                <AlertCircle className="h-4 w-4 text-muted-foreground/70 mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className="text-sm font-medium">Connexions API (bientôt disponible)</p>
-                  <p className="text-sm text-muted-foreground">
-                    La synchronisation automatique avec Google Business Profile et Facebook sera disponible prochainement 
-                    pour récupérer vos avis en temps réel.
+                  <p className="text-xs font-medium text-foreground/80">Connexions API (bientôt)</p>
+                  <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                    Synchronisation automatique avec Google Business Profile et Facebook pour récupérer vos avis en temps réel.
                   </p>
                 </div>
               </div>
