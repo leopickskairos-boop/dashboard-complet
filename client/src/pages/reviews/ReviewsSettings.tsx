@@ -428,16 +428,17 @@ export default function ReviewsSettings() {
 
                     {newIncentive.type === "amount" && (
                       <div className="space-y-2">
-                        <Label>Montant de la réduction (centimes)</Label>
+                        <Label>Montant de la réduction</Label>
                         <div className="flex items-center gap-2">
                           <Input
                             type="number"
-                            min={100}
-                            value={newIncentive.fixedAmountValue}
-                            onChange={(e) => setNewIncentive({ ...newIncentive, fixedAmountValue: parseInt(e.target.value) || 0 })}
+                            min={1}
+                            step={0.5}
+                            value={(newIncentive.fixedAmountValue / 100).toFixed(2)}
+                            onChange={(e) => setNewIncentive({ ...newIncentive, fixedAmountValue: Math.round(parseFloat(e.target.value || "0") * 100) })}
                             data-testid="input-amount-value"
                           />
-                          <span className="text-muted-foreground">centimes (ex: 500 = 5€)</span>
+                          <span className="text-muted-foreground">€</span>
                         </div>
                       </div>
                     )}
