@@ -1,4 +1,4 @@
-import { LayoutDashboard, Bell, User, Shield, CreditCard, Calendar, History, Settings } from "lucide-react";
+import { LayoutDashboard, Bell, User, Shield, CreditCard, Calendar, History, Settings, Star, MessageSquare, BarChart3, Send } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -48,6 +48,29 @@ const guaranteeItems = [
     title: "Historique",
     url: "/guarantee/history",
     icon: History,
+  },
+];
+
+const reviewsItems = [
+  {
+    title: "Configuration",
+    url: "/reviews/settings",
+    icon: Settings,
+  },
+  {
+    title: "Campagnes",
+    url: "/reviews/campaigns",
+    icon: Send,
+  },
+  {
+    title: "Tous les avis",
+    url: "/reviews",
+    icon: MessageSquare,
+  },
+  {
+    title: "Statistiques",
+    url: "/reviews/stats",
+    icon: BarChart3,
   },
 ];
 
@@ -111,6 +134,27 @@ export function AppSidebar() {
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild isActive={location === item.url}>
                     <Link href={item.url} data-testid={`link-guarantee-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                      <item.icon />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel className="flex items-center gap-2 text-[#C8B88A]">
+            <Star className="h-4 w-4" />
+            Avis & Réputation
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {reviewsItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild isActive={location === item.url || (item.url === "/reviews" && location.startsWith("/reviews/") && !reviewsItems.some(i => i.url !== "/reviews" && location === i.url))}>
+                    <Link href={item.url} data-testid={`link-reviews-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
                       <item.icon />
                       <span>{item.title}</span>
                     </Link>

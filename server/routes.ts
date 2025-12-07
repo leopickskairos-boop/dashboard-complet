@@ -4147,6 +4147,496 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== REVIEWS & REPUTATION MANAGEMENT ROUTES =====
+
+  // Get review configuration
+  app.get("/api/reviews/config", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      let config = await storage.getReviewConfig(userId);
+      
+      if (!config) {
+        config = await storage.upsertReviewConfig(userId, { enabled: false });
+      }
+      
+      res.json(config);
+    } catch (error: any) {
+      console.error("[Reviews] Error fetching config:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // Update review configuration
+  app.put("/api/reviews/config", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const updates = req.body;
+      
+      const config = await storage.upsertReviewConfig(userId, updates);
+      res.json(config);
+    } catch (error: any) {
+      console.error("[Reviews] Error updating config:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // Get all incentives
+  app.get("/api/reviews/incentives", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const incentives = await storage.getReviewIncentives(userId);
+      res.json(incentives);
+    } catch (error: any) {
+      console.error("[Reviews] Error fetching incentives:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // Create incentive
+  app.post("/api/reviews/incentives", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const incentive = await storage.createReviewIncentive({
+        ...req.body,
+        userId,
+      });
+      res.json(incentive);
+    } catch (error: any) {
+      console.error("[Reviews] Error creating incentive:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // Update incentive
+  app.put("/api/reviews/incentives/:id", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { id } = req.params;
+      
+      const incentive = await storage.updateReviewIncentive(id, userId, req.body);
+      
+      if (!incentive) {
+        return res.status(404).json({ message: "Incitation non trouvée" });
+      }
+      
+      res.json(incentive);
+    } catch (error: any) {
+      console.error("[Reviews] Error updating incentive:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // Delete incentive
+  app.delete("/api/reviews/incentives/:id", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { id } = req.params;
+      
+      await storage.deleteReviewIncentive(id, userId);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("[Reviews] Error deleting incentive:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // Set default incentive
+  app.post("/api/reviews/incentives/:id/default", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { id } = req.params;
+      
+      await storage.setDefaultIncentive(id, userId);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("[Reviews] Error setting default incentive:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // Get review requests with filters
+  app.get("/api/reviews/requests", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { status, limit, offset } = req.query;
+      
+      const requests = await storage.getReviewRequests(userId, {
+        status: status as string,
+        limit: limit ? parseInt(limit as string) : undefined,
+        offset: offset ? parseInt(offset as string) : undefined,
+      });
+      
+      res.json(requests);
+    } catch (error: any) {
+      console.error("[Reviews] Error fetching requests:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // Create manual review request
+  app.post("/api/reviews/requests", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { customerName, customerEmail, customerPhone, sendMethod, incentiveId } = req.body;
+      
+      if (!customerName) {
+        return res.status(400).json({ message: "Nom du client requis" });
+      }
+      
+      if (!customerEmail && !customerPhone) {
+        return res.status(400).json({ message: "Email ou téléphone requis" });
+      }
+      
+      const trackingToken = `rv_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+      
+      const request = await storage.createReviewRequest({
+        userId,
+        customerName,
+        customerEmail,
+        customerPhone,
+        sendMethod: sendMethod || 'both',
+        incentiveId,
+        trackingToken,
+        status: 'pending',
+      });
+      
+      res.json(request);
+    } catch (error: any) {
+      console.error("[Reviews] Error creating request:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // Send review request immediately
+  app.post("/api/reviews/requests/:id/send", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { id } = req.params;
+      
+      const request = await storage.getReviewRequestById(id, userId);
+      
+      if (!request) {
+        return res.status(404).json({ message: "Demande non trouvée" });
+      }
+      
+      const config = await storage.getReviewConfig(userId);
+      
+      if (!config) {
+        return res.status(400).json({ message: "Configuration des avis non trouvée" });
+      }
+      
+      const frontendUrl = getFrontendUrl();
+      const reviewLink = `${frontendUrl}/review/${request.trackingToken}`;
+      
+      let emailSent = false;
+      
+      if (request.customerEmail && (request.sendMethod === 'email' || request.sendMethod === 'both')) {
+        const subject = config.emailSubject || "Partagez votre expérience avec nous !";
+        const message = config.emailMessage || `
+          <p>Bonjour ${request.customerName},</p>
+          <p>Nous espérons que vous avez passé un agréable moment chez nous.</p>
+          <p>Votre avis nous est précieux ! Prenez quelques secondes pour partager votre expérience :</p>
+          <p><a href="${reviewLink}" style="display:inline-block;padding:12px 24px;background:#C8B88A;color:#000;text-decoration:none;border-radius:6px;">Laisser un avis</a></p>
+          <p>Merci beaucoup !</p>
+        `;
+        
+        try {
+          await sendEmail({
+            to: request.customerEmail,
+            subject,
+            text: `Bonjour ${request.customerName}, merci de votre visite ! Partagez votre expérience avec nous : ${reviewLink}`,
+            html: message,
+          });
+          emailSent = true;
+        } catch (emailError) {
+          console.error("[Reviews] Error sending email:", emailError);
+        }
+      }
+      
+      await storage.updateReviewRequest(id, {
+        status: 'sent',
+        sentAt: new Date(),
+      });
+      
+      res.json({ success: true, emailSent });
+    } catch (error: any) {
+      console.error("[Reviews] Error sending request:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // Get review request stats
+  app.get("/api/reviews/requests/stats", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const stats = await storage.getReviewRequestStats(userId);
+      res.json(stats);
+    } catch (error: any) {
+      console.error("[Reviews] Error fetching request stats:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // Get all reviews with filters
+  app.get("/api/reviews", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { platform, ratingMin, ratingMax, sentiment, isRead, search, limit, offset } = req.query;
+      
+      const reviewsList = await storage.getReviews(userId, {
+        platform: platform as string,
+        ratingMin: ratingMin ? parseInt(ratingMin as string) : undefined,
+        ratingMax: ratingMax ? parseInt(ratingMax as string) : undefined,
+        sentiment: sentiment as string,
+        isRead: isRead !== undefined ? isRead === 'true' : undefined,
+        search: search as string,
+        limit: limit ? parseInt(limit as string) : undefined,
+        offset: offset ? parseInt(offset as string) : undefined,
+      });
+      
+      res.json(reviewsList);
+    } catch (error: any) {
+      console.error("[Reviews] Error fetching reviews:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // Get single review
+  app.get("/api/reviews/:id", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { id } = req.params;
+      
+      const review = await storage.getReviewById(id, userId);
+      
+      if (!review) {
+        return res.status(404).json({ message: "Avis non trouvé" });
+      }
+      
+      res.json(review);
+    } catch (error: any) {
+      console.error("[Reviews] Error fetching review:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // Mark review as read
+  app.post("/api/reviews/:id/read", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { id } = req.params;
+      
+      const review = await storage.updateReview(id, userId, { isRead: true });
+      
+      if (!review) {
+        return res.status(404).json({ message: "Avis non trouvé" });
+      }
+      
+      res.json(review);
+    } catch (error: any) {
+      console.error("[Reviews] Error marking review as read:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // Flag/unflag review
+  app.post("/api/reviews/:id/flag", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { id } = req.params;
+      const { flagged } = req.body;
+      
+      const review = await storage.updateReview(id, userId, { isFlagged: flagged });
+      
+      if (!review) {
+        return res.status(404).json({ message: "Avis non trouvé" });
+      }
+      
+      res.json(review);
+    } catch (error: any) {
+      console.error("[Reviews] Error flagging review:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // Save response to review (draft or publish)
+  app.post("/api/reviews/:id/respond", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { id } = req.params;
+      const { responseText, publish } = req.body;
+      
+      if (!responseText) {
+        return res.status(400).json({ message: "Texte de réponse requis" });
+      }
+      
+      const review = await storage.updateReview(id, userId, {
+        responseText,
+        responseStatus: publish ? 'published' : 'draft',
+        responseDate: publish ? new Date() : undefined,
+      });
+      
+      if (!review) {
+        return res.status(404).json({ message: "Avis non trouvé" });
+      }
+      
+      res.json(review);
+    } catch (error: any) {
+      console.error("[Reviews] Error responding to review:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // Get review stats
+  app.get("/api/reviews/stats", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { period } = req.query;
+      
+      const stats = await storage.getReviewStats(
+        userId, 
+        period as 'week' | 'month' | 'year' | 'all'
+      );
+      
+      res.json(stats);
+    } catch (error: any) {
+      console.error("[Reviews] Error fetching stats:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // Get review alerts configuration
+  app.get("/api/reviews/alerts", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const alerts = await storage.getReviewAlerts(userId);
+      res.json(alerts);
+    } catch (error: any) {
+      console.error("[Reviews] Error fetching alerts:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // Update review alerts configuration
+  app.put("/api/reviews/alerts", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { alerts } = req.body;
+      
+      if (!Array.isArray(alerts)) {
+        return res.status(400).json({ message: "Format invalide" });
+      }
+      
+      await storage.upsertReviewAlerts(userId, alerts);
+      const updatedAlerts = await storage.getReviewAlerts(userId);
+      res.json(updatedAlerts);
+    } catch (error: any) {
+      console.error("[Reviews] Error updating alerts:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // Public endpoint: Track link click from review request
+  app.get("/api/reviews/public/track/:token", async (req, res) => {
+    try {
+      const { token } = req.params;
+      const { platform } = req.query;
+      
+      const request = await storage.getReviewRequestByToken(token);
+      
+      if (!request) {
+        return res.status(404).json({ message: "Lien invalide" });
+      }
+      
+      if (!request.linkClickedAt) {
+        await storage.updateReviewRequest(request.id, {
+          linkClickedAt: new Date(),
+          platformClicked: platform as string,
+          status: 'clicked',
+        });
+      }
+      
+      const config = await storage.getReviewConfig(request.userId);
+      
+      res.json({
+        platforms: {
+          google: config?.googleReviewUrl,
+          tripadvisor: config?.tripadvisorUrl,
+          facebook: config?.facebookPageUrl,
+          yelp: config?.yelpUrl,
+          doctolib: config?.doctolibUrl,
+          pagesJaunes: config?.pagesJaunesUrl,
+        },
+        priority: config?.platformsPriority || ['google', 'tripadvisor', 'facebook'],
+        customerName: request.customerName,
+      });
+    } catch (error: any) {
+      console.error("[Reviews] Error tracking link:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // Public endpoint: Confirm review was left
+  app.post("/api/reviews/public/confirm/:token", async (req, res) => {
+    try {
+      const { token } = req.params;
+      const { platform } = req.body;
+      
+      const request = await storage.getReviewRequestByToken(token);
+      
+      if (!request) {
+        return res.status(404).json({ message: "Lien invalide" });
+      }
+      
+      if (request.reviewConfirmedAt) {
+        return res.json({ 
+          success: true, 
+          promoCode: request.promoCode,
+          alreadyConfirmed: true,
+        });
+      }
+      
+      let promoCode: string | null = null;
+      
+      if (request.incentiveId) {
+        const incentive = await storage.getReviewIncentiveById(request.incentiveId, request.userId);
+        if (incentive) {
+          promoCode = `MERCI-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+        }
+      }
+      
+      await storage.updateReviewRequest(request.id, {
+        reviewConfirmedAt: new Date(),
+        reviewConfirmedPlatform: platform,
+        promoCode,
+        status: 'confirmed',
+      });
+      
+      res.json({ 
+        success: true, 
+        promoCode,
+      });
+    } catch (error: any) {
+      console.error("[Reviews] Error confirming review:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // OAuth stub endpoints (501 Not Implemented for Phase 2)
+  app.get("/api/reviews/oauth/google/connect", requireAuth, async (req, res) => {
+    res.status(501).json({ 
+      message: "Connexion Google Business Profile disponible prochainement",
+      status: "not_implemented"
+    });
+  });
+
+  app.get("/api/reviews/oauth/facebook/connect", requireAuth, async (req, res) => {
+    res.status(501).json({ 
+      message: "Connexion Facebook Pages disponible prochainement",
+      status: "not_implemented"
+    });
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

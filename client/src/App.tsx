@@ -33,6 +33,13 @@ import GuaranteePage from "@/pages/guarantee/GuaranteePage";
 import GuaranteeConfirmation from "@/pages/guarantee/GuaranteeConfirmation";
 import GuaranteeCancellation from "@/pages/guarantee/GuaranteeCancellation";
 
+// Reviews & Reputation Pages
+import ReviewsSettings from "@/pages/reviews/ReviewsSettings";
+import ReviewsCampaigns from "@/pages/reviews/ReviewsCampaigns";
+import ReviewsList from "@/pages/reviews/ReviewsList";
+import ReviewsStats from "@/pages/reviews/ReviewsStats";
+import ReviewPage from "@/pages/reviews/ReviewPage";
+
 function Router() {
   return (
     <Switch>
@@ -123,6 +130,42 @@ function Router() {
       <Route path="/g/:sessionId" component={GuaranteePage} />
       <Route path="/guarantee/confirmation" component={GuaranteeConfirmation} />
       <Route path="/guarantee/annulation" component={GuaranteeCancellation} />
+
+      {/* Reviews & Reputation - Protected dashboard pages */}
+      <Route path="/reviews/settings">
+        <ProtectedRoute requireVerified={true} requireSubscription={true}>
+          <DashboardLayout>
+            <ReviewsSettings />
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/reviews/campaigns">
+        <ProtectedRoute requireVerified={true} requireSubscription={true}>
+          <DashboardLayout>
+            <ReviewsCampaigns />
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/reviews/stats">
+        <ProtectedRoute requireVerified={true} requireSubscription={true}>
+          <DashboardLayout>
+            <ReviewsStats />
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/reviews">
+        <ProtectedRoute requireVerified={true} requireSubscription={true}>
+          <DashboardLayout>
+            <ReviewsList />
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+
+      {/* Reviews - Public page (no auth required) */}
+      <Route path="/review/:token" component={ReviewPage} />
 
       <Route component={NotFound} />
     </Switch>
