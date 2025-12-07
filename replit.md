@@ -44,6 +44,26 @@ The project utilizes a modern web stack for a responsive and professional user i
     -   Company branding customization (logo, colors)
     -   Automatic charging for no-shows with failure tracking
     -   Statistics and recovery metrics
+-   **Reviews & Reputation Management System**: Complete review collection and management system with:
+    -   5-table architecture (review_config, review_incentives, review_requests, reviews, review_alerts)
+    -   Automated review request sending via email (SMS prepared)
+    -   Incentive system with 6 types: percentage, fixed_amount, free_item, lottery, loyalty_points, custom
+    -   Tracking system with unique tokens (format: rv_{timestamp}_{random})
+    -   Public pages for customers to select review platforms and confirm submission
+    -   Automatic promo code generation after review confirmation
+    -   Configurable timing modes: smart (AI), fixed_delay, fixed_time
+    -   Multi-platform support: Google, TripAdvisor, Facebook, Yelp, Doctolib, Pages Jaunes
+    -   Alert configuration for negative reviews, 5-star reviews, response delays
+    -   Full API documentation available at: docs/REVIEWS_SYSTEM_DOCUMENTATION.md
+
+## Technical Documentation
+
+-   **Reviews & Reputation System**: Complete technical documentation for N8N integration available at `docs/REVIEWS_SYSTEM_DOCUMENTATION.md`. Includes:
+    -   Full database schema with all 5 tables and field-by-field documentation
+    -   Complete API reference with request/response schemas
+    -   N8N workflow examples with ASCII diagrams and JSON payloads
+    -   Data flow diagrams and state machine documentation
+    -   All enums and their values documented
 
 ## External Dependencies
 
