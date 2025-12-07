@@ -1270,6 +1270,184 @@ export default function ReviewsSettings() {
         </CardContent>
       </Card>
 
+      {/* AI Response Settings */}
+      <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-2 text-base font-semibold">
+            <div className="p-1.5 rounded-lg bg-[#C8B88A]/10">
+              <Settings className="h-4 w-4 text-[#C8B88A]" />
+            </div>
+            Réponses IA automatiques
+          </CardTitle>
+          <CardDescription className="text-xs">
+            Générez automatiquement des suggestions de réponses aux avis
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4 pt-0">
+          <div className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-muted/20">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-[#C8B88A]/10">
+                <Settings className="h-4 w-4 text-[#C8B88A]" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">Activer les réponses IA</p>
+                <p className="text-xs text-muted-foreground">Génère des suggestions de réponse pour chaque avis</p>
+              </div>
+            </div>
+            <Switch
+              checked={config?.aiResponseEnabled || false}
+              onCheckedChange={(value) => handleSaveSettings("aiResponseEnabled", value)}
+              data-testid="switch-ai-response-enabled"
+            />
+          </div>
+
+          {config?.aiResponseEnabled && (
+            <>
+              <div className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-muted/20">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-blue-500/10">
+                    <Settings className="h-4 w-4 text-blue-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Génération automatique</p>
+                    <p className="text-xs text-muted-foreground">Génère les réponses lors de la synchronisation</p>
+                  </div>
+                </div>
+                <Switch
+                  checked={config?.aiAutoGenerate || false}
+                  onCheckedChange={(value) => handleSaveSettings("aiAutoGenerate", value)}
+                  data-testid="switch-ai-auto-generate"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Ton des réponses</Label>
+                  <Select
+                    value={config?.aiResponseTone || "professional"}
+                    onValueChange={(value) => handleSaveSettings("aiResponseTone", value)}
+                    data-testid="select-ai-tone"
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="professional">Professionnel</SelectItem>
+                      <SelectItem value="friendly">Amical</SelectItem>
+                      <SelectItem value="formal">Formel</SelectItem>
+                      <SelectItem value="casual">Décontracté</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Langue</Label>
+                  <Select
+                    value={config?.aiResponseLanguage || "fr"}
+                    onValueChange={(value) => handleSaveSettings("aiResponseLanguage", value)}
+                    data-testid="select-ai-language"
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="fr">Français</SelectItem>
+                      <SelectItem value="en">Anglais</SelectItem>
+                      <SelectItem value="es">Espagnol</SelectItem>
+                      <SelectItem value="de">Allemand</SelectItem>
+                      <SelectItem value="it">Italien</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Longueur max des réponses</Label>
+                <Select
+                  value={String(config?.aiMaxLength || 300)}
+                  onValueChange={(value) => handleSaveSettings("aiMaxLength", parseInt(value))}
+                  data-testid="select-ai-max-length"
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="150">Court (150 car.)</SelectItem>
+                    <SelectItem value="300">Moyen (300 car.)</SelectItem>
+                    <SelectItem value="500">Long (500 car.)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-muted/20">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-[#4CEFAD]/10">
+                    <MessageSquare className="h-4 w-4 text-[#4CEFAD]" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Inclure le nom de l'entreprise</p>
+                    <p className="text-xs text-muted-foreground">Personnalise les réponses avec votre marque</p>
+                  </div>
+                </div>
+                <Switch
+                  checked={config?.aiIncludeCompanyName || false}
+                  onCheckedChange={(value) => handleSaveSettings("aiIncludeCompanyName", value)}
+                  data-testid="switch-ai-include-company"
+                />
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* SMS Settings */}
+      <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-2 text-base font-semibold">
+            <div className="p-1.5 rounded-lg bg-[#4CEFAD]/10">
+              <MessageSquare className="h-4 w-4 text-[#4CEFAD]" />
+            </div>
+            Envoi SMS
+          </CardTitle>
+          <CardDescription className="text-xs">
+            Activez l'envoi de SMS pour les demandes d'avis
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4 pt-0">
+          <div className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-muted/20">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-[#4CEFAD]/10">
+                <MessageSquare className="h-4 w-4 text-[#4CEFAD]" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">Activer l'envoi SMS</p>
+                <p className="text-xs text-muted-foreground">Envoie des SMS aux clients avec numéro de téléphone</p>
+              </div>
+            </div>
+            <Switch
+              checked={config?.smsEnabled || false}
+              onCheckedChange={(value) => handleSaveSettings("smsEnabled", value)}
+              data-testid="switch-sms-enabled"
+            />
+          </div>
+
+          {config?.smsEnabled && (
+            <div className="p-3 rounded-xl border border-[#C8B88A]/20 bg-[#C8B88A]/5">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="h-4 w-4 text-[#C8B88A] mt-0.5" />
+                <div>
+                  <p className="text-xs font-medium text-[#C8B88A]">Configuration requise</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Pour envoyer des SMS, les variables d'environnement Twilio doivent être configurées :
+                    TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <PlatformConnectionsSection />
     </div>
   );

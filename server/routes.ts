@@ -4634,6 +4634,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Generate AI insights for reviews analytics
+  app.post("/api/ai/review-insights", requireAuth, async (req, res) => {
+    try {
+      const { stats, period } = req.body;
+      
+      if (!stats) {
+        return res.status(400).json({ message: "Stats required" });
+      }
+      
+      const OpenAI = (await import('openai')).default;
+      const openai = new OpenAI({
+        baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+        apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+      });
+
+      const prompt = `Tu es un expert en gestion de la réputation en ligne et en analyse de données.
+Analyse ces statistiques d'avis clients et génère 3-4 recommandations concrètes et actionnables.
+
+Statistiques:
+- Note globale: ${stats.globalScore}/5
+- Total d'avis: ${stats.totalReviews}
+- Nouveaux avis sur la période (${period || 'mois'}): ${stats.newReviewsPeriod}
+- Taux de réponse: ${stats.responseRate}%
+- Temps de réponse moyen: ${stats.avgResponseTimeHours ? stats.avgResponseTimeHours + 'h' : 'Non disponible'}
+- Distribution des notes: ${JSON.stringify(stats.ratingDistribution)}
+- Distribution des sentiments: ${JSON.stringify(stats.sentimentDistribution)}
+- Plateformes: ${JSON.stringify(stats.platforms)}
+
+Génère une analyse en français avec:
+1. Un point fort identifié
+2. Un axe d'amélioration prioritaire
+3. 2-3 actions concrètes à mettre en place
+
+Format: Utilise des bullet points et reste concis (max 200 mots).`;
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.7,
+        max_tokens: 400,
+      });
+
+      const insights = completion.choices[0]?.message?.content || "Analyse non disponible";
+
+      res.json({ insights });
+    } catch (error: any) {
+      console.error("[AI Reviews] Error generating insights:", error);
+      res.status(500).json({ message: "Erreur lors de la génération IA" });
+    }
+  });
+
   // Get review stats
   app.get("/api/reviews/stats", requireAuth, async (req, res) => {
     try {
