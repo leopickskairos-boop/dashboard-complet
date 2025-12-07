@@ -252,6 +252,10 @@ export interface IStorage {
     platforms: Record<string, { score: number; count: number }>;
     ratingDistribution: Record<number, number>;
     sentimentDistribution: Record<string, number>;
+    trends: Array<{ date: string; count: number; avgRating: number }>;
+    avgResponseTimeHours: number | null;
+    sentimentTrend: Array<{ date: string; positive: number; neutral: number; negative: number }>;
+    platformComparison: Array<{ platform: string; score: number; count: number; trend: number }>;
   }>;
   
   // Review alerts
@@ -1658,21 +1662,30 @@ export class DatabaseStorage implements IStorage {
     platforms: Record<string, { score: number; count: number }>;
     ratingDistribution: Record<number, number>;
     sentimentDistribution: Record<string, number>;
+    trends: Array<{ date: string; count: number; avgRating: number }>;
+    avgResponseTimeHours: number | null;
+    sentimentTrend: Array<{ date: string; positive: number; neutral: number; negative: number }>;
+    platformComparison: Array<{ platform: string; score: number; count: number; trend: number }>;
   }> {
     const conditions = [eq(reviews.userId, userId)];
     
     let periodStartDate: Date | null = null;
+    let previousPeriodStart: Date | null = null;
+    const now = new Date();
+    
     if (period && period !== 'all') {
-      const now = new Date();
       switch (period) {
         case 'week':
           periodStartDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          previousPeriodStart = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
           break;
         case 'month':
           periodStartDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          previousPeriodStart = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
           break;
         case 'year':
           periodStartDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+          previousPeriodStart = new Date(now.getTime() - 730 * 24 * 60 * 60 * 1000);
           break;
       }
     }
@@ -1687,9 +1700,10 @@ export class DatabaseStorage implements IStorage {
       ? Math.round((allReviews.reduce((sum, r) => sum + r.rating, 0) / totalReviews) * 10) / 10
       : 0;
     
-    const newReviewsPeriod = periodStartDate 
-      ? allReviews.filter(r => r.reviewDate && r.reviewDate >= periodStartDate!).length
-      : totalReviews;
+    const periodReviews = periodStartDate 
+      ? allReviews.filter(r => r.reviewDate && r.reviewDate >= periodStartDate!)
+      : allReviews;
+    const newReviewsPeriod = periodReviews.length;
     
     const reviewsWithResponse = allReviews.filter(r => r.responseStatus === 'published').length;
     const responseRate = totalReviews > 0 ? Math.round((reviewsWithResponse / totalReviews) * 100) : 0;
@@ -1729,6 +1743,108 @@ export class DatabaseStorage implements IStorage {
       }
     });
     
+    // === NEW ANALYTICS ===
+    
+    // Trends: Group by date (last 30 days by default, or period)
+    const trendMap = new Map<string, { count: number; totalRating: number }>();
+    const trendDays = period === 'week' ? 7 : period === 'month' ? 30 : period === 'year' ? 12 : 30;
+    
+    periodReviews.forEach(r => {
+      if (r.reviewDate) {
+        const dateKey = period === 'year' 
+          ? `${r.reviewDate.getFullYear()}-${String(r.reviewDate.getMonth() + 1).padStart(2, '0')}`
+          : r.reviewDate.toISOString().split('T')[0];
+        
+        if (!trendMap.has(dateKey)) {
+          trendMap.set(dateKey, { count: 0, totalRating: 0 });
+        }
+        const entry = trendMap.get(dateKey)!;
+        entry.count++;
+        entry.totalRating += r.rating;
+      }
+    });
+    
+    const trends = Array.from(trendMap.entries())
+      .map(([date, data]) => ({
+        date,
+        count: data.count,
+        avgRating: Math.round((data.totalRating / data.count) * 10) / 10,
+      }))
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .slice(-trendDays);
+    
+    // Average response time (for reviews that have responses)
+    const reviewsWithResponseTime = allReviews.filter(
+      r => r.reviewDate && r.responseDate && r.responseStatus === 'published'
+    );
+    let avgResponseTimeHours: number | null = null;
+    if (reviewsWithResponseTime.length > 0) {
+      const totalHours = reviewsWithResponseTime.reduce((sum, r) => {
+        const diffMs = r.responseDate!.getTime() - r.reviewDate!.getTime();
+        return sum + (diffMs / (1000 * 60 * 60));
+      }, 0);
+      avgResponseTimeHours = Math.round(totalHours / reviewsWithResponseTime.length);
+    }
+    
+    // Sentiment trend by date
+    const sentimentTrendMap = new Map<string, { positive: number; neutral: number; negative: number }>();
+    periodReviews.forEach(r => {
+      if (r.reviewDate && r.sentiment) {
+        const dateKey = period === 'year'
+          ? `${r.reviewDate.getFullYear()}-${String(r.reviewDate.getMonth() + 1).padStart(2, '0')}`
+          : r.reviewDate.toISOString().split('T')[0];
+        
+        if (!sentimentTrendMap.has(dateKey)) {
+          sentimentTrendMap.set(dateKey, { positive: 0, neutral: 0, negative: 0 });
+        }
+        const entry = sentimentTrendMap.get(dateKey)!;
+        if (r.sentiment === 'very_positive' || r.sentiment === 'positive') {
+          entry.positive++;
+        } else if (r.sentiment === 'neutral') {
+          entry.neutral++;
+        } else {
+          entry.negative++;
+        }
+      }
+    });
+    
+    const sentimentTrend = Array.from(sentimentTrendMap.entries())
+      .map(([date, data]) => ({ date, ...data }))
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .slice(-trendDays);
+    
+    // Platform comparison with trend (compare to previous period)
+    const previousPeriodReviews = previousPeriodStart && periodStartDate
+      ? allReviews.filter(r => r.reviewDate && r.reviewDate >= previousPeriodStart! && r.reviewDate < periodStartDate!)
+      : [];
+    
+    const previousPlatformScores: Record<string, number> = {};
+    previousPeriodReviews.forEach(r => {
+      if (!previousPlatformScores[r.platform]) {
+        previousPlatformScores[r.platform] = 0;
+      }
+      previousPlatformScores[r.platform] += r.rating;
+    });
+    const previousPlatformCounts: Record<string, number> = {};
+    previousPeriodReviews.forEach(r => {
+      previousPlatformCounts[r.platform] = (previousPlatformCounts[r.platform] || 0) + 1;
+    });
+    
+    const platformComparison = Object.entries(platforms).map(([platform, data]) => {
+      const prevCount = previousPlatformCounts[platform] || 0;
+      const prevScore = prevCount > 0 
+        ? (previousPlatformScores[platform] || 0) / prevCount 
+        : data.score;
+      const trend = Math.round((data.score - prevScore) * 10) / 10;
+      
+      return {
+        platform,
+        score: data.score,
+        count: data.count,
+        trend,
+      };
+    });
+    
     return {
       globalScore,
       totalReviews,
@@ -1737,6 +1853,10 @@ export class DatabaseStorage implements IStorage {
       platforms,
       ratingDistribution,
       sentimentDistribution,
+      trends,
+      avgResponseTimeHours,
+      sentimentTrend,
+      platformComparison,
     };
   }
 
