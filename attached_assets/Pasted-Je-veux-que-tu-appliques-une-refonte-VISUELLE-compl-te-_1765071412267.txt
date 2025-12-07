@@ -1,0 +1,76 @@
+Je veux que tu appliques une refonte VISUELLE complète de mon dashboard pour réduire fortement le bruit visuel et rendre l’interface beaucoup plus épurée, plus simple et plus premium.
+
+RÈGLE ABSOLUE :
+Tu ne modifies JAMAIS la logique, les hooks, les appels API, les handlers, les formulaires, ni la structure fonctionnelle. Tu modifies uniquement la présentation visuelle et la hiérarchie.
+
+OBJECTIF PRINCIPAL :
+Réduire le bruit visuel, simplifier l’interface, harmoniser l’espacement, alléger les blocs, et donner une impression premium, calme et lisible (style Linear / Anthropic / Notion).
+
+DIRECTIVES VISUELLES :
+
+1) Réduire le nombre de bordures visibles :
+- Remplacer les card-borders par des separators subtils.
+- Supprimer les cadres inutiles.
+- Utiliser border subtile : rgba(255,255,255,0.04)
+- Préférer les panels sans contours visibles.
+
+2) Aérer la mise en page :
+- Ajouter plus d’espace vertical entre les sections (24–32px).
+- Diminuer la hauteur interne des cards (padding 16–20px max).
+- Créer une vraie respiration entre les blocs.
+
+3) Hiérarchiser la typographie :
+- Titres : 20px semi-bold
+- Sous-titres : 14px gris clair
+- Labels : 12px très subtil
+- Diminuer la présence visuelle des textes non importants.
+
+4) Minimiser l’encombrement visuel :
+- Réduire la taille des icônes.
+- Utiliser icônes fines et discrètes.
+- Uniformiser les couleurs des icônes (pas de couleurs multiples).
+- Éviter les encadrements rectangulaires superflus.
+
+5) Empty-states ultra simples et premium :
+- Icône fine centrée + une ligne de texte.
+- Pas de grands blocs vides encombrants.
+
+6) Harmoniser les espacements :
+- Toujours le même spacing entre sections.
+- Toujours le même padding interne pour les cards.
+- Radius uniforme : 10–12px.
+
+7) Réduire l’effet “mur de cartes” :
+- Faire en sorte que les panneaux respirent davantage.
+- Utiliser des backgrounds plus proches du fond général (#050509 / #0A0C10).
+- Atténuer les contrastes trop marqués.
+
+8) Composants spécifiques :
+
+● Section “Offres incitatives”
+- Réduire la hauteur du bloc.
+- Créer un empty-state plus compact.
+- Ne pas afficher de grand panneau vide.
+
+● Section “Liens plateformes”
+- Organiser en deux colonnes compactes.
+- Réduire les dividers internes.
+- Icônes fines, alignées, discrètes.
+
+● Section “Timing d’envoi / Messages”
+- Garder deux colonnes mais les compacter.
+- Titre plus visible, légendes plus discrètes.
+
+● Bouton “Nouvelle offre”
+- Style plus compact, plus propre (tailwind minimal).
+
+STYLE GLOBAL :
+- Dark mode premium
+- Très peu de contrastes
+- Monochrome + une couleur d’accent
+- Apparence très calme, douce, non agressive
+- Pas de saturation, pas de couleurs secondaires multiples
+
+Tu appliques TOUTES ces modifications UNIQUEMENT au niveau visuel.
+Aucune logique, aucune fonctionnalité ne doit changer.
+Propose ensuite les modifications UI à appliquer dans les composants existants.

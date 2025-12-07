@@ -206,15 +206,15 @@ export default function ReviewsSettings() {
   }
 
   return (
-    <div className="space-y-5 pb-8">
+    <div className="space-y-7 pb-8">
       {/* Header */}
-      <div className="flex items-center justify-between pl-1">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-semibold text-foreground">Configuration des Avis</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">Paramétrez votre collecte d'avis</p>
+          <h1 className="text-xl font-semibold text-foreground">Configuration</h1>
+          <p className="text-sm text-muted-foreground/70 mt-1">Paramètres de collecte d'avis</p>
         </div>
-        <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-card/50 border border-border/50">
-          <span className="text-sm text-muted-foreground">Système activé</span>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-muted-foreground/60">Système activé</span>
           <Switch
             checked={config?.enabled || false}
             onCheckedChange={handleToggleEnabled}
@@ -223,28 +223,22 @@ export default function ReviewsSettings() {
         </div>
       </div>
 
-      <div className="grid gap-5 md:grid-cols-2">
-        <Card className="border-border/50 bg-card/50">
-          <CardHeader className="pb-4">
-            <CardTitle className="flex items-center gap-2 text-base font-semibold">
-              <div className="p-1.5 rounded-lg bg-[#C8B88A]/10">
-                <Clock className="h-4 w-4 text-[#C8B88A]" />
-              </div>
-              Timing d'envoi
-            </CardTitle>
-            <CardDescription className="text-xs">
-              Définissez le meilleur moment pour solliciter vos clients
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4 pt-0">
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Timing Section */}
+        <div className="space-y-5">
+          <div className="flex items-center gap-2">
+            <Clock className="h-3.5 w-3.5 text-muted-foreground/50" />
+            <h2 className="text-sm font-medium text-foreground/90">Timing d'envoi</h2>
+          </div>
+          <div className="space-y-4 pl-5">
             <div className="space-y-2">
-              <Label>Mode de timing</Label>
+              <Label className="text-xs text-muted-foreground/70">Mode de timing</Label>
               <Select
                 value={config?.timingMode || "smart"}
                 onValueChange={(value) => handleSaveSettings("timingMode", value)}
                 data-testid="select-timing-mode"
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-9">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -257,13 +251,14 @@ export default function ReviewsSettings() {
 
             {config?.timingMode === "fixed_delay" && (
               <div className="space-y-2">
-                <Label>Délai après RDV (heures)</Label>
+                <Label className="text-xs text-muted-foreground/70">Délai après RDV (heures)</Label>
                 <Input
                   type="number"
                   min={1}
                   max={168}
                   value={config?.fixedDelayHours || 24}
                   onChange={(e) => handleSaveSettings("fixedDelayHours", parseInt(e.target.value))}
+                  className="h-9"
                   data-testid="input-fixed-delay"
                 />
               </div>
@@ -271,61 +266,58 @@ export default function ReviewsSettings() {
 
             {config?.timingMode === "fixed_time" && (
               <div className="space-y-2">
-                <Label>Heure d'envoi</Label>
+                <Label className="text-xs text-muted-foreground/70">Heure d'envoi</Label>
                 <Input
                   type="time"
                   value={config?.fixedTime || "18:00"}
                   onChange={(e) => handleSaveSettings("fixedTime", e.target.value)}
+                  className="h-9"
                   data-testid="input-fixed-time"
                 />
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>Fenêtre début</Label>
+                <Label className="text-xs text-muted-foreground/70">Fenêtre début</Label>
                 <Input
                   type="time"
                   value={config?.sendWindowStart || "10:00"}
                   onChange={(e) => handleSaveSettings("sendWindowStart", e.target.value)}
+                  className="h-9"
                   data-testid="input-window-start"
                 />
               </div>
               <div className="space-y-2">
-                <Label>Fenêtre fin</Label>
+                <Label className="text-xs text-muted-foreground/70">Fenêtre fin</Label>
                 <Input
                   type="time"
                   value={config?.sendWindowEnd || "20:00"}
                   onChange={(e) => handleSaveSettings("sendWindowEnd", e.target.value)}
+                  className="h-9"
                   data-testid="input-window-end"
                 />
               </div>
             </div>
 
-            <div className="flex items-center justify-between">
-              <Label>Éviter les week-ends</Label>
+            <div className="flex items-center justify-between py-1">
+              <Label className="text-xs text-muted-foreground/70">Éviter les week-ends</Label>
               <Switch
                 checked={config?.avoidWeekends || false}
                 onCheckedChange={(value) => handleSaveSettings("avoidWeekends", value)}
                 data-testid="switch-avoid-weekends"
               />
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        <Card className="border-border/50 bg-card/50">
-          <CardHeader className="pb-4">
-            <CardTitle className="flex items-center gap-2 text-base font-semibold">
-              <div className="p-1.5 rounded-lg bg-[#C8B88A]/10">
-                <MessageSquare className="h-4 w-4 text-[#C8B88A]" />
-              </div>
-              Messages personnalisés
-            </CardTitle>
-            <CardDescription className="text-xs">
-              Personnalisez le ton et le contenu de vos invitations
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4 pt-0">
+        {/* Messages Section */}
+        <div className="space-y-5">
+          <div className="flex items-center gap-2">
+            <MessageSquare className="h-3.5 w-3.5 text-muted-foreground/50" />
+            <h2 className="text-sm font-medium text-foreground/90">Messages</h2>
+          </div>
+          <div className="space-y-4 pl-5">
             <div className="space-y-2">
               <Label>Message SMS (160 car. max)</Label>
               <Textarea
@@ -352,31 +344,29 @@ export default function ReviewsSettings() {
             </div>
 
             <div className="space-y-2">
-              <Label>Corps de l'email (HTML)</Label>
+              <Label className="text-xs text-muted-foreground/70">Corps de l'email</Label>
               <Textarea
                 value={config?.emailMessage || ""}
                 onChange={(e) => handleSaveSettings("emailMessage", e.target.value)}
                 placeholder="<p>Bonjour {nom},</p><p>Merci de votre visite...</p>"
-                className="min-h-[100px] resize-none font-mono text-sm"
+                className="min-h-[80px] resize-none font-mono text-xs"
                 data-testid="textarea-email-message"
               />
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
+      </div>
 
-        <Card className="md:col-span-2 border-border/50 bg-card/50">
-          <CardHeader className="pb-4">
-            <CardTitle className="flex items-center gap-2 text-base font-semibold">
-              <div className="p-1.5 rounded-lg bg-[#C8B88A]/10">
-                <Gift className="h-4 w-4 text-[#C8B88A]" />
-              </div>
-              Offres incitatives
-            </CardTitle>
-            <CardDescription className="text-xs">
-              Encouragez vos clients à laisser un avis avec des récompenses attractives
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4 pt-0">
+      {/* Separator */}
+      <div className="h-px bg-border/30" />
+
+      {/* Incentives Section */}
+      <div className="space-y-5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Gift className="h-3.5 w-3.5 text-muted-foreground/50" />
+            <h2 className="text-sm font-medium text-foreground/90">Offres incitatives</h2>
+          </div>
             <div className="flex justify-end">
               <Dialog open={showNewIncentiveDialog} onOpenChange={setShowNewIncentiveDialog}>
                 <DialogTrigger asChild>
