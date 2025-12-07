@@ -301,6 +301,7 @@ export default function ReviewsList() {
                           size="sm"
                           className="mt-2"
                           onClick={() => setResponseText(selectedReview.aiSuggestedResponse || "")}
+                          data-testid="button-use-suggestion"
                         >
                           Utiliser cette suggestion
                         </Button>
@@ -321,13 +322,14 @@ export default function ReviewsList() {
                 </DialogDescription>
               </DialogHeader>
               <DialogFooter className="gap-2">
-                <Button variant="outline" onClick={() => setSelectedReview(null)}>
+                <Button variant="outline" onClick={() => setSelectedReview(null)} data-testid="button-close-review">
                   Fermer
                 </Button>
                 <Button
                   variant="secondary"
                   onClick={() => respondMutation.mutate({ reviewId: selectedReview.id, text: responseText, publish: false })}
                   disabled={!responseText || respondMutation.isPending}
+                  data-testid="button-save-draft"
                 >
                   Sauvegarder brouillon
                 </Button>

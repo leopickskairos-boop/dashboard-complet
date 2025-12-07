@@ -4295,7 +4295,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         customerEmail,
         customerPhone,
         sendMethod: sendMethod || 'both',
-        incentiveId,
+        incentiveId: incentiveId && incentiveId.trim() !== '' ? incentiveId : null,
         trackingToken,
         status: 'pending',
       });

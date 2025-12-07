@@ -211,7 +211,7 @@ export default function ReviewsCampaigns() {
               )}
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
+              <Button variant="outline" onClick={() => setIsCreateOpen(false)} data-testid="button-cancel-request">
                 Annuler
               </Button>
               <Button
