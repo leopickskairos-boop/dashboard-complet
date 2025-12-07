@@ -979,6 +979,17 @@ export const reviewConfig = pgTable("review_config", {
   // Priorité des plateformes
   platformsPriority: jsonb("platforms_priority").default(['google', 'tripadvisor', 'facebook']),
   
+  // Configuration SMS
+  smsEnabled: boolean("sms_enabled").notNull().default(false),
+  
+  // Configuration IA pour réponses automatiques
+  aiResponseEnabled: boolean("ai_response_enabled").notNull().default(false),
+  aiResponseTone: text("ai_response_tone").notNull().default("professional"), // 'professional', 'friendly', 'formal', 'casual'
+  aiResponseLanguage: text("ai_response_language").notNull().default("fr"), // 'fr', 'en', 'es', 'de', 'it'
+  aiAutoGenerate: boolean("ai_auto_generate").notNull().default(true), // Génère automatiquement lors du sync
+  aiIncludeCompanyName: boolean("ai_include_company_name").notNull().default(true),
+  aiMaxLength: integer("ai_max_length").notNull().default(300), // Longueur max en caractères
+  
   // Timestamps
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
