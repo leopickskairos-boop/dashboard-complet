@@ -5032,33 +5032,35 @@ Format: Utilise des bullet points et reste concis (max 200 mots).`;
         }
       }
 
-      // SMS sending with Twilio
+      // Prepare SMS data for N8N to send (N8N handles actual SMS sending via Twilio)
+      let smsData = null;
+      let smsPrepared = false;
       if (request.customerPhone && (request.sendMethod === 'sms' || request.sendMethod === 'both')) {
         const companyName = config.companyName || "notre établissement";
         
-        // Check if SMS is enabled in config
+        // Build SMS message with global replacement for all placeholders
+        const smsMessage = config.smsMessage 
+          ? config.smsMessage
+              .replaceAll('{nom}', request.customerName || 'Client')
+              .replaceAll('{entreprise}', companyName)
+              .replaceAll('{lien}', reviewLink)
+          : `Bonjour ${request.customerName || ''}, merci pour votre visite chez ${companyName} ! Partagez votre avis : ${reviewLink}${incentiveTextSms}`;
+        
+        // Return SMS data for N8N to send
         if (config.smsEnabled) {
-          try {
-            const { sendReviewRequestSms } = await import('./services/twilio-sms.service');
-            const smsResult = await sendReviewRequestSms(
-              request.customerPhone,
-              request.customerName || 'Client',
-              companyName,
-              reviewLink,
-              incentive?.displayMessage
-            );
-            
-            if (smsResult.success) {
-              smsSent = true;
-              console.log(`✅ [N8N Reviews] SMS sent to ${request.customerPhone}`);
-            } else {
-              console.warn(`[N8N Reviews] SMS failed: ${smsResult.error}`);
-            }
-          } catch (smsError) {
-            console.error("[N8N Reviews] Error sending SMS:", smsError);
-          }
+          smsData = {
+            to: request.customerPhone,
+            message: smsMessage,
+            customer_name: request.customerName,
+            company_name: companyName,
+            review_link: reviewLink,
+            incentive: incentive?.displayMessage || null
+          };
+          smsPrepared = true;
+          smsSent = true; // Indicates N8N should send SMS
+          console.log(`📱 [N8N Reviews] SMS data prepared for ${request.customerPhone} - N8N will handle sending`);
         } else {
-          console.log("[N8N Reviews] SMS disabled in config, skipping SMS send");
+          console.log("[N8N Reviews] SMS disabled in config, skipping SMS data preparation");
         }
       }
 
@@ -5068,10 +5070,13 @@ Format: Utilise des bullet points et reste concis (max 200 mots).`;
         status: 'sent',
       });
 
+      // Response includes both sms_sent (for N8N compatibility) and sms_data (new payload)
       res.json({
         success: true,
         email_sent: emailSent,
-        sms_sent: smsSent,
+        sms_sent: smsSent, // Keep for N8N workflow compatibility
+        sms_enabled: config.smsEnabled || false,
+        sms_data: smsData, // New: full SMS payload for N8N to use with Twilio node
         tracking_url: reviewLink
       });
 

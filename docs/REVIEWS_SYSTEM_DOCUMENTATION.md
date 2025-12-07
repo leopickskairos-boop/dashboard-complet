@@ -811,7 +811,7 @@ Content-Type: application/json
 
 ### 2. POST `/api/n8n/reviews/send-request`
 
-Envoie une demande d'avis (Email + SMS).
+Envoie une demande d'avis (Email directement, SMS via N8N).
 
 **Headers:**
 ```
@@ -832,7 +832,7 @@ Content-Type: application/json
 3. Récupère l'incitation si `incentive_id` est présent
 4. Génère le contenu Email et SMS avec l'offre incluse
 5. Envoie l'email (via SMTP configuré)
-6. Envoie le SMS (Twilio - à venir)
+6. **Prépare les données SMS** pour N8N (N8N gère l'envoi via son nœud Twilio)
 7. Met à jour `sent_at` et `status = 'sent'`
 
 **Réponse 200:**
@@ -840,7 +840,16 @@ Content-Type: application/json
 {
   "success": true,
   "email_sent": true,
-  "sms_sent": false,
+  "sms_sent": true,
+  "sms_enabled": true,
+  "sms_data": {
+    "to": "+33612345678",
+    "message": "Bonjour Jean, merci pour votre visite ! Partagez votre avis : https://...",
+    "customer_name": "Jean Dupont",
+    "company_name": "Mon Restaurant",
+    "review_link": "https://domain.com/review/rv_xxx",
+    "incentive": "-10% sur votre prochaine visite"
+  },
   "tracking_url": "https://domain.com/review/rv_xxx"
 }
 ```
