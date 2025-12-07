@@ -206,15 +206,15 @@ export default function ReviewsSettings() {
   }
 
   return (
-    <div className="space-y-7 pb-8">
+    <div className="space-y-5 pb-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between pl-1">
         <div>
-          <h1 className="text-xl font-semibold text-foreground">Configuration</h1>
-          <p className="text-sm text-muted-foreground/70 mt-1">Paramètres de collecte d'avis</p>
+          <h1 className="text-lg font-semibold text-foreground">Configuration des Avis</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">Paramétrez votre collecte d'avis</p>
         </div>
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-muted-foreground/60">Système activé</span>
+        <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-card/50 border border-border/50">
+          <span className="text-sm text-muted-foreground">Système activé</span>
           <Switch
             checked={config?.enabled || false}
             onCheckedChange={handleToggleEnabled}
@@ -223,22 +223,28 @@ export default function ReviewsSettings() {
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Timing Section */}
-        <div className="space-y-5">
-          <div className="flex items-center gap-2">
-            <Clock className="h-3.5 w-3.5 text-muted-foreground/50" />
-            <h2 className="text-sm font-medium text-foreground/90">Timing d'envoi</h2>
-          </div>
-          <div className="space-y-4 pl-5">
+      <div className="grid gap-5 md:grid-cols-2">
+        <Card className="border-border/50 bg-card/50">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2 text-base font-semibold">
+              <div className="p-1.5 rounded-lg bg-[#C8B88A]/10">
+                <Clock className="h-4 w-4 text-[#C8B88A]" />
+              </div>
+              Timing d'envoi
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Définissez le meilleur moment pour solliciter vos clients
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4 pt-0">
             <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground/70">Mode de timing</Label>
+              <Label>Mode de timing</Label>
               <Select
                 value={config?.timingMode || "smart"}
                 onValueChange={(value) => handleSaveSettings("timingMode", value)}
                 data-testid="select-timing-mode"
               >
-                <SelectTrigger className="h-9">
+                <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -251,14 +257,13 @@ export default function ReviewsSettings() {
 
             {config?.timingMode === "fixed_delay" && (
               <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground/70">Délai après RDV (heures)</Label>
+                <Label>Délai après RDV (heures)</Label>
                 <Input
                   type="number"
                   min={1}
                   max={168}
                   value={config?.fixedDelayHours || 24}
                   onChange={(e) => handleSaveSettings("fixedDelayHours", parseInt(e.target.value))}
-                  className="h-9"
                   data-testid="input-fixed-delay"
                 />
               </div>
@@ -266,58 +271,61 @@ export default function ReviewsSettings() {
 
             {config?.timingMode === "fixed_time" && (
               <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground/70">Heure d'envoi</Label>
+                <Label>Heure d'envoi</Label>
                 <Input
                   type="time"
                   value={config?.fixedTime || "18:00"}
                   onChange={(e) => handleSaveSettings("fixedTime", e.target.value)}
-                  className="h-9"
                   data-testid="input-fixed-time"
                 />
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground/70">Fenêtre début</Label>
+                <Label>Fenêtre début</Label>
                 <Input
                   type="time"
                   value={config?.sendWindowStart || "10:00"}
                   onChange={(e) => handleSaveSettings("sendWindowStart", e.target.value)}
-                  className="h-9"
                   data-testid="input-window-start"
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground/70">Fenêtre fin</Label>
+                <Label>Fenêtre fin</Label>
                 <Input
                   type="time"
                   value={config?.sendWindowEnd || "20:00"}
                   onChange={(e) => handleSaveSettings("sendWindowEnd", e.target.value)}
-                  className="h-9"
                   data-testid="input-window-end"
                 />
               </div>
             </div>
 
-            <div className="flex items-center justify-between py-1">
-              <Label className="text-xs text-muted-foreground/70">Éviter les week-ends</Label>
+            <div className="flex items-center justify-between">
+              <Label>Éviter les week-ends</Label>
               <Switch
                 checked={config?.avoidWeekends || false}
                 onCheckedChange={(value) => handleSaveSettings("avoidWeekends", value)}
                 data-testid="switch-avoid-weekends"
               />
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        {/* Messages Section */}
-        <div className="space-y-5">
-          <div className="flex items-center gap-2">
-            <MessageSquare className="h-3.5 w-3.5 text-muted-foreground/50" />
-            <h2 className="text-sm font-medium text-foreground/90">Messages</h2>
-          </div>
-          <div className="space-y-4 pl-5">
+        <Card className="border-border/50 bg-card/50">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2 text-base font-semibold">
+              <div className="p-1.5 rounded-lg bg-[#C8B88A]/10">
+                <MessageSquare className="h-4 w-4 text-[#C8B88A]" />
+              </div>
+              Messages personnalisés
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Personnalisez le ton et le contenu de vos invitations
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4 pt-0">
             <div className="space-y-2">
               <Label>Message SMS (160 car. max)</Label>
               <Textarea
@@ -344,7 +352,7 @@ export default function ReviewsSettings() {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground/70">Corps de l'email</Label>
+              <Label>Corps de l'email</Label>
               <Textarea
                 value={config?.emailMessage || ""}
                 onChange={(e) => handleSaveSettings("emailMessage", e.target.value)}
@@ -353,20 +361,20 @@ export default function ReviewsSettings() {
                 data-testid="textarea-email-message"
               />
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Separator */}
-      <div className="h-px bg-border/30" />
-
       {/* Incentives Section */}
-      <div className="space-y-5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Gift className="h-3.5 w-3.5 text-muted-foreground/50" />
-            <h2 className="text-sm font-medium text-foreground/90">Offres incitatives</h2>
-          </div>
+      <Card className="border-border/50 bg-card/50">
+        <CardHeader className="pb-4">
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-base font-semibold">
+              <div className="p-1.5 rounded-lg bg-[#C8B88A]/10">
+                <Gift className="h-4 w-4 text-[#C8B88A]" />
+              </div>
+              Offres incitatives
+            </CardTitle>
             <div className="flex justify-end">
               <Dialog open={showNewIncentiveDialog} onOpenChange={setShowNewIncentiveDialog}>
                 <DialogTrigger asChild>
@@ -510,23 +518,25 @@ export default function ReviewsSettings() {
                 </DialogContent>
               </Dialog>
             </div>
-
-            {loadingIncentives ? (
-              <div className="flex justify-center py-6">
-                <Loader2 className="h-5 w-5 animate-spin text-[#C8B88A]" />
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4 pt-0">
+          {loadingIncentives ? (
+            <div className="flex justify-center py-6">
+              <Loader2 className="h-5 w-5 animate-spin text-[#C8B88A]" />
+            </div>
+          ) : incentives.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-10 px-6 rounded-xl border border-dashed border-border/60 bg-muted/20">
+              <div className="p-3 rounded-full bg-[#C8B88A]/10 mb-4">
+                <Gift className="h-6 w-6 text-[#C8B88A]/60" />
               </div>
-            ) : incentives.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-10 px-6 rounded-xl border border-dashed border-border/60 bg-muted/20">
-                <div className="p-3 rounded-full bg-[#C8B88A]/10 mb-4">
-                  <Gift className="h-6 w-6 text-[#C8B88A]/60" />
-                </div>
-                <p className="text-sm font-medium text-foreground/80">Aucune offre configurée</p>
-                <p className="text-xs text-muted-foreground mt-1 text-center max-w-xs">
-                  Créez votre première offre incitative pour booster le taux de réponse de vos clients
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-2">
+              <p className="text-sm font-medium text-foreground/80">Aucune offre configurée</p>
+              <p className="text-xs text-muted-foreground mt-1 text-center max-w-xs">
+                Créez votre première offre incitative pour booster le taux de réponse de vos clients
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
                 {incentives.map((incentive) => {
                   const IconComponent = getIncentiveIcon(incentive.type);
                   const getIncentiveLabel = () => {
@@ -611,7 +621,7 @@ export default function ReviewsSettings() {
               </div>
             )}
 
-            <div className="mt-3 p-3 bg-muted/30 rounded-xl border border-border/30">
+            <div className="mt-3 p-3 bg-muted/30 rounded-lg border border-border/30">
               <div className="flex items-start gap-2.5">
                 <Gift className="h-4 w-4 text-[#C8B88A]/70 mt-0.5 flex-shrink-0" />
                 <div>
@@ -622,19 +632,24 @@ export default function ReviewsSettings() {
                 </div>
               </div>
             </div>
-        </div>
-      </div>
-
-      {/* Separator */}
-      <div className="h-px bg-border/30" />
+          </CardContent>
+        </Card>
 
       {/* Platforms Section */}
-      <div className="space-y-5">
-        <div className="flex items-center gap-2">
-          <Globe className="h-3.5 w-3.5 text-muted-foreground/50" />
-          <h2 className="text-sm font-medium text-foreground/90">Liens plateformes</h2>
-        </div>
-            <div className="grid gap-4 md:grid-cols-2">
+      <Card className="border-border/50 bg-card/50">
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-2 text-base font-semibold">
+            <div className="p-1.5 rounded-lg bg-[#C8B88A]/10">
+              <Globe className="h-4 w-4 text-[#C8B88A]" />
+            </div>
+            Liens plateformes
+          </CardTitle>
+          <CardDescription className="text-xs">
+            Configurez vos liens d'avis pour chaque plateforme
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4 pt-0">
+          <div className="grid gap-4 md:grid-cols-2">
               <div className="p-3 rounded-xl border border-border/40 bg-muted/20 hover:bg-muted/30 transition-colors">
                 <Label className="flex items-center gap-2 text-xs font-medium mb-2">
                   <SiGoogle className="h-3.5 w-3.5 text-red-500" />
@@ -754,20 +769,21 @@ export default function ReviewsSettings() {
                   data-testid="input-doctolib-url"
                 />
               </div>
-            </div>
+          </div>
 
-        <div className="mt-4 p-3 bg-muted/30 rounded-xl border border-border/30">
-          <div className="flex items-start gap-2.5">
-            <AlertCircle className="h-4 w-4 text-muted-foreground/70 mt-0.5 flex-shrink-0" />
-            <div>
-              <p className="text-xs font-medium text-foreground/80">Connexions API (bientôt)</p>
-              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-                Synchronisation automatique avec Google Business Profile et Facebook pour récupérer vos avis en temps réel.
-              </p>
+          <div className="mt-4 p-3 bg-muted/30 rounded-lg border border-border/30">
+            <div className="flex items-start gap-2.5">
+              <AlertCircle className="h-4 w-4 text-muted-foreground/70 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-xs font-medium text-foreground/80">Connexions API (bientôt)</p>
+                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                  Synchronisation automatique avec Google Business Profile et Facebook pour récupérer vos avis en temps réel.
+                </p>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
