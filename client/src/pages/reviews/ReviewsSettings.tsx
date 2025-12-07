@@ -622,22 +622,18 @@ export default function ReviewsSettings() {
                 </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
+        </div>
+      </div>
 
-        <Card className="md:col-span-2 border-border/50 bg-card/50">
-          <CardHeader className="pb-4">
-            <CardTitle className="flex items-center gap-2 text-base font-semibold">
-              <div className="p-1.5 rounded-lg bg-[#C8B88A]/10">
-                <Globe className="h-4 w-4 text-[#C8B88A]" />
-              </div>
-              Liens vers les plateformes
-            </CardTitle>
-            <CardDescription className="text-xs">
-              Redirigez vos clients vers vos profils d'avis en ligne
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-0">
+      {/* Separator */}
+      <div className="h-px bg-border/30" />
+
+      {/* Platforms Section */}
+      <div className="space-y-5">
+        <div className="flex items-center gap-2">
+          <Globe className="h-3.5 w-3.5 text-muted-foreground/50" />
+          <h2 className="text-sm font-medium text-foreground/90">Liens plateformes</h2>
+        </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="p-3 rounded-xl border border-border/40 bg-muted/20 hover:bg-muted/30 transition-colors">
                 <Label className="flex items-center gap-2 text-xs font-medium mb-2">
@@ -760,19 +756,17 @@ export default function ReviewsSettings() {
               </div>
             </div>
 
-            <div className="mt-4 p-3 bg-muted/30 rounded-xl border border-border/30">
-              <div className="flex items-start gap-2.5">
-                <AlertCircle className="h-4 w-4 text-muted-foreground/70 mt-0.5 flex-shrink-0" />
-                <div>
-                  <p className="text-xs font-medium text-foreground/80">Connexions API (bientôt)</p>
-                  <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-                    Synchronisation automatique avec Google Business Profile et Facebook pour récupérer vos avis en temps réel.
-                  </p>
-                </div>
-              </div>
+        <div className="mt-4 p-3 bg-muted/30 rounded-xl border border-border/30">
+          <div className="flex items-start gap-2.5">
+            <AlertCircle className="h-4 w-4 text-muted-foreground/70 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="text-xs font-medium text-foreground/80">Connexions API (bientôt)</p>
+              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                Synchronisation automatique avec Google Business Profile et Facebook pour récupérer vos avis en temps réel.
+              </p>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     </div>
   );
