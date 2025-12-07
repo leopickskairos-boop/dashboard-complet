@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -621,19 +622,23 @@ export default function ReviewsSettings() {
                 </div>
               </div>
             </div>
-        </div>
-      </div>
+          </CardContent>
+        </Card>
 
-      {/* Separator */}
-      <div className="h-px bg-border/30" />
-
-      {/* Platforms Section */}
-      <div className="space-y-5">
-        <div className="flex items-center gap-2">
-          <Globe className="h-3.5 w-3.5 text-muted-foreground/50" />
-          <h2 className="text-sm font-medium text-foreground/90">Plateformes d'avis</h2>
-        </div>
-        <div className="grid gap-3 md:grid-cols-2 pl-5">
+        <Card className="md:col-span-2 border-border/50 bg-card/50">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2 text-base font-semibold">
+              <div className="p-1.5 rounded-lg bg-[#C8B88A]/10">
+                <Globe className="h-4 w-4 text-[#C8B88A]" />
+              </div>
+              Liens vers les plateformes
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Redirigez vos clients vers vos profils d'avis en ligne
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="grid gap-4 md:grid-cols-2">
               <div className="p-3 rounded-xl border border-border/40 bg-muted/20 hover:bg-muted/30 transition-colors">
                 <Label className="flex items-center gap-2 text-xs font-medium mb-2">
                   <SiGoogle className="h-3.5 w-3.5 text-red-500" />
@@ -740,31 +745,34 @@ export default function ReviewsSettings() {
                 />
               </div>
 
-          <div className="p-3 rounded-xl border border-border/40 bg-muted/20 hover:bg-muted/30 transition-colors">
-            <Label className="flex items-center gap-2 text-xs font-medium mb-2">
-              <Globe className="h-3.5 w-3.5 text-blue-400" />
-              Doctolib
-            </Label>
-            <Input
-              value={config?.doctolibUrl || ""}
-              onChange={(e) => handleSaveSettings("doctolibUrl", e.target.value)}
-              placeholder="https://doctolib.fr/..."
-              className="text-xs h-8"
-              data-testid="input-doctolib-url"
-            />
-          </div>
-        </div>
-        <div className="mt-4 p-3 bg-muted/30 rounded-xl border border-border/30">
-          <div className="flex items-start gap-2.5">
-            <AlertCircle className="h-4 w-4 text-muted-foreground/70 mt-0.5 flex-shrink-0" />
-            <div>
-              <p className="text-xs font-medium text-foreground/80">Connexions API (bientôt)</p>
-              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-                Synchronisation automatique avec Google Business Profile et Facebook pour récupérer vos avis en temps réel.
-              </p>
+              <div className="p-3 rounded-xl border border-border/40 bg-muted/20 hover:bg-muted/30 transition-colors">
+                <Label className="flex items-center gap-2 text-xs font-medium mb-2">
+                  <Globe className="h-3.5 w-3.5 text-blue-400" />
+                  Doctolib
+                </Label>
+                <Input
+                  value={config?.doctolibUrl || ""}
+                  onChange={(e) => handleSaveSettings("doctolibUrl", e.target.value)}
+                  placeholder="https://doctolib.fr/..."
+                  className="text-xs h-8"
+                  data-testid="input-doctolib-url"
+                />
+              </div>
             </div>
-          </div>
-        </div>
+
+            <div className="mt-4 p-3 bg-muted/30 rounded-xl border border-border/30">
+              <div className="flex items-start gap-2.5">
+                <AlertCircle className="h-4 w-4 text-muted-foreground/70 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-xs font-medium text-foreground/80">Connexions API (bientôt)</p>
+                  <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                    Synchronisation automatique avec Google Business Profile et Facebook pour récupérer vos avis en temps réel.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

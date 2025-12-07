@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -179,71 +180,77 @@ export default function ReviewsList() {
       </div>
 
       {reviews && reviews.length > 0 ? (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {reviews.map((review) => (
-            <div
+            <Card
               key={review.id}
-              className={`cursor-pointer p-4 rounded-xl border border-border/30 bg-muted/10 hover:bg-muted/20 transition-colors ${!review.isRead ? "border-l-2 border-l-[#C8B88A]" : ""}`}
+              className={`cursor-pointer transition-colors hover:border-[#C8B88A]/50 ${!review.isRead ? "border-l-4 border-l-[#C8B88A]" : ""}`}
               onClick={() => handleOpenReview(review)}
               data-testid={`card-review-${review.id}`}
             >
-              <div className="flex items-start gap-3">
-                <Avatar className="h-9 w-9">
-                  <AvatarImage src={review.reviewerAvatarUrl || undefined} />
-                  <AvatarFallback className="text-xs">
-                    {review.reviewerName?.charAt(0).toUpperCase() || "?"}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-medium">{review.reviewerName || "Anonyme"}</span>
-                    <div className="flex items-center gap-1">
-                      {getPlatformIcon(review.platform)}
-                      <span className="text-[11px] text-muted-foreground capitalize">{review.platform}</span>
+              <CardContent className="pt-6">
+                <div className="flex items-start gap-4">
+                  <Avatar className="h-12 w-12">
+                    <AvatarImage src={review.reviewerAvatarUrl || undefined} />
+                    <AvatarFallback>
+                      {review.reviewerName?.charAt(0).toUpperCase() || "?"}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <span className="font-medium">{review.reviewerName || "Anonyme"}</span>
+                      <div className="flex items-center gap-1.5">
+                        {getPlatformIcon(review.platform)}
+                        <span className="text-sm text-muted-foreground capitalize">{review.platform}</span>
+                      </div>
+                      {renderStars(review.rating)}
+                      {review.sentiment && getSentimentBadge(review.sentiment)}
+                      {!review.isRead && (
+                        <Badge className="bg-[#C8B88A]/20 text-[#C8B88A] border-[#C8B88A]/30">Non lu</Badge>
+                      )}
                     </div>
-                    {renderStars(review.rating)}
-                    {review.sentiment && getSentimentBadge(review.sentiment)}
-                    {!review.isRead && (
-                      <Badge className="text-[10px] px-1.5 py-0 bg-[#C8B88A]/15 text-[#C8B88A] border-0">Nouveau</Badge>
-                    )}
-                  </div>
-                  <p className="mt-1.5 text-xs text-muted-foreground line-clamp-2">
-                    {review.content || <span className="italic">Aucun commentaire</span>}
-                  </p>
-                  <div className="flex items-center gap-3 mt-2 text-[11px] text-muted-foreground/70">
-                    {review.reviewDate && (
-                      <span>{format(new Date(review.reviewDate), "dd MMM yyyy", { locale: fr })}</span>
-                    )}
-                    {review.responseStatus === "published" && (
-                      <span className="flex items-center gap-1 text-[#4CEFAD]">
-                        <MessageSquare className="h-2.5 w-2.5" />
-                        Répondu
-                      </span>
-                    )}
-                    {review.responseStatus === "draft" && (
-                      <span className="flex items-center gap-1">
-                        <Eye className="h-2.5 w-2.5" />
-                        Brouillon
-                      </span>
-                    )}
-                    {review.isFlagged && (
-                      <span className="flex items-center gap-1 text-red-400">
-                        <Flag className="h-2.5 w-2.5" />
-                        Signalé
-                      </span>
-                    )}
+                    <p className="mt-2 text-muted-foreground line-clamp-2">
+                      {review.content || <span className="italic">Aucun commentaire</span>}
+                    </p>
+                    <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground">
+                      {review.reviewDate && (
+                        <span>{format(new Date(review.reviewDate), "dd MMMM yyyy", { locale: fr })}</span>
+                      )}
+                      {review.responseStatus === "published" && (
+                        <Badge variant="outline" className="text-[#4CEFAD]">
+                          <MessageSquare className="h-3 w-3 mr-1" />
+                          Répondu
+                        </Badge>
+                      )}
+                      {review.responseStatus === "draft" && (
+                        <Badge variant="outline">
+                          <Eye className="h-3 w-3 mr-1" />
+                          Brouillon
+                        </Badge>
+                      )}
+                      {review.isFlagged && (
+                        <Badge variant="destructive">
+                          <Flag className="h-3 w-3 mr-1" />
+                          Signalé
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           ))}
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center py-10 rounded-xl border border-dashed border-border/30 bg-muted/10">
-          <MessageSquare className="h-5 w-5 text-muted-foreground/30 mb-2" />
-          <p className="text-xs font-medium text-muted-foreground">Aucun avis trouvé</p>
-          <p className="text-[11px] text-muted-foreground/70 mt-0.5">Configurez vos plateformes pour voir vos avis</p>
-        </div>
+        <Card>
+          <CardContent className="py-12 text-center text-muted-foreground">
+            <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p>Aucun avis trouvé</p>
+            <p className="text-sm mt-1">
+              Les avis apparaîtront ici une fois que vous aurez configuré vos plateformes
+            </p>
+          </CardContent>
+        </Card>
       )}
 
       <Dialog open={!!selectedReview} onOpenChange={() => setSelectedReview(null)}>

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -228,131 +229,161 @@ export default function ReviewsCampaigns() {
         </Dialog>
       </div>
 
-      {/* KPI Grid */}
-      <div className="grid gap-3 md:grid-cols-4">
-        <div className="p-3.5 rounded-xl border border-border/30 bg-muted/10">
-          <div className="flex items-center gap-2.5">
-            <Send className="h-4 w-4 text-blue-400/70" />
-            <div>
-              <p className="text-xl font-semibold">{stats?.requestsSent || 0}</p>
-              <p className="text-[10px] text-muted-foreground">Demandes envoyées</p>
+      {/* KPI Cards */}
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card className="border-border/50 bg-card/50">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-blue-500/10">
+                <Send className="h-5 w-5 text-blue-400" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{stats?.requestsSent || 0}</p>
+                <p className="text-xs text-muted-foreground">Demandes envoyées</p>
+              </div>
             </div>
-          </div>
-        </div>
+            <p className="text-[10px] text-muted-foreground/70 mt-2">Total des sollicitations envoyées</p>
+          </CardContent>
+        </Card>
 
-        <div className="p-3.5 rounded-xl border border-border/30 bg-muted/10">
-          <div className="flex items-center gap-2.5">
-            <MousePointer className="h-4 w-4 text-[#C8B88A]/70" />
-            <div>
-              <p className="text-xl font-semibold">{stats?.clickRate || 0}%</p>
-              <p className="text-[10px] text-muted-foreground">Taux de clic</p>
+        <Card className="border-border/50 bg-card/50">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-[#C8B88A]/10">
+                <MousePointer className="h-5 w-5 text-[#C8B88A]" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{stats?.clickRate || 0}%</p>
+                <p className="text-xs text-muted-foreground">Taux de clic</p>
+              </div>
             </div>
-          </div>
-        </div>
+            <p className="text-[10px] text-muted-foreground/70 mt-2">Clients ayant cliqué sur le lien</p>
+          </CardContent>
+        </Card>
 
-        <div className="p-3.5 rounded-xl border border-border/30 bg-muted/10">
-          <div className="flex items-center gap-2.5">
-            <CheckCircle2 className="h-4 w-4 text-[#4CEFAD]/70" />
-            <div>
-              <p className="text-xl font-semibold">{stats?.conversionRate || 0}%</p>
-              <p className="text-[10px] text-muted-foreground">Taux de conversion</p>
+        <Card className="border-border/50 bg-card/50">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-[#4CEFAD]/10">
+                <CheckCircle2 className="h-5 w-5 text-[#4CEFAD]" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{stats?.conversionRate || 0}%</p>
+                <p className="text-xs text-muted-foreground">Taux de conversion</p>
+              </div>
             </div>
-          </div>
-        </div>
+            <p className="text-[10px] text-muted-foreground/70 mt-2">Avis effectivement laissés</p>
+          </CardContent>
+        </Card>
 
-        <div className="p-3.5 rounded-xl border border-border/30 bg-muted/10">
-          <div className="flex items-center gap-2.5">
-            <Ticket className="h-4 w-4 text-purple-400/70" />
-            <div>
-              <p className="text-xl font-semibold">{stats?.promosUsed || 0}/{stats?.promosGenerated || 0}</p>
-              <p className="text-[10px] text-muted-foreground">Promos utilisées</p>
+        <Card className="border-border/50 bg-card/50">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-purple-500/10">
+                <Ticket className="h-5 w-5 text-purple-400" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{stats?.promosUsed || 0}/{stats?.promosGenerated || 0}</p>
+                <p className="text-xs text-muted-foreground">Promos utilisées</p>
+              </div>
             </div>
-          </div>
-        </div>
+            <p className="text-[10px] text-muted-foreground/70 mt-2">Codes promo utilisés / générés</p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Requests Table */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-2 pl-1">
-          <Clock className="h-3.5 w-3.5 text-muted-foreground/50" />
-          <h2 className="text-sm font-medium text-foreground/90">Historique des demandes</h2>
-        </div>
-        {requests && requests.length > 0 ? (
-          <div className="rounded-xl border border-border/30 overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/20 hover:bg-muted/20">
-                  <TableHead className="text-[11px] font-medium">Client</TableHead>
-                  <TableHead className="text-[11px] font-medium">Contact</TableHead>
-                  <TableHead className="text-[11px] font-medium">Statut</TableHead>
-                  <TableHead className="text-[11px] font-medium">Date</TableHead>
-                  <TableHead className="text-[11px] font-medium">Code</TableHead>
-                  <TableHead className="text-[11px] font-medium text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {requests.map((request) => (
-                  <TableRow key={request.id} className="hover:bg-muted/10" data-testid={`row-request-${request.id}`}>
-                    <TableCell className="font-medium text-xs">{request.customerName}</TableCell>
-                    <TableCell>
-                      <div className="flex flex-col gap-0.5 text-[11px] text-muted-foreground">
-                        {request.customerEmail && (
-                          <span className="flex items-center gap-1">
-                            <Mail className="h-2.5 w-2.5" />
-                            {request.customerEmail}
-                          </span>
-                        )}
-                        {request.customerPhone && (
-                          <span className="flex items-center gap-1">
-                            <Phone className="h-2.5 w-2.5" />
-                            {request.customerPhone}
-                          </span>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>{getStatusBadge(request.status)}</TableCell>
-                    <TableCell className="text-[11px] text-muted-foreground">
-                      {request.sentAt ? format(new Date(request.sentAt), "dd/MM HH:mm", { locale: fr }) : "-"}
-                    </TableCell>
-                    <TableCell>
-                      {request.promoCode ? (
-                        <span className="font-mono text-[10px] text-muted-foreground">{request.promoCode}</span>
-                      ) : <span className="text-[11px] text-muted-foreground/50">-</span>}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {request.status === "pending" && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => sendMutation.mutate(request.id)}
-                          disabled={sendMutation.isPending}
-                          className="h-6 text-[11px] px-2"
-                          data-testid={`button-send-${request.id}`}
-                        >
-                          {sendMutation.isPending ? (
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                          ) : (
-                            <>
-                              <Send className="h-3 w-3 mr-1" />
-                              Envoyer
-                            </>
-                          )}
-                        </Button>
-                      )}
-                    </TableCell>
+      <Card className="border-border/50 bg-card/50">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-base font-semibold">Historique des demandes</CardTitle>
+          <CardDescription className="text-xs">
+            Suivi détaillé de toutes vos sollicitations d'avis
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="pt-0">
+          {requests && requests.length > 0 ? (
+            <div className="rounded-xl border border-border/40 overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/30 hover:bg-muted/30">
+                    <TableHead className="text-xs font-medium">Client</TableHead>
+                    <TableHead className="text-xs font-medium">Contact</TableHead>
+                    <TableHead className="text-xs font-medium">Statut</TableHead>
+                    <TableHead className="text-xs font-medium">Date d'envoi</TableHead>
+                    <TableHead className="text-xs font-medium">Code promo</TableHead>
+                    <TableHead className="text-xs font-medium text-right">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center py-10 px-6 rounded-xl border border-dashed border-border/30 bg-muted/10">
-            <Send className="h-5 w-5 text-muted-foreground/30 mb-3" />
-            <p className="text-xs font-medium text-muted-foreground">Aucune demande</p>
-            <p className="text-[11px] text-muted-foreground/70 mt-0.5">Créez votre première demande d'avis</p>
-          </div>
-        )}
-      </div>
+                </TableHeader>
+                <TableBody>
+                  {requests.map((request) => (
+                    <TableRow key={request.id} className="hover:bg-muted/20" data-testid={`row-request-${request.id}`}>
+                      <TableCell className="font-medium text-sm">{request.customerName}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-0.5 text-xs text-muted-foreground">
+                          {request.customerEmail && (
+                            <span className="flex items-center gap-1.5">
+                              <Mail className="h-3 w-3" />
+                              {request.customerEmail}
+                            </span>
+                          )}
+                          {request.customerPhone && (
+                            <span className="flex items-center gap-1.5">
+                              <Phone className="h-3 w-3" />
+                              {request.customerPhone}
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>{getStatusBadge(request.status)}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {request.sentAt ? format(new Date(request.sentAt), "dd/MM/yyyy HH:mm", { locale: fr }) : "-"}
+                      </TableCell>
+                      <TableCell>
+                        {request.promoCode ? (
+                          <Badge variant="outline" className="font-mono text-[10px] px-1.5 py-0 border-border/50">
+                            {request.promoCode}
+                          </Badge>
+                        ) : <span className="text-xs text-muted-foreground">-</span>}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {request.status === "pending" && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => sendMutation.mutate(request.id)}
+                            disabled={sendMutation.isPending}
+                            className="h-7 text-xs"
+                            data-testid={`button-send-${request.id}`}
+                          >
+                            {sendMutation.isPending ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <>
+                                <Send className="h-3.5 w-3.5 mr-1" />
+                                Envoyer
+                              </>
+                            )}
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-12 px-6 rounded-xl border border-dashed border-border/60 bg-muted/20">
+              <div className="p-3 rounded-full bg-blue-500/10 mb-4">
+                <Send className="h-6 w-6 text-blue-400/60" />
+              </div>
+              <p className="text-sm font-medium text-foreground/80">Aucune demande d'avis</p>
+              <p className="text-xs text-muted-foreground mt-1 text-center max-w-xs">
+                Créez votre première demande pour solliciter un avis client
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
