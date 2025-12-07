@@ -4325,26 +4325,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Configuration des avis non trouvée" });
       }
       
+      // Récupérer l'incentive (spécifique à la demande ou par défaut)
+      let incentive = null;
+      if (request.incentiveId) {
+        incentive = await storage.getReviewIncentiveById(request.incentiveId, userId);
+      }
+      if (!incentive) {
+        incentive = await storage.getDefaultIncentive(userId);
+      }
+      
       const frontendUrl = getFrontendUrl();
       const reviewLink = `${frontendUrl}/review/${request.trackingToken}`;
       
-      let emailSent = false;
+      // Texte d'incentive pour SMS
+      const incentiveTextSms = incentive ? `\n🎁 ${incentive.displayMessage}` : '';
       
+      // Bloc HTML d'incentive pour Email
+      const incentiveHtmlBlock = incentive ? `
+        <tr>
+          <td style="padding:0 24px 24px;">
+            <div style="background-color:#fef3c7;border:1px solid #fcd34d;border-radius:12px;padding:16px;text-align:center;">
+              <span style="font-size:24px;">🎁</span>
+              <p style="margin:8px 0 0;font-size:15px;color:#92400e;font-weight:600;">
+                ${incentive.displayMessage}
+              </p>
+            </div>
+          </td>
+        </tr>
+      ` : '';
+      
+      let emailSent = false;
+      let smsSent = false;
+      
+      // Envoi Email
       if (request.customerEmail && (request.sendMethod === 'email' || request.sendMethod === 'both')) {
         const subject = config.emailSubject || "Partagez votre expérience avec nous !";
-        const message = config.emailMessage || `
-          <p>Bonjour ${request.customerName},</p>
-          <p>Nous espérons que vous avez passé un agréable moment chez nous.</p>
-          <p>Votre avis nous est précieux ! Prenez quelques secondes pour partager votre expérience :</p>
-          <p><a href="${reviewLink}" style="display:inline-block;padding:12px 24px;background:#C8B88A;color:#000;text-decoration:none;border-radius:6px;">Laisser un avis</a></p>
-          <p>Merci beaucoup !</p>
+        const companyName = config.companyName || "notre établissement";
+        
+        const message = `
+          <table cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:600px;margin:0 auto;font-family:Arial,sans-serif;">
+            <tr>
+              <td style="padding:24px;text-align:center;">
+                <p style="margin:0 0 16px;font-size:16px;color:#374151;">Bonjour ${request.customerName},</p>
+                <p style="margin:0 0 16px;font-size:16px;color:#374151;">Nous espérons que vous avez passé un agréable moment chez ${companyName}.</p>
+                <p style="margin:0 0 24px;font-size:16px;color:#374151;">Votre avis nous est précieux ! Prenez quelques secondes pour partager votre expérience :</p>
+              </td>
+            </tr>
+            ${incentiveHtmlBlock}
+            <tr>
+              <td style="padding:0 24px 24px;text-align:center;">
+                <a href="${reviewLink}" style="display:inline-block;padding:14px 32px;background:#C8B88A;color:#000;text-decoration:none;border-radius:8px;font-weight:600;font-size:16px;">Laisser mon avis</a>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 24px 24px;text-align:center;">
+                <p style="margin:0;font-size:14px;color:#6b7280;">Merci beaucoup pour votre confiance !</p>
+              </td>
+            </tr>
+          </table>
         `;
+        
+        const incentiveTextEmail = incentive ? `\n🎁 ${incentive.displayMessage}` : '';
         
         try {
           await sendEmail({
             to: request.customerEmail,
             subject,
-            text: `Bonjour ${request.customerName}, merci de votre visite ! Partagez votre expérience avec nous : ${reviewLink}`,
+            text: `Bonjour ${request.customerName}, merci de votre visite chez ${companyName} !${incentiveTextEmail}\n\nPartagez votre expérience avec nous : ${reviewLink}`,
             html: message,
           });
           emailSent = true;
@@ -4353,12 +4400,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      // Envoi SMS (si configuré - à implémenter avec un service SMS)
+      if (request.customerPhone && (request.sendMethod === 'sms' || request.sendMethod === 'both')) {
+        const companyName = config.companyName || "notre établissement";
+        const smsMessage = `Bonjour ${request.customerName} ! 😊\n\nMerci pour votre visite chez ${companyName}.${incentiveTextSms}\n\nVotre avis : ${reviewLink}`;
+        
+        // TODO: Intégrer un service SMS (Twilio, etc.)
+        console.log("[Reviews] SMS message to send:", smsMessage);
+        // smsSent = true; // À activer quand le service SMS sera configuré
+      }
+      
       await storage.updateReviewRequest(id, {
         status: 'sent',
         sentAt: new Date(),
       });
       
-      res.json({ success: true, emailSent });
+      res.json({ success: true, emailSent, smsSent });
     } catch (error: any) {
       console.error("[Reviews] Error sending request:", error);
       res.status(500).json({ message: "Erreur serveur" });

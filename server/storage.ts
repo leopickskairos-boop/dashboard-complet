@@ -194,6 +194,7 @@ export interface IStorage {
   // Review incentives
   getReviewIncentives(userId: string): Promise<ReviewIncentive[]>;
   getReviewIncentiveById(id: string, userId: string): Promise<ReviewIncentive | undefined>;
+  getDefaultIncentive(userId: string): Promise<ReviewIncentive | undefined>;
   createReviewIncentive(incentive: InsertReviewIncentive): Promise<ReviewIncentive>;
   updateReviewIncentive(id: string, userId: string, updates: Partial<ReviewIncentive>): Promise<ReviewIncentive | undefined>;
   deleteReviewIncentive(id: string, userId: string): Promise<void>;
@@ -1370,6 +1371,19 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(reviewIncentives)
       .where(and(eq(reviewIncentives.id, id), eq(reviewIncentives.userId, userId)));
+    return incentive || undefined;
+  }
+
+  async getDefaultIncentive(userId: string): Promise<ReviewIncentive | undefined> {
+    const [incentive] = await db
+      .select()
+      .from(reviewIncentives)
+      .where(and(
+        eq(reviewIncentives.userId, userId),
+        eq(reviewIncentives.isActive, true),
+        eq(reviewIncentives.isDefault, true)
+      ))
+      .limit(1);
     return incentive || undefined;
   }
 
