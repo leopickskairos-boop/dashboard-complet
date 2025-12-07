@@ -728,21 +728,216 @@ Appelée quand le client confirme avoir laissé un avis.
 
 ## Authentification pour N8N
 
-Pour intégrer avec N8N, vous avez deux options:
+**MÉTHODE RECOMMANDÉE : Endpoints N8N dédiés avec Master API Key**
 
-### Option A: Session Cookie (recommandé pour tests)
-1. Authentifiez-vous via `/api/auth/login`
-2. Utilisez le cookie `connect.sid` dans les requêtes suivantes
-
-### Option B: API Key (pour production)
-Le système SpeedAI dispose d'un système d'API key hashé (bcrypt) stocké dans `users.apiKeyHash`. 
+SpeedAI fournit des endpoints dédiés pour N8N qui utilisent la clé API master. Cette méthode est la plus simple et la plus fiable pour les workflows automatisés.
 
 **Headers requis:**
 ```
-Authorization: Bearer <api_key>
+Authorization: Bearer speedai_n8n_bdc161ffe627a1c7eeff9665a37ea0cb4e6d37de620c70c7be8baee458fefba0
+Content-Type: application/json
 ```
 
-**Note:** L'implémentation de la vérification API key pour les routes reviews n'est pas encore active. Utilisez l'authentification session pour l'instant.
+---
+
+## Endpoints N8N Dédiés
+
+### 1. POST `/api/n8n/reviews/create-request`
+
+Crée une demande d'avis pour un client SpeedAI.
+
+**Headers:**
+```
+Authorization: Bearer <N8N_MASTER_API_KEY>
+Content-Type: application/json
+```
+
+**Body:**
+```json
+{
+  "client_email": "restaurant@example.com",
+  "customer_name": "Jean Dupont",
+  "customer_email": "jean@email.com",
+  "customer_phone": "+33612345678",
+  "reservation_id": "RES-001",
+  "reservation_date": "2024-12-20",
+  "reservation_time": "20:00",
+  "send_method": "email"
+}
+```
+
+| Champ | Type | Requis | Description |
+|-------|------|--------|-------------|
+| `client_email` | string | OUI | Email du client SpeedAI |
+| `customer_name` | string | NON* | Nom du client final |
+| `customer_email` | string | NON* | Email du client final |
+| `customer_phone` | string | NON* | Téléphone (+33...) |
+| `reservation_id` | string | NON | ID externe réservation |
+| `reservation_date` | string | NON | Date ISO (YYYY-MM-DD) |
+| `reservation_time` | string | NON | Heure (HH:MM) |
+| `send_method` | string | NON | `'email'` \| `'sms'` \| `'both'` (défaut: `'email'`) |
+
+*Au moins un de `customer_name`, `customer_email` ou `customer_phone` est requis.
+
+**Réponse 200 (succès):**
+```json
+{
+  "success": true,
+  "request_id": "uuid-xxx",
+  "tracking_token": "rv_1733567890123_abc123",
+  "status": "pending",
+  "incentive": {
+    "id": "uuid-incentive",
+    "display_message": "-10% sur votre prochaine visite"
+  }
+}
+```
+
+**Réponse 200 (système désactivé):**
+```json
+{
+  "success": true,
+  "created": false,
+  "reason": "reviews_disabled"
+}
+```
+
+**Réponse 404:**
+```json
+{ "success": false, "error": "Client not found" }
+```
+
+---
+
+### 2. POST `/api/n8n/reviews/send-request`
+
+Envoie une demande d'avis (Email + SMS).
+
+**Headers:**
+```
+Authorization: Bearer <N8N_MASTER_API_KEY>
+Content-Type: application/json
+```
+
+**Body:**
+```json
+{
+  "request_id": "uuid-xxx"
+}
+```
+
+**Logique:**
+1. Récupère la demande par ID
+2. Récupère la config du user (URLs plateformes, messages personnalisés)
+3. Récupère l'incitation si `incentive_id` est présent
+4. Génère le contenu Email et SMS avec l'offre incluse
+5. Envoie l'email (via SMTP configuré)
+6. Envoie le SMS (Twilio - à venir)
+7. Met à jour `sent_at` et `status = 'sent'`
+
+**Réponse 200:**
+```json
+{
+  "success": true,
+  "email_sent": true,
+  "sms_sent": false,
+  "tracking_url": "https://domain.com/review/rv_xxx"
+}
+```
+
+---
+
+### 3. GET `/api/n8n/reviews/pending-requests`
+
+Récupère les demandes prêtes à être envoyées.
+
+**Headers:**
+```
+Authorization: Bearer <N8N_MASTER_API_KEY>
+```
+
+**Query params:**
+| Param | Type | Défaut | Description |
+|-------|------|--------|-------------|
+| `max_age_hours` | number | 48 | Age max des demandes en heures |
+| `ready_only` | boolean | false | Si `true`, ne retourne que les demandes prêtes à envoyer |
+
+**Logique:**
+1. Récupère toutes les demandes avec `status = 'pending'` créées dans la fenêtre
+2. Pour chaque demande, calcule si le timing est bon selon la config du user
+3. Retourne celles qui sont prêtes à être envoyées
+
+**Réponse 200:**
+```json
+{
+  "success": true,
+  "requests": [
+    {
+      "id": "uuid-xxx",
+      "user_id": "uuid-user",
+      "customer_name": "Jean Dupont",
+      "customer_email": "jean@email.com",
+      "customer_phone": "+33612345678",
+      "tracking_token": "rv_xxx",
+      "send_method": "email",
+      "created_at": "2024-12-06T20:00:00Z",
+      "should_send_at": "2024-12-07T11:00:00Z",
+      "ready_to_send": true
+    }
+  ]
+}
+```
+
+---
+
+### 4. POST `/api/n8n/reviews/mark-sent`
+
+Marque des demandes comme envoyées (si N8N gère l'envoi).
+
+**Headers:**
+```
+Authorization: Bearer <N8N_MASTER_API_KEY>
+Content-Type: application/json
+```
+
+**Body:**
+```json
+{
+  "request_ids": ["uuid-1", "uuid-2"]
+}
+```
+
+**Réponse 200:**
+```json
+{
+  "success": true,
+  "updated": 2
+}
+```
+
+---
+
+## Récapitulatif Endpoints N8N
+
+| Endpoint | Description |
+|----------|-------------|
+| `POST /api/n8n/reviews/create-request` | Créer une demande (après RDV) |
+| `POST /api/n8n/reviews/send-request` | Envoyer Email/SMS |
+| `GET /api/n8n/reviews/pending-requests` | Liste demandes prêtes |
+| `POST /api/n8n/reviews/mark-sent` | Marquer comme envoyées |
+
+---
+
+## Méthodes alternatives (non recommandées)
+
+### Option A: Session Cookie (tests uniquement)
+1. Authentifiez-vous via `/api/auth/login`
+2. Utilisez le cookie `connect.sid` dans les requêtes suivantes
+
+### Option B: API Key utilisateur
+Le système SpeedAI dispose d'un système d'API key hashé (bcrypt) stocké dans `users.apiKeyHash`. 
+
+**Note:** Préférez les endpoints N8N dédiés ci-dessus pour les workflows automatisés.
 
 ---
 

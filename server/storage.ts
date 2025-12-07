@@ -209,7 +209,9 @@ export interface IStorage {
     offset?: number;
   }): Promise<ReviewRequest[]>;
   getReviewRequestById(id: string, userId: string): Promise<ReviewRequest | undefined>;
+  getReviewRequestByIdAdmin(id: string): Promise<ReviewRequest | undefined>;
   getReviewRequestByToken(token: string): Promise<ReviewRequest | undefined>;
+  getPendingReviewRequests(maxAge: Date): Promise<ReviewRequest[]>;
   createReviewRequest(request: InsertReviewRequest): Promise<ReviewRequest>;
   updateReviewRequest(id: string, updates: Partial<ReviewRequest>): Promise<ReviewRequest | undefined>;
   getReviewRequestStats(userId: string): Promise<{
@@ -1467,12 +1469,33 @@ export class DatabaseStorage implements IStorage {
     return request || undefined;
   }
 
+  async getReviewRequestByIdAdmin(id: string): Promise<ReviewRequest | undefined> {
+    const [request] = await db
+      .select()
+      .from(reviewRequests)
+      .where(eq(reviewRequests.id, id));
+    return request || undefined;
+  }
+
   async getReviewRequestByToken(token: string): Promise<ReviewRequest | undefined> {
     const [request] = await db
       .select()
       .from(reviewRequests)
       .where(eq(reviewRequests.trackingToken, token));
     return request || undefined;
+  }
+
+  async getPendingReviewRequests(maxAge: Date): Promise<ReviewRequest[]> {
+    return await db
+      .select()
+      .from(reviewRequests)
+      .where(
+        and(
+          eq(reviewRequests.status, 'pending'),
+          gte(reviewRequests.createdAt, maxAge)
+        )
+      )
+      .orderBy(reviewRequests.createdAt);
   }
 
   async createReviewRequest(request: InsertReviewRequest): Promise<ReviewRequest> {
