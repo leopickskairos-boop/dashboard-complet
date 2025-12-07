@@ -8,18 +8,43 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Settings, Clock, MessageSquare, Globe, Loader2, Save, ExternalLink, AlertCircle } from "lucide-react";
+import { Settings, Clock, MessageSquare, Globe, Loader2, Save, ExternalLink, AlertCircle, Gift, Plus, Trash2, Star, Percent, Coffee, Tag } from "lucide-react";
 import { SiGoogle, SiFacebook, SiTripadvisor, SiYelp } from "react-icons/si";
-import type { ReviewConfig } from "@shared/schema";
+import type { ReviewConfig, ReviewIncentive } from "@shared/schema";
+
+const INCENTIVE_TYPES = [
+  { value: "percentage", label: "Réduction (%)", icon: Percent },
+  { value: "amount", label: "Réduction (€)", icon: Tag },
+  { value: "free_item", label: "Offert gratuit", icon: Coffee },
+  { value: "loyalty_points", label: "Points fidélité", icon: Star },
+  { value: "other", label: "Autre", icon: Gift },
+];
 
 export default function ReviewsSettings() {
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
+  const [showNewIncentiveDialog, setShowNewIncentiveDialog] = useState(false);
+  const [newIncentive, setNewIncentive] = useState({
+    type: "percentage",
+    percentageValue: 10,
+    fixedAmountValue: 500,
+    freeItemName: "",
+    loyaltyPointsValue: 100,
+    customDescription: "",
+    displayMessage: "",
+    isActive: true,
+  });
 
   const { data: config, isLoading } = useQuery<ReviewConfig>({
     queryKey: ["/api/reviews/config"],
+  });
+
+  const { data: incentives = [], isLoading: loadingIncentives } = useQuery<ReviewIncentive[]>({
+    queryKey: ["/api/reviews/incentives"],
   });
 
   const updateMutation = useMutation({
@@ -44,6 +69,95 @@ export default function ReviewsSettings() {
     },
   });
 
+  const createIncentiveMutation = useMutation({
+    mutationFn: async (data: typeof newIncentive) => {
+      return await apiRequest("POST", "/api/reviews/incentives", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/reviews/incentives"] });
+      toast({
+        title: "Offre créée",
+        description: "Votre nouvelle offre a été ajoutée.",
+      });
+      setShowNewIncentiveDialog(false);
+      setNewIncentive({
+        type: "percentage",
+        percentageValue: 10,
+        fixedAmountValue: 500,
+        freeItemName: "",
+        loyaltyPointsValue: 100,
+        customDescription: "",
+        displayMessage: "",
+        isActive: true,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erreur",
+        description: "Impossible de créer l'offre.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateIncentiveMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<ReviewIncentive> }) => {
+      return await apiRequest("PUT", `/api/reviews/incentives/${id}`, updates);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/reviews/incentives"] });
+      toast({
+        title: "Offre mise à jour",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erreur",
+        description: "Impossible de mettre à jour l'offre.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteIncentiveMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest("DELETE", `/api/reviews/incentives/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/reviews/incentives"] });
+      toast({
+        title: "Offre supprimée",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erreur",
+        description: "Impossible de supprimer l'offre.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const setDefaultMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest("POST", `/api/reviews/incentives/${id}/default`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/reviews/incentives"] });
+      toast({
+        title: "Offre par défaut définie",
+        description: "Cette offre sera utilisée pour les nouvelles demandes d'avis.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erreur",
+        description: "Impossible de définir l'offre par défaut.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleToggleEnabled = (enabled: boolean) => {
     updateMutation.mutate({ enabled });
   };
@@ -51,6 +165,36 @@ export default function ReviewsSettings() {
   const handleSaveSettings = (field: string, value: any) => {
     setIsSaving(true);
     updateMutation.mutate({ [field]: value });
+  };
+
+  const handleCreateIncentive = () => {
+    if (!newIncentive.displayMessage.trim()) {
+      toast({
+        title: "Champs requis",
+        description: "Veuillez remplir le message d'affichage.",
+        variant: "destructive",
+      });
+      return;
+    }
+    createIncentiveMutation.mutate(newIncentive);
+  };
+
+  const resetNewIncentive = () => {
+    setNewIncentive({
+      type: "percentage",
+      percentageValue: 10,
+      fixedAmountValue: 500,
+      freeItemName: "",
+      loyaltyPointsValue: 100,
+      customDescription: "",
+      displayMessage: "",
+      isActive: true,
+    });
+  };
+
+  const getIncentiveIcon = (type: string) => {
+    const found = INCENTIVE_TYPES.find(t => t.value === type);
+    return found ? found.icon : Gift;
   };
 
   if (isLoading) {
@@ -211,6 +355,268 @@ export default function ReviewsSettings() {
                 className="min-h-[100px] resize-none font-mono text-sm"
                 data-testid="textarea-email-message"
               />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="md:col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Gift className="h-5 w-5 text-[#C8B88A]" />
+              Offres incitatives
+            </CardTitle>
+            <CardDescription>
+              Créez des offres pour inciter vos clients à laisser un avis
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex justify-end">
+              <Dialog open={showNewIncentiveDialog} onOpenChange={setShowNewIncentiveDialog}>
+                <DialogTrigger asChild>
+                  <Button data-testid="button-new-incentive">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Nouvelle offre
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Créer une offre incitative</DialogTitle>
+                    <DialogDescription>
+                      Cette offre sera affichée dans les messages de demande d'avis
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label>Type d'offre</Label>
+                      <Select
+                        value={newIncentive.type}
+                        onValueChange={(value) => setNewIncentive({ ...newIncentive, type: value })}
+                        data-testid="select-incentive-type"
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {INCENTIVE_TYPES.map((type) => (
+                            <SelectItem key={type.value} value={type.value}>
+                              <span className="flex items-center gap-2">
+                                <type.icon className="h-4 w-4" />
+                                {type.label}
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {newIncentive.type === "percentage" && (
+                      <div className="space-y-2">
+                        <Label>Pourcentage de réduction</Label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number"
+                            min={1}
+                            max={100}
+                            value={newIncentive.percentageValue}
+                            onChange={(e) => setNewIncentive({ ...newIncentive, percentageValue: parseInt(e.target.value) || 0 })}
+                            data-testid="input-percentage-value"
+                          />
+                          <span className="text-muted-foreground">%</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {newIncentive.type === "amount" && (
+                      <div className="space-y-2">
+                        <Label>Montant de la réduction (centimes)</Label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number"
+                            min={100}
+                            value={newIncentive.fixedAmountValue}
+                            onChange={(e) => setNewIncentive({ ...newIncentive, fixedAmountValue: parseInt(e.target.value) || 0 })}
+                            data-testid="input-amount-value"
+                          />
+                          <span className="text-muted-foreground">centimes (ex: 500 = 5€)</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {newIncentive.type === "free_item" && (
+                      <div className="space-y-2">
+                        <Label>Article offert</Label>
+                        <Input
+                          placeholder="ex: Café, Dessert, Entrée..."
+                          value={newIncentive.freeItemName}
+                          onChange={(e) => setNewIncentive({ ...newIncentive, freeItemName: e.target.value })}
+                          data-testid="input-free-item"
+                        />
+                      </div>
+                    )}
+
+                    {newIncentive.type === "loyalty_points" && (
+                      <div className="space-y-2">
+                        <Label>Points fidélité</Label>
+                        <Input
+                          type="number"
+                          min={1}
+                          value={newIncentive.loyaltyPointsValue}
+                          onChange={(e) => setNewIncentive({ ...newIncentive, loyaltyPointsValue: parseInt(e.target.value) || 0 })}
+                          data-testid="input-loyalty-points"
+                        />
+                      </div>
+                    )}
+
+                    {newIncentive.type === "other" && (
+                      <div className="space-y-2">
+                        <Label>Description de l'offre</Label>
+                        <Input
+                          placeholder="ex: Cadeau surprise"
+                          value={newIncentive.customDescription}
+                          onChange={(e) => setNewIncentive({ ...newIncentive, customDescription: e.target.value })}
+                          data-testid="input-custom-description"
+                        />
+                      </div>
+                    )}
+
+                    <div className="space-y-2">
+                      <Label>Message affiché aux clients *</Label>
+                      <Textarea
+                        placeholder="ex: Obtenez 10% de réduction sur votre prochaine visite !"
+                        value={newIncentive.displayMessage}
+                        onChange={(e) => setNewIncentive({ ...newIncentive, displayMessage: e.target.value })}
+                        className="resize-none"
+                        data-testid="textarea-incentive-message"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Ce message apparaîtra dans le SMS et l'email envoyés au client
+                      </p>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setShowNewIncentiveDialog(false)} data-testid="button-cancel-incentive">
+                      Annuler
+                    </Button>
+                    <Button 
+                      onClick={handleCreateIncentive} 
+                      disabled={createIncentiveMutation.isPending}
+                      data-testid="button-create-incentive"
+                    >
+                      {createIncentiveMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        "Créer"
+                      )}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            {loadingIncentives ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-[#C8B88A]" />
+              </div>
+            ) : incentives.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Gift className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <p>Aucune offre créée</p>
+                <p className="text-sm">Créez une offre pour inciter vos clients à laisser un avis</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {incentives.map((incentive) => {
+                  const IconComponent = getIncentiveIcon(incentive.type);
+                  const getIncentiveLabel = () => {
+                    switch (incentive.type) {
+                      case 'percentage':
+                        return `${incentive.percentageValue || 0}% de réduction`;
+                      case 'amount':
+                        return `${((incentive.fixedAmountValue || 0) / 100).toFixed(2)}€ de réduction`;
+                      case 'free_item':
+                        return incentive.freeItemName || 'Article offert';
+                      case 'loyalty_points':
+                        return `${incentive.loyaltyPointsValue || 0} points fidélité`;
+                      default:
+                        return incentive.customDescription || 'Offre personnalisée';
+                    }
+                  };
+                  return (
+                    <div
+                      key={incentive.id}
+                      className={`flex items-center justify-between p-4 rounded-lg border ${
+                        incentive.isDefault ? "border-[#C8B88A] bg-[#C8B88A]/5" : "border-border"
+                      }`}
+                      data-testid={`incentive-card-${incentive.id}`}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className={`p-2 rounded-lg ${incentive.isActive ? "bg-[#C8B88A]/20" : "bg-muted"}`}>
+                          <IconComponent className={`h-5 w-5 ${incentive.isActive ? "text-[#C8B88A]" : "text-muted-foreground"}`} />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{getIncentiveLabel()}</span>
+                            {incentive.isDefault && (
+                              <Badge variant="secondary" className="bg-[#C8B88A]/20 text-[#C8B88A]">
+                                Par défaut
+                              </Badge>
+                            )}
+                            {!incentive.isActive && (
+                              <Badge variant="outline" className="text-muted-foreground">
+                                Inactif
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground">{incentive.displayMessage}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={incentive.isActive}
+                          onCheckedChange={(checked) => 
+                            updateIncentiveMutation.mutate({ id: incentive.id, updates: { isActive: checked } })
+                          }
+                          data-testid={`switch-incentive-active-${incentive.id}`}
+                        />
+                        {!incentive.isDefault && incentive.isActive && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setDefaultMutation.mutate(incentive.id)}
+                            disabled={setDefaultMutation.isPending}
+                            data-testid={`button-set-default-${incentive.id}`}
+                          >
+                            <Star className="h-4 w-4" />
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => deleteIncentiveMutation.mutate(incentive.id)}
+                          disabled={deleteIncentiveMutation.isPending}
+                          className="text-destructive hover:text-destructive"
+                          data-testid={`button-delete-incentive-${incentive.id}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="mt-4 p-4 bg-muted/50 rounded-lg">
+              <div className="flex items-start gap-3">
+                <Gift className="h-5 w-5 text-[#C8B88A] mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium">Comment ça fonctionne ?</p>
+                  <p className="text-sm text-muted-foreground">
+                    L'offre par défaut (ou celle sélectionnée) sera automatiquement incluse dans les SMS et emails 
+                    envoyés à vos clients avec un encadré visible avant le bouton "Laisser mon avis".
+                  </p>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
