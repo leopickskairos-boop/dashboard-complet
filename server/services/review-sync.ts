@@ -1,9 +1,33 @@
 // Review Sync Service - Fetches reviews from all connected platforms
 import { storage } from '../storage';
-import type { ReviewSource, InsertReview } from '@shared/schema';
+import type { ReviewSource, InsertReview, Review } from '@shared/schema';
 import { TripAdvisorService, createTripAdvisorService } from './tripadvisor';
 import { GoogleBusinessService, refreshGoogleAccessToken } from './google-business';
 import { FacebookPagesService } from './facebook-pages';
+import { generateReviewResponse } from './ai-review-response.service';
+
+async function generateAIResponseForNewReview(review: Review, userId: string): Promise<void> {
+  try {
+    const config = await storage.getReviewConfig(userId);
+    
+    if (!config || !config.aiResponseEnabled || !config.aiAutoGenerate) {
+      return;
+    }
+
+    console.log(`[ReviewSync] Generating AI response for review ${review.id}`);
+    
+    const generated = await generateReviewResponse({ review, config });
+    
+    await storage.updateReview(review.id, userId, {
+      aiSuggestedResponse: generated.response,
+      aiSummary: generated.summary,
+    });
+    
+    console.log(`✅ [ReviewSync] AI response generated for review ${review.id}`);
+  } catch (error) {
+    console.error(`[ReviewSync] Failed to generate AI response for review ${review.id}:`, error);
+  }
+}
 
 export async function syncReviewSource(source: ReviewSource): Promise<{
   success: boolean;
@@ -135,8 +159,12 @@ async function syncTripAdvisorReviews(source: ReviewSource): Promise<{
       await storage.updateReview(existing.id, source.userId, reviewData);
       updatedCount++;
     } else {
-      await storage.createReview(reviewData);
+      const created = await storage.createReview(reviewData);
       newCount++;
+      
+      if (created) {
+        await generateAIResponseForNewReview(created, source.userId);
+      }
     }
   }
 
@@ -215,8 +243,12 @@ async function syncGoogleReviews(source: ReviewSource): Promise<{
       await storage.updateReview(existing.id, source.userId, reviewData);
       updatedCount++;
     } else {
-      await storage.createReview(reviewData);
+      const created = await storage.createReview(reviewData);
       newCount++;
+      
+      if (created) {
+        await generateAIResponseForNewReview(created, source.userId);
+      }
     }
   }
 
@@ -281,8 +313,12 @@ async function syncFacebookReviews(source: ReviewSource): Promise<{
       await storage.updateReview(existing.id, source.userId, reviewData);
       updatedCount++;
     } else {
-      await storage.createReview(reviewData);
+      const created = await storage.createReview(reviewData);
       newCount++;
+      
+      if (created) {
+        await generateAIResponseForNewReview(created, source.userId);
+      }
     }
   }
 

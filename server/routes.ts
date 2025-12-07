@@ -4544,6 +4544,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Regenerate AI response for a review
+  app.post("/api/reviews/:id/regenerate-ai", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { id } = req.params;
+      
+      const review = await storage.getReviewById(id, userId);
+      if (!review) {
+        return res.status(404).json({ message: "Avis non trouvé" });
+      }
+      
+      const config = await storage.getReviewConfig(userId);
+      if (!config) {
+        return res.status(400).json({ message: "Configuration des avis non trouvée" });
+      }
+      
+      const { regenerateResponse } = await import('./services/ai-review-response.service');
+      const generated = await regenerateResponse(review, config, review.aiSuggestedResponse || undefined);
+      
+      const updated = await storage.updateReview(id, userId, {
+        aiSuggestedResponse: generated.response,
+      });
+      
+      res.json({ 
+        success: true, 
+        aiSuggestedResponse: generated.response,
+        review: updated 
+      });
+    } catch (error: any) {
+      console.error("[Reviews] Error regenerating AI response:", error);
+      res.status(500).json({ message: "Erreur lors de la génération IA" });
+    }
+  });
+
+  // Generate AI response for a review (first time)
+  app.post("/api/reviews/:id/generate-ai", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { id } = req.params;
+      
+      const review = await storage.getReviewById(id, userId);
+      if (!review) {
+        return res.status(404).json({ message: "Avis non trouvé" });
+      }
+      
+      const config = await storage.getReviewConfig(userId);
+      if (!config) {
+        return res.status(400).json({ message: "Configuration des avis non trouvée" });
+      }
+      
+      const { generateReviewResponse } = await import('./services/ai-review-response.service');
+      const generated = await generateReviewResponse({ review, config });
+      
+      const updated = await storage.updateReview(id, userId, {
+        aiSuggestedResponse: generated.response,
+        aiSummary: generated.summary,
+      });
+      
+      res.json({ 
+        success: true, 
+        aiSuggestedResponse: generated.response,
+        aiSummary: generated.summary,
+        review: updated 
+      });
+    } catch (error: any) {
+      console.error("[Reviews] Error generating AI response:", error);
+      res.status(500).json({ message: "Erreur lors de la génération IA" });
+    }
+  });
+
   // Get review stats
   app.get("/api/reviews/stats", requireAuth, async (req, res) => {
     try {
