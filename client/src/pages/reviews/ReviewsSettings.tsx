@@ -1400,54 +1400,6 @@ export default function ReviewsSettings() {
         </CardContent>
       </Card>
 
-      {/* SMS Settings */}
-      <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
-        <CardHeader className="pb-4">
-          <CardTitle className="flex items-center gap-2 text-base font-semibold">
-            <div className="p-1.5 rounded-lg bg-[#4CEFAD]/10">
-              <MessageSquare className="h-4 w-4 text-[#4CEFAD]" />
-            </div>
-            Envoi SMS
-          </CardTitle>
-          <CardDescription className="text-xs">
-            Activez l'envoi de SMS pour les demandes d'avis
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4 pt-0">
-          <div className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-muted/20">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-[#4CEFAD]/10">
-                <MessageSquare className="h-4 w-4 text-[#4CEFAD]" />
-              </div>
-              <div>
-                <p className="text-sm font-medium">Activer l'envoi SMS</p>
-                <p className="text-xs text-muted-foreground">Envoie des SMS aux clients avec numéro de téléphone</p>
-              </div>
-            </div>
-            <Switch
-              checked={config?.smsEnabled || false}
-              onCheckedChange={(value) => handleSaveSettings("smsEnabled", value)}
-              data-testid="switch-sms-enabled"
-            />
-          </div>
-
-          {config?.smsEnabled && (
-            <div className="p-3 rounded-xl border border-[#C8B88A]/20 bg-[#C8B88A]/5">
-              <div className="flex items-start gap-2">
-                <AlertCircle className="h-4 w-4 text-[#C8B88A] mt-0.5" />
-                <div>
-                  <p className="text-xs font-medium text-[#C8B88A]">Configuration requise</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Pour envoyer des SMS, les variables d'environnement Twilio doivent être configurées :
-                    TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
       <PlatformConnectionsSection />
     </div>
   );
