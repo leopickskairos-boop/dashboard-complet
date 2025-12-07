@@ -4400,14 +4400,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Envoi SMS (si configuré - à implémenter avec un service SMS)
+      // Envoi SMS (si configuré avec Twilio)
       if (request.customerPhone && (request.sendMethod === 'sms' || request.sendMethod === 'both')) {
         const companyName = config.companyName || "notre établissement";
-        const smsMessage = `Bonjour ${request.customerName} ! 😊\n\nMerci pour votre visite chez ${companyName}.${incentiveTextSms}\n\nVotre avis : ${reviewLink}`;
         
-        // TODO: Intégrer un service SMS (Twilio, etc.)
-        console.log("[Reviews] SMS message to send:", smsMessage);
-        // smsSent = true; // À activer quand le service SMS sera configuré
+        // Check if SMS is enabled in config
+        if (config.smsEnabled) {
+          try {
+            const { sendReviewRequestSms } = await import('./services/twilio-sms.service');
+            const smsResult = await sendReviewRequestSms(
+              request.customerPhone,
+              request.customerName || 'Client',
+              companyName,
+              reviewLink,
+              incentive?.displayMessage
+            );
+            
+            if (smsResult.success) {
+              smsSent = true;
+              console.log(`✅ [Reviews] SMS sent to ${request.customerPhone}`);
+            } else {
+              console.warn(`[Reviews] SMS failed: ${smsResult.error}`);
+            }
+          } catch (smsError) {
+            console.error("[Reviews] Error sending SMS:", smsError);
+          }
+        } else {
+          console.log("[Reviews] SMS disabled in config, skipping SMS send");
+        }
       }
       
       await storage.updateReviewRequest(id, {
@@ -4961,15 +4981,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // SMS sending - placeholder (Twilio integration needed)
+      // SMS sending with Twilio
       if (request.customerPhone && (request.sendMethod === 'sms' || request.sendMethod === 'both')) {
         const companyName = config.companyName || "notre établissement";
-        const smsMessage = `Bonjour ${request.customerName || 'cher client'} !\n\nMerci pour votre visite chez ${companyName}.${incentiveTextSms}\n\nVotre avis : ${reviewLink}`;
         
-        // SMS sending would go here with Twilio
-        // For now, log the message that would be sent
-        console.log(`📱 [N8N Reviews] SMS would be sent to ${request.customerPhone}: ${smsMessage.substring(0, 50)}...`);
-        // smsSent = true; // Uncomment when Twilio is integrated
+        // Check if SMS is enabled in config
+        if (config.smsEnabled) {
+          try {
+            const { sendReviewRequestSms } = await import('./services/twilio-sms.service');
+            const smsResult = await sendReviewRequestSms(
+              request.customerPhone,
+              request.customerName || 'Client',
+              companyName,
+              reviewLink,
+              incentive?.displayMessage
+            );
+            
+            if (smsResult.success) {
+              smsSent = true;
+              console.log(`✅ [N8N Reviews] SMS sent to ${request.customerPhone}`);
+            } else {
+              console.warn(`[N8N Reviews] SMS failed: ${smsResult.error}`);
+            }
+          } catch (smsError) {
+            console.error("[N8N Reviews] Error sending SMS:", smsError);
+          }
+        } else {
+          console.log("[N8N Reviews] SMS disabled in config, skipping SMS send");
+        }
       }
 
       // Update request status
