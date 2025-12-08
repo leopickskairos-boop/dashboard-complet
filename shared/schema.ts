@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, boolean, integer, pgEnum, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, boolean, integer, pgEnum, jsonb, decimal, date } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -1395,3 +1395,513 @@ export type ConnectTripAdvisor = z.infer<typeof connectTripAdvisorSchema>;
 export type InitiateGoogleOAuth = z.infer<typeof initiateGoogleOAuthSchema>;
 export type InitiateFacebookOAuth = z.infer<typeof initiateFacebookOAuthSchema>;
 export type TriggerSync = z.infer<typeof triggerSyncSchema>;
+
+// ===== MARKETING MODULE =====
+
+// Marketing channel enum
+export const marketingChannelEnum = pgEnum('marketing_channel', [
+  'email',
+  'sms',
+  'both'
+]);
+
+// Marketing campaign status enum
+export const marketingCampaignStatusEnum = pgEnum('marketing_campaign_status', [
+  'draft',
+  'scheduled',
+  'sending',
+  'sent',
+  'paused',
+  'cancelled'
+]);
+
+// Marketing campaign type enum
+export const marketingCampaignTypeEnum = pgEnum('marketing_campaign_type', [
+  'promo',
+  'menu',
+  'birthday',
+  'event',
+  'reactivation',
+  'welcome',
+  'custom'
+]);
+
+// Marketing send status enum
+export const marketingSendStatusEnum = pgEnum('marketing_send_status', [
+  'pending',
+  'sent',
+  'delivered',
+  'opened',
+  'clicked',
+  'bounced',
+  'failed',
+  'unsubscribed'
+]);
+
+// Marketing automation trigger enum
+export const marketingAutomationTriggerEnum = pgEnum('marketing_automation_trigger', [
+  'new_contact',
+  'birthday',
+  'inactive_30d',
+  'inactive_60d',
+  'post_visit',
+  'tag_added',
+  'segment_entered',
+  'manual'
+]);
+
+// Marketing contact source enum
+export const marketingContactSourceEnum = pgEnum('marketing_contact_source', [
+  'speedai',
+  'crm',
+  'import',
+  'manual',
+  'website'
+]);
+
+// Marketing contacts table
+export const marketingContacts = pgTable("marketing_contacts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  
+  // Contact info
+  email: text("email"),
+  phone: text("phone"),
+  firstName: text("first_name"),
+  lastName: text("last_name"),
+  
+  // Source & external reference
+  source: text("source").notNull().default("manual"), // 'speedai', 'crm', 'import', 'manual', 'website'
+  externalId: text("external_id"), // ID in external CRM
+  
+  // RGPD Consent
+  optInEmail: boolean("opt_in_email").notNull().default(true),
+  optInSms: boolean("opt_in_sms").notNull().default(true),
+  consentEmailAt: timestamp("consent_email_at"),
+  consentSmsAt: timestamp("consent_sms_at"),
+  consentWithdrawnAt: timestamp("consent_withdrawn_at"),
+  
+  // Profile data
+  birthDate: date("birth_date"),
+  language: text("language").default("fr"),
+  tags: text("tags").array(),
+  
+  // Behavioral data
+  totalVisits: integer("total_visits").default(0),
+  lastVisitAt: timestamp("last_visit_at"),
+  avgSpend: decimal("avg_spend", { precision: 10, scale: 2 }),
+  preferredDay: text("preferred_day"),
+  preferredTime: text("preferred_time"),
+  
+  // Engagement stats
+  totalEmailsSent: integer("total_emails_sent").default(0),
+  totalEmailsOpened: integer("total_emails_opened").default(0),
+  totalEmailsClicked: integer("total_emails_clicked").default(0),
+  totalSmsSent: integer("total_sms_sent").default(0),
+  lastEmailSentAt: timestamp("last_email_sent_at"),
+  lastSmsSentAt: timestamp("last_sms_sent_at"),
+  
+  // Timestamps
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Insert schema for marketing contacts
+export const insertMarketingContactSchema = createInsertSchema(marketingContacts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  totalEmailsSent: true,
+  totalEmailsOpened: true,
+  totalEmailsClicked: true,
+  totalSmsSent: true,
+}).extend({
+  email: z.string().email().optional().nullable(),
+  phone: z.string().optional().nullable(),
+  birthDate: z.string().optional().nullable(),
+});
+
+// Types for marketing contacts
+export type InsertMarketingContact = z.infer<typeof insertMarketingContactSchema>;
+export type MarketingContact = typeof marketingContacts.$inferSelect;
+
+// Marketing consent history (RGPD audit trail)
+export const marketingConsentHistory = pgTable("marketing_consent_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  contactId: varchar("contact_id").notNull().references(() => marketingContacts.id, { onDelete: 'cascade' }),
+  
+  action: text("action").notNull(), // 'opt_in', 'opt_out', 'updated'
+  channel: text("channel").notNull(), // 'email', 'sms', 'both'
+  source: text("source").notNull(), // 'form', 'import', 'unsubscribe_link', 'admin'
+  
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Types for consent history
+export type MarketingConsentHistory = typeof marketingConsentHistory.$inferSelect;
+
+// Marketing segments table
+export const marketingSegments = pgTable("marketing_segments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  
+  name: text("name").notNull(),
+  description: text("description"),
+  
+  // Filter configuration (JSON)
+  filters: jsonb("filters"), // { visits_min: 2, inactive_days: 30, tags: ['vip'], ... }
+  
+  // Settings
+  isSystem: boolean("is_system").notNull().default(false), // Pre-built segments
+  autoUpdate: boolean("auto_update").notNull().default(true),
+  
+  // Cached count
+  contactCount: integer("contact_count").default(0),
+  lastCalculatedAt: timestamp("last_calculated_at"),
+  
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Insert schema for segments
+export const insertMarketingSegmentSchema = createInsertSchema(marketingSegments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  contactCount: true,
+  lastCalculatedAt: true,
+});
+
+// Types for segments
+export type InsertMarketingSegment = z.infer<typeof insertMarketingSegmentSchema>;
+export type MarketingSegment = typeof marketingSegments.$inferSelect;
+
+// Marketing templates table
+export const marketingTemplates = pgTable("marketing_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id, { onDelete: 'cascade' }), // NULL = system template
+  
+  name: text("name").notNull(),
+  description: text("description"),
+  
+  // Categorization
+  category: text("category").notNull(), // 'promo', 'event', 'birthday', 'reactivation', 'welcome', 'custom'
+  businessType: text("business_type"), // 'restaurant', 'garage', 'kine', 'all'
+  channel: text("channel").notNull(), // 'email', 'sms', 'both'
+  
+  // Content
+  emailSubject: text("email_subject"),
+  emailContent: text("email_content"), // HTML content
+  emailPreviewText: text("email_preview_text"),
+  smsContent: text("sms_content"),
+  
+  // Variables used
+  variables: text("variables").array(), // ['{prénom}', '{restaurant}', '{code_promo}']
+  
+  // Flags
+  isSystem: boolean("is_system").notNull().default(false),
+  isActive: boolean("is_active").notNull().default(true),
+  
+  // Stats
+  timesUsed: integer("times_used").default(0),
+  
+  // Thumbnail for preview
+  thumbnailUrl: text("thumbnail_url"),
+  
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Insert schema for templates
+export const insertMarketingTemplateSchema = createInsertSchema(marketingTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  timesUsed: true,
+});
+
+// Types for templates
+export type InsertMarketingTemplate = z.infer<typeof insertMarketingTemplateSchema>;
+export type MarketingTemplate = typeof marketingTemplates.$inferSelect;
+
+// Marketing campaigns table
+export const marketingCampaigns = pgTable("marketing_campaigns", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  
+  // Basic info
+  name: text("name").notNull(),
+  type: text("type").notNull(), // 'promo', 'menu', 'birthday', 'event', 'reactivation', 'welcome', 'custom'
+  status: text("status").notNull().default("draft"), // 'draft', 'scheduled', 'sending', 'sent', 'paused', 'cancelled'
+  channel: text("channel").notNull(), // 'email', 'sms', 'both'
+  
+  // Content
+  emailSubject: text("email_subject"),
+  emailContent: text("email_content"), // HTML
+  emailPreviewText: text("email_preview_text"),
+  smsContent: text("sms_content"),
+  
+  // Template reference (if used)
+  templateId: varchar("template_id").references(() => marketingTemplates.id),
+  
+  // Targeting
+  segmentId: varchar("segment_id").references(() => marketingSegments.id),
+  targetAll: boolean("target_all").default(false),
+  customFilters: jsonb("custom_filters"), // For advanced targeting without segment
+  
+  // Scheduling
+  scheduledAt: timestamp("scheduled_at"),
+  sendingStartedAt: timestamp("sending_started_at"),
+  sentAt: timestamp("sent_at"),
+  
+  // A/B Testing
+  isAbTest: boolean("is_ab_test").default(false),
+  abVariantOf: varchar("ab_variant_of"), // Parent campaign ID for A/B test
+  abTestPercentage: integer("ab_test_percentage"), // % of audience for this variant
+  
+  // Stats (aggregated)
+  totalRecipients: integer("total_recipients").default(0),
+  totalSent: integer("total_sent").default(0),
+  totalDelivered: integer("total_delivered").default(0),
+  totalOpened: integer("total_opened").default(0),
+  totalClicked: integer("total_clicked").default(0),
+  totalConverted: integer("total_converted").default(0),
+  totalUnsubscribed: integer("total_unsubscribed").default(0),
+  totalBounced: integer("total_bounced").default(0),
+  totalFailed: integer("total_failed").default(0),
+  
+  // Revenue attribution
+  totalRevenue: decimal("total_revenue", { precision: 10, scale: 2 }).default("0"),
+  
+  // Cost tracking
+  emailCost: decimal("email_cost", { precision: 10, scale: 2 }).default("0"),
+  smsCost: decimal("sms_cost", { precision: 10, scale: 2 }).default("0"),
+  
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Insert schema for campaigns
+export const insertMarketingCampaignSchema = createInsertSchema(marketingCampaigns).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  sendingStartedAt: true,
+  sentAt: true,
+  totalRecipients: true,
+  totalSent: true,
+  totalDelivered: true,
+  totalOpened: true,
+  totalClicked: true,
+  totalConverted: true,
+  totalUnsubscribed: true,
+  totalBounced: true,
+  totalFailed: true,
+  totalRevenue: true,
+  emailCost: true,
+  smsCost: true,
+});
+
+// Types for campaigns
+export type InsertMarketingCampaign = z.infer<typeof insertMarketingCampaignSchema>;
+export type MarketingCampaign = typeof marketingCampaigns.$inferSelect;
+
+// Marketing sends table (individual send tracking)
+export const marketingSends = pgTable("marketing_sends", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  campaignId: varchar("campaign_id").notNull().references(() => marketingCampaigns.id, { onDelete: 'cascade' }),
+  contactId: varchar("contact_id").notNull().references(() => marketingContacts.id, { onDelete: 'cascade' }),
+  
+  channel: text("channel").notNull(), // 'email' or 'sms'
+  status: text("status").notNull().default("pending"), // 'pending', 'sent', 'delivered', 'opened', 'clicked', 'bounced', 'failed', 'unsubscribed'
+  
+  // Tracking IDs
+  trackingId: varchar("tracking_id").notNull().default(sql`gen_random_uuid()`), // Unique ID for tracking links/pixels
+  externalMessageId: text("external_message_id"), // Resend/Twilio message ID
+  
+  // Delivery info
+  recipientEmail: text("recipient_email"),
+  recipientPhone: text("recipient_phone"),
+  
+  // Timestamps
+  scheduledAt: timestamp("scheduled_at"),
+  sentAt: timestamp("sent_at"),
+  deliveredAt: timestamp("delivered_at"),
+  openedAt: timestamp("opened_at"),
+  clickedAt: timestamp("clicked_at"),
+  convertedAt: timestamp("converted_at"),
+  unsubscribedAt: timestamp("unsubscribed_at"),
+  bouncedAt: timestamp("bounced_at"),
+  failedAt: timestamp("failed_at"),
+  
+  // Conversion tracking
+  conversionValue: decimal("conversion_value", { precision: 10, scale: 2 }),
+  conversionType: text("conversion_type"), // 'reservation', 'purchase', 'visit'
+  
+  // Click tracking
+  clickCount: integer("click_count").default(0),
+  lastClickedUrl: text("last_clicked_url"),
+  
+  // Error handling
+  errorMessage: text("error_message"),
+  retryCount: integer("retry_count").default(0),
+  
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Types for sends
+export type MarketingSend = typeof marketingSends.$inferSelect;
+
+// Marketing automations table
+export const marketingAutomations = pgTable("marketing_automations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  
+  name: text("name").notNull(),
+  description: text("description"),
+  
+  // Trigger configuration
+  triggerType: text("trigger_type").notNull(), // 'new_contact', 'birthday', 'inactive_30d', 'inactive_60d', 'post_visit', 'tag_added', 'segment_entered', 'manual'
+  triggerConfig: jsonb("trigger_config"), // { tag: 'vip', days_before: 3, segment_id: '...' }
+  
+  // Actions (workflow steps)
+  actions: jsonb("actions"), // [{ type: 'email', templateId: '...', delay: '0' }, { type: 'wait', delay: '7d' }, ...]
+  
+  // Status
+  isActive: boolean("is_active").notNull().default(false),
+  
+  // Stats
+  totalTriggered: integer("total_triggered").default(0),
+  totalCompleted: integer("total_completed").default(0),
+  totalFailed: integer("total_failed").default(0),
+  
+  // Timing
+  lastTriggeredAt: timestamp("last_triggered_at"),
+  
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Insert schema for automations
+export const insertMarketingAutomationSchema = createInsertSchema(marketingAutomations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  totalTriggered: true,
+  totalCompleted: true,
+  totalFailed: true,
+  lastTriggeredAt: true,
+});
+
+// Types for automations
+export type InsertMarketingAutomation = z.infer<typeof insertMarketingAutomationSchema>;
+export type MarketingAutomation = typeof marketingAutomations.$inferSelect;
+
+// Marketing automation logs table
+export const marketingAutomationLogs = pgTable("marketing_automation_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  automationId: varchar("automation_id").notNull().references(() => marketingAutomations.id, { onDelete: 'cascade' }),
+  contactId: varchar("contact_id").notNull().references(() => marketingContacts.id, { onDelete: 'cascade' }),
+  
+  // Execution status
+  status: text("status").notNull(), // 'running', 'completed', 'failed', 'cancelled'
+  currentStep: integer("current_step").default(0),
+  
+  // Timing
+  triggeredAt: timestamp("triggered_at").notNull().defaultNow(),
+  completedAt: timestamp("completed_at"),
+  nextStepAt: timestamp("next_step_at"), // When next step should execute
+  
+  // Error handling
+  errorMessage: text("error_message"),
+  
+  // Context data
+  contextData: jsonb("context_data"), // Any data needed for template variables
+  
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Types for automation logs
+export type MarketingAutomationLog = typeof marketingAutomationLogs.$inferSelect;
+
+// Marketing click tracking table (for detailed link tracking)
+export const marketingClickEvents = pgTable("marketing_click_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sendId: varchar("send_id").notNull().references(() => marketingSends.id, { onDelete: 'cascade' }),
+  
+  url: text("url").notNull(),
+  clickedAt: timestamp("clicked_at").notNull().defaultNow(),
+  
+  // Device info
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  device: text("device"), // 'mobile', 'desktop', 'tablet'
+  browser: text("browser"),
+  os: text("os"),
+  
+  // Geo info (optional)
+  country: text("country"),
+  city: text("city"),
+});
+
+// Types for click events
+export type MarketingClickEvent = typeof marketingClickEvents.$inferSelect;
+
+// ===== MARKETING API SCHEMAS =====
+
+// Schema for importing contacts
+export const importContactsSchema = z.object({
+  contacts: z.array(z.object({
+    email: z.string().email().optional(),
+    phone: z.string().optional(),
+    firstName: z.string().optional(),
+    lastName: z.string().optional(),
+    tags: z.array(z.string()).optional(),
+    birthDate: z.string().optional(),
+  })),
+  optInEmail: z.boolean().default(true),
+  optInSms: z.boolean().default(true),
+  source: z.string().default("import"),
+  deduplicateBy: z.enum(["email", "phone", "both"]).default("email"),
+});
+
+// Schema for creating a quick campaign (simple mode)
+export const createQuickCampaignSchema = z.object({
+  templateId: z.string().uuid(),
+  segmentType: z.enum(["all", "recent", "inactive", "vip", "custom"]),
+  customSegmentId: z.string().uuid().optional(),
+  channel: z.enum(["email", "sms", "both"]),
+  customizations: z.object({
+    discountPercent: z.number().min(0).max(100).optional(),
+    discountAmount: z.number().min(0).optional(),
+    validUntil: z.string().optional(),
+    customMessage: z.string().optional(),
+  }).optional(),
+  scheduledAt: z.string().datetime().optional(),
+});
+
+// Schema for segment filters
+export const segmentFiltersSchema = z.object({
+  visitsMin: z.number().optional(),
+  visitsMax: z.number().optional(),
+  inactiveDays: z.number().optional(),
+  avgSpendMin: z.number().optional(),
+  avgSpendMax: z.number().optional(),
+  tags: z.array(z.string()).optional(),
+  tagsExclude: z.array(z.string()).optional(),
+  source: z.string().optional(),
+  hasEmail: z.boolean().optional(),
+  hasPhone: z.boolean().optional(),
+  birthdayMonth: z.number().min(1).max(12).optional(),
+  createdAfter: z.string().datetime().optional(),
+  createdBefore: z.string().datetime().optional(),
+});
+
+// Types
+export type ImportContacts = z.infer<typeof importContactsSchema>;
+export type CreateQuickCampaign = z.infer<typeof createQuickCampaignSchema>;
+export type SegmentFilters = z.infer<typeof segmentFiltersSchema>;
