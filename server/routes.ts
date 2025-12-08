@@ -2265,6 +2265,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         hasMetadata: !!data.metadata,
       });
 
+      // Helper to parse flexible datetime (string, number, or null)
+      const parseFlexibleDate = (value: string | number | null | undefined): Date | undefined => {
+        if (value === null || value === undefined) return undefined;
+        if (typeof value === 'number') {
+          // Detect if timestamp is in seconds or milliseconds
+          const ts = value > 9999999999 ? value : value * 1000;
+          return new Date(ts);
+        }
+        return new Date(value);
+      };
+
       // Build comprehensive call data from all fields
       const callData: any = {
         userId,
@@ -2272,8 +2283,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Basic call info
         phoneNumber: data.phoneNumber,
         status: data.status,
-        startTime: new Date(data.startTime),
-        endTime: data.endTime ? new Date(data.endTime) : undefined,
+        startTime: parseFlexibleDate(data.startTime) || new Date(), // Default to now if missing
+        endTime: parseFlexibleDate(data.endTime),
         duration: data.duration,
         
         // External references
@@ -2295,8 +2306,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         transcript: data.transcript,
         tags: data.tags,
         
-        // Appointment details
-        appointmentDate: data.appointmentDate ? new Date(data.appointmentDate) : undefined,
+        // Appointment details (nullable for non-booking calls)
+        appointmentDate: parseFlexibleDate(data.appointmentDate),
         appointmentHour: data.appointmentHour,
         appointmentDayOfWeek: data.appointmentDayOfWeek,
         bookingDelayDays: data.booking_delay_days,
@@ -2342,7 +2353,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         calendarId: meta.calendar_id,
         timezone: meta.timezone,
         recordingUrl: meta.recording_url,
-        collectedAt: data.collected_at ? new Date(data.collected_at) : new Date(),
+        collectedAt: parseFlexibleDate(data.collected_at) || new Date(),
         
         // Store full metadata for any additional fields
         metadata: data.metadata,

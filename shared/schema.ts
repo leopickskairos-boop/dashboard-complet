@@ -247,56 +247,63 @@ export type InsertCall = z.infer<typeof insertCallSchema>;
 export type Call = typeof calls.$inferSelect;
 
 // N8N Webhook payload schema for call data ingestion (comprehensive)
+// Supports both ISO datetime strings and Unix timestamps (milliseconds or seconds)
+const flexibleDateTime = z.union([
+  z.string().datetime({ message: "Format de date invalide" }),
+  z.string(), // Accept any string (N8N may send various formats)
+  z.number(), // Unix timestamp (ms or seconds)
+]).nullable().optional();
+
 export const n8nCallWebhookSchema = z.object({
   // Basic call info (required)
   phoneNumber: z.string().min(1, "Numéro de téléphone requis"),
   status: z.enum(['active', 'completed', 'failed', 'canceled', 'no_answer']),
-  startTime: z.string().datetime({ message: "Format de date invalide pour startTime" }),
+  startTime: flexibleDateTime, // Accept string, number, or null
   
   // Basic call info (optional)
-  endTime: z.string().datetime({ message: "Format de date invalide pour endTime" }).optional(),
-  duration: z.number().int().min(0).optional(),
+  endTime: flexibleDateTime, // Accept string, number, or null
+  duration: z.number().int().min(0).nullable().optional(),
   
   // External references
-  call_id: z.string().optional(),
-  agent_id: z.string().optional(),
+  call_id: z.string().nullable().optional(),
+  agent_id: z.string().nullable().optional(),
   
   // Call type and event
-  event_type: z.string().optional(),
+  event_type: z.string().nullable().optional(),
   
   // Call outcome
-  call_answered: z.boolean().optional(),
-  is_out_of_scope: z.boolean().optional(),
-  conversion_result: z.string().optional(),
-  call_successful: z.boolean().optional(),
-  disconnection_reason: z.string().optional(),
+  call_answered: z.boolean().nullable().optional(),
+  is_out_of_scope: z.boolean().nullable().optional(),
+  conversion_result: z.string().nullable().optional(),
+  call_successful: z.boolean().nullable().optional(),
+  disconnection_reason: z.string().nullable().optional(),
   
   // Content
-  summary: z.string().optional(),
-  transcript: z.string().optional(),
-  tags: z.array(z.string()).optional(),
+  summary: z.string().nullable().optional(),
+  transcript: z.string().nullable().optional(),
+  tags: z.array(z.string()).nullable().optional(),
   
-  // Appointment details
-  appointmentDate: z.string().datetime({ message: "Format de date invalide pour appointmentDate" }).optional(),
-  appointmentHour: z.number().int().min(0).max(23).optional(),
-  appointmentDayOfWeek: z.number().int().min(0).max(6).optional(),
-  booking_delay_days: z.number().int().optional(),
-  is_last_minute: z.boolean().optional(),
-  group_category: z.string().optional(),
+  // Appointment details (all nullable for non-booking calls)
+  appointmentDate: flexibleDateTime, // Accept string, number, or null
+  appointmentHour: z.number().int().min(0).max(23).nullable().optional(),
+  appointmentDayOfWeek: z.number().int().min(0).max(6).nullable().optional(),
+  booking_delay_days: z.number().int().nullable().optional(),
+  is_last_minute: z.boolean().nullable().optional(),
+  group_category: z.string().nullable().optional(),
   
   // N8N specific fields (ignored but accepted)
-  dashboard_api_key: z.string().optional(),
-  dashboard_url: z.string().optional(),
-  collected_at: z.string().datetime().optional(),
+  dashboard_api_key: z.string().nullable().optional(),
+  dashboard_url: z.string().nullable().optional(),
+  collected_at: z.union([z.string(), z.number()]).nullable().optional(),
   
   // Rich metadata from N8N (all fields extracted)
   metadata: z.object({
-    event_type: z.string().optional(),
-    agency_name: z.string().optional(),
-    company_name: z.string().optional(),
-    nb_personnes: z.number().int().optional(),
-    group_category: z.string().optional(),
-    service_type: z.string().optional(),
+    event_type: z.string().nullable().optional(),
+    agency_name: z.string().nullable().optional(),
+    company_name: z.string().nullable().optional(),
+    nb_personnes: z.number().int().nullable().optional(),
+    group_category: z.string().nullable().optional(),
+    service_type: z.string().nullable().optional(),
     preferences: z.string().nullable().optional(),
     special_occasion: z.string().nullable().optional(),
     original_date: z.string().nullable().optional(),
@@ -308,20 +315,20 @@ export const n8nCallWebhookSchema = z.object({
     client_email: z.string().nullable().optional(),
     client_mood: z.string().nullable().optional(),
     is_returning_client: z.boolean().nullable().optional(),
-    booking_confidence: z.number().int().min(0).max(100).optional(),
-    questions_asked: z.array(z.string()).optional(),
-    objections: z.array(z.string()).optional(),
-    keywords: z.array(z.string()).optional(),
-    pain_points: z.array(z.string()).optional(),
-    compliments: z.array(z.string()).optional(),
+    booking_confidence: z.number().int().min(0).max(100).nullable().optional(),
+    questions_asked: z.array(z.string()).nullable().optional(),
+    objections: z.array(z.string()).nullable().optional(),
+    keywords: z.array(z.string()).nullable().optional(),
+    pain_points: z.array(z.string()).nullable().optional(),
+    compliments: z.array(z.string()).nullable().optional(),
     upsell_accepted: z.boolean().nullable().optional(),
-    competitor_mentioned: z.boolean().optional(),
-    language_detected: z.string().optional(),
-    call_quality: z.string().optional(),
+    competitor_mentioned: z.boolean().nullable().optional(),
+    language_detected: z.string().nullable().optional(),
+    call_quality: z.string().nullable().optional(),
     calendar_id: z.string().nullable().optional(),
-    timezone: z.string().optional(),
+    timezone: z.string().nullable().optional(),
     recording_url: z.string().nullable().optional(),
-  }).passthrough().optional(), // passthrough allows additional unknown fields
+  }).passthrough().nullable().optional(), // passthrough allows additional unknown fields
 });
 
 export type N8nCallWebhookPayload = z.infer<typeof n8nCallWebhookSchema>;
