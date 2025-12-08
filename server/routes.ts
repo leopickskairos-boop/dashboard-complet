@@ -41,6 +41,7 @@ import {
   notifyPasswordChanged,
 } from "./notifications";
 import { pushNotificationService } from "./push-notification.service";
+import { registerMarketingRoutes } from "./marketing-routes";
 
 // Extend Express Request type to include user property
 declare global {
@@ -5884,6 +5885,9 @@ Format: Utilise des bullet points et reste concis (max 200 mots).`;
       res.redirect('/reviews/settings?error=callback_failed');
     }
   });
+
+  // ===== MARKETING MODULE ROUTES =====
+  registerMarketingRoutes(app);
 
   const httpServer = createServer(app);
 

@@ -43,6 +43,16 @@ import ReviewPage from "@/pages/reviews/ReviewPage";
 import ReviewsEmbed from "@/pages/reviews/ReviewsEmbed";
 import ReviewCollect from "@/pages/reviews/ReviewCollect";
 
+// Marketing Pages
+import MarketingOverview from "@/pages/marketing/MarketingOverview";
+import MarketingContacts from "@/pages/marketing/MarketingContacts";
+import MarketingCampaigns from "@/pages/marketing/MarketingCampaigns";
+import MarketingTemplates from "@/pages/marketing/MarketingTemplates";
+import MarketingSegments from "@/pages/marketing/MarketingSegments";
+import MarketingAutomations from "@/pages/marketing/MarketingAutomations";
+import MarketingAnalytics from "@/pages/marketing/MarketingAnalytics";
+import UnsubscribePage from "@/pages/marketing/UnsubscribePage";
+
 function Router() {
   return (
     <Switch>
@@ -179,6 +189,66 @@ function Router() {
       <Route path="/review/:token" component={ReviewPage} />
       <Route path="/review/collect" component={ReviewCollect} />
       <Route path="/embed/reviews" component={ReviewsEmbed} />
+
+      {/* Marketing - Protected dashboard pages */}
+      <Route path="/marketing">
+        <ProtectedRoute requireVerified={true} requireSubscription={true}>
+          <DashboardLayout>
+            <MarketingOverview />
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/marketing/contacts">
+        <ProtectedRoute requireVerified={true} requireSubscription={true}>
+          <DashboardLayout>
+            <MarketingContacts />
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/marketing/campaigns">
+        <ProtectedRoute requireVerified={true} requireSubscription={true}>
+          <DashboardLayout>
+            <MarketingCampaigns />
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/marketing/templates">
+        <ProtectedRoute requireVerified={true} requireSubscription={true}>
+          <DashboardLayout>
+            <MarketingTemplates />
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/marketing/segments">
+        <ProtectedRoute requireVerified={true} requireSubscription={true}>
+          <DashboardLayout>
+            <MarketingSegments />
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/marketing/automations">
+        <ProtectedRoute requireVerified={true} requireSubscription={true}>
+          <DashboardLayout>
+            <MarketingAutomations />
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/marketing/analytics">
+        <ProtectedRoute requireVerified={true} requireSubscription={true}>
+          <DashboardLayout>
+            <MarketingAnalytics />
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+
+      {/* Marketing - Public pages */}
+      <Route path="/unsubscribe/:trackingId" component={UnsubscribePage} />
 
       <Route component={NotFound} />
     </Switch>

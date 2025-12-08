@@ -17,6 +17,15 @@ import {
   reviewAlerts,
   reviewSources,
   reviewSyncLogs,
+  marketingContacts,
+  marketingConsentHistory,
+  marketingSegments,
+  marketingTemplates,
+  marketingCampaigns,
+  marketingSends,
+  marketingAutomations,
+  marketingAutomationLogs,
+  marketingClickEvents,
   type User, 
   type InsertUser, 
   type Call, 
@@ -50,10 +59,25 @@ import {
   type ReviewSource,
   type InsertReviewSource,
   type ReviewSyncLog,
-  type InsertReviewSyncLog
+  type InsertReviewSyncLog,
+  type MarketingContact,
+  type InsertMarketingContact,
+  type MarketingConsentHistory,
+  type MarketingSegment,
+  type InsertMarketingSegment,
+  type MarketingTemplate,
+  type InsertMarketingTemplate,
+  type MarketingCampaign,
+  type InsertMarketingCampaign,
+  type MarketingSend,
+  type MarketingAutomation,
+  type InsertMarketingAutomation,
+  type MarketingAutomationLog,
+  type MarketingClickEvent,
+  type SegmentFilters
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, gte, lte, desc, sql, count, isNotNull, or } from "drizzle-orm";
+import { eq, and, gte, lte, desc, sql, count, isNotNull, or, asc, like, ilike, isNull, inArray, ne, lt, gt } from "drizzle-orm";
 import { generateApiKey } from "./api-key";
 
 export interface IStorage {
@@ -279,6 +303,141 @@ export interface IStorage {
   // Reviews with source
   getReviewByPlatformId(platformReviewId: string, platform: string): Promise<Review | undefined>;
   upsertReviewFromPlatform(review: InsertReview): Promise<Review>;
+  
+  // ===== MARKETING MODULE =====
+  
+  // Marketing Contacts
+  getMarketingContacts(userId: string, filters?: {
+    search?: string;
+    source?: string;
+    hasEmail?: boolean;
+    hasPhone?: boolean;
+    optInEmail?: boolean;
+    optInSms?: boolean;
+    tags?: string[];
+    limit?: number;
+    offset?: number;
+  }): Promise<MarketingContact[]>;
+  getMarketingContactById(id: string, userId: string): Promise<MarketingContact | undefined>;
+  getMarketingContactByEmail(userId: string, email: string): Promise<MarketingContact | undefined>;
+  getMarketingContactByPhone(userId: string, phone: string): Promise<MarketingContact | undefined>;
+  createMarketingContact(contact: InsertMarketingContact): Promise<MarketingContact>;
+  updateMarketingContact(id: string, userId: string, updates: Partial<MarketingContact>): Promise<MarketingContact | undefined>;
+  deleteMarketingContact(id: string, userId: string): Promise<void>;
+  bulkCreateMarketingContacts(contacts: InsertMarketingContact[]): Promise<{ created: number; updated: number; errors: number }>;
+  getMarketingContactsCount(userId: string): Promise<number>;
+  getMarketingContactsBySegmentFilters(userId: string, filters: SegmentFilters): Promise<MarketingContact[]>;
+  incrementContactEmailStats(contactId: string, stat: 'sent' | 'opened' | 'clicked'): Promise<void>;
+  incrementContactSmsStats(contactId: string): Promise<void>;
+  
+  // Marketing Consent History
+  createConsentHistory(contactId: string, action: string, channel: string, source: string, ipAddress?: string, userAgent?: string): Promise<MarketingConsentHistory>;
+  getConsentHistory(contactId: string): Promise<MarketingConsentHistory[]>;
+  
+  // Marketing Segments
+  getMarketingSegments(userId: string): Promise<MarketingSegment[]>;
+  getMarketingSegmentById(id: string, userId: string): Promise<MarketingSegment | undefined>;
+  createMarketingSegment(segment: InsertMarketingSegment): Promise<MarketingSegment>;
+  updateMarketingSegment(id: string, userId: string, updates: Partial<MarketingSegment>): Promise<MarketingSegment | undefined>;
+  deleteMarketingSegment(id: string, userId: string): Promise<void>;
+  updateSegmentContactCount(id: string, count: number): Promise<void>;
+  
+  // Marketing Templates
+  getMarketingTemplates(userId: string, filters?: {
+    category?: string;
+    channel?: string;
+    businessType?: string;
+    includeSystem?: boolean;
+  }): Promise<MarketingTemplate[]>;
+  getMarketingTemplateById(id: string, userId: string): Promise<MarketingTemplate | undefined>;
+  createMarketingTemplate(template: InsertMarketingTemplate): Promise<MarketingTemplate>;
+  updateMarketingTemplate(id: string, userId: string, updates: Partial<MarketingTemplate>): Promise<MarketingTemplate | undefined>;
+  deleteMarketingTemplate(id: string, userId: string): Promise<void>;
+  incrementTemplateUsage(id: string): Promise<void>;
+  getSystemTemplates(filters?: { category?: string; channel?: string; businessType?: string }): Promise<MarketingTemplate[]>;
+  
+  // Marketing Campaigns
+  getMarketingCampaigns(userId: string, filters?: {
+    status?: string;
+    type?: string;
+    channel?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<MarketingCampaign[]>;
+  getMarketingCampaignById(id: string, userId: string): Promise<MarketingCampaign | undefined>;
+  createMarketingCampaign(campaign: InsertMarketingCampaign): Promise<MarketingCampaign>;
+  updateMarketingCampaign(id: string, userId: string, updates: Partial<MarketingCampaign>): Promise<MarketingCampaign | undefined>;
+  deleteMarketingCampaign(id: string, userId: string): Promise<void>;
+  getScheduledCampaigns(): Promise<MarketingCampaign[]>;
+  updateCampaignStats(id: string, stats: Partial<{
+    totalRecipients: number;
+    totalSent: number;
+    totalDelivered: number;
+    totalOpened: number;
+    totalClicked: number;
+    totalConverted: number;
+    totalUnsubscribed: number;
+    totalBounced: number;
+    totalFailed: number;
+    totalRevenue: string;
+    emailCost: string;
+    smsCost: string;
+  }>): Promise<void>;
+  
+  // Marketing Sends
+  createMarketingSend(send: Partial<MarketingSend> & { campaignId: string; contactId: string; channel: string }): Promise<MarketingSend>;
+  getMarketingSendByTrackingId(trackingId: string): Promise<MarketingSend | undefined>;
+  updateMarketingSend(id: string, updates: Partial<MarketingSend>): Promise<MarketingSend | undefined>;
+  getMarketingSendsByCampaign(campaignId: string): Promise<MarketingSend[]>;
+  getCampaignSendStats(campaignId: string): Promise<{
+    total: number;
+    sent: number;
+    delivered: number;
+    opened: number;
+    clicked: number;
+    bounced: number;
+    failed: number;
+    unsubscribed: number;
+  }>;
+  
+  // Marketing Click Events
+  createClickEvent(sendId: string, url: string, ipAddress?: string, userAgent?: string, device?: string, browser?: string, os?: string): Promise<MarketingClickEvent>;
+  getClickEventsBySend(sendId: string): Promise<MarketingClickEvent[]>;
+  
+  // Marketing Automations
+  getMarketingAutomations(userId: string): Promise<MarketingAutomation[]>;
+  getMarketingAutomationById(id: string, userId: string): Promise<MarketingAutomation | undefined>;
+  createMarketingAutomation(automation: InsertMarketingAutomation): Promise<MarketingAutomation>;
+  updateMarketingAutomation(id: string, userId: string, updates: Partial<MarketingAutomation>): Promise<MarketingAutomation | undefined>;
+  deleteMarketingAutomation(id: string, userId: string): Promise<void>;
+  getActiveAutomationsByTrigger(triggerType: string): Promise<MarketingAutomation[]>;
+  incrementAutomationStats(id: string, stat: 'triggered' | 'completed' | 'failed'): Promise<void>;
+  
+  // Marketing Automation Logs
+  createAutomationLog(log: Partial<MarketingAutomationLog> & { automationId: string; contactId: string; status: string }): Promise<MarketingAutomationLog>;
+  updateAutomationLog(id: string, updates: Partial<MarketingAutomationLog>): Promise<MarketingAutomationLog | undefined>;
+  getPendingAutomationLogs(): Promise<MarketingAutomationLog[]>;
+  getAutomationLogsByContact(contactId: string): Promise<MarketingAutomationLog[]>;
+  
+  // Marketing Analytics
+  getMarketingOverviewStats(userId: string, period?: 'week' | 'month' | 'year'): Promise<{
+    totalContacts: number;
+    newContactsPeriod: number;
+    totalCampaigns: number;
+    campaignsSentPeriod: number;
+    totalEmailsSent: number;
+    avgOpenRate: number;
+    avgClickRate: number;
+    totalRevenue: number;
+    costPerConversion: number;
+  }>;
+  getCampaignPerformanceChart(userId: string, period?: 'week' | 'month' | 'year'): Promise<Array<{
+    date: string;
+    emailsSent: number;
+    opened: number;
+    clicked: number;
+    conversions: number;
+  }>>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2007,6 +2166,787 @@ export class DatabaseStorage implements IStorage {
       .values(review)
       .returning();
     return created;
+  }
+
+  // ===== MARKETING MODULE IMPLEMENTATION =====
+
+  // Marketing Contacts
+  async getMarketingContacts(userId: string, filters?: {
+    search?: string;
+    source?: string;
+    hasEmail?: boolean;
+    hasPhone?: boolean;
+    optInEmail?: boolean;
+    optInSms?: boolean;
+    tags?: string[];
+    limit?: number;
+    offset?: number;
+  }): Promise<MarketingContact[]> {
+    const conditions = [eq(marketingContacts.userId, userId)];
+    
+    if (filters?.search) {
+      conditions.push(or(
+        ilike(marketingContacts.email, `%${filters.search}%`),
+        ilike(marketingContacts.firstName, `%${filters.search}%`),
+        ilike(marketingContacts.lastName, `%${filters.search}%`),
+        ilike(marketingContacts.phone, `%${filters.search}%`)
+      )!);
+    }
+    if (filters?.source) {
+      conditions.push(eq(marketingContacts.source, filters.source));
+    }
+    if (filters?.hasEmail === true) {
+      conditions.push(isNotNull(marketingContacts.email));
+    }
+    if (filters?.hasPhone === true) {
+      conditions.push(isNotNull(marketingContacts.phone));
+    }
+    if (filters?.optInEmail !== undefined) {
+      conditions.push(eq(marketingContacts.optInEmail, filters.optInEmail));
+    }
+    if (filters?.optInSms !== undefined) {
+      conditions.push(eq(marketingContacts.optInSms, filters.optInSms));
+    }
+    
+    let query = db
+      .select()
+      .from(marketingContacts)
+      .where(and(...conditions))
+      .orderBy(desc(marketingContacts.createdAt));
+    
+    if (filters?.limit) {
+      query = query.limit(filters.limit) as typeof query;
+    }
+    if (filters?.offset) {
+      query = query.offset(filters.offset) as typeof query;
+    }
+    
+    return await query;
+  }
+
+  async getMarketingContactById(id: string, userId: string): Promise<MarketingContact | undefined> {
+    const [contact] = await db
+      .select()
+      .from(marketingContacts)
+      .where(and(eq(marketingContacts.id, id), eq(marketingContacts.userId, userId)));
+    return contact || undefined;
+  }
+
+  async getMarketingContactByEmail(userId: string, email: string): Promise<MarketingContact | undefined> {
+    const [contact] = await db
+      .select()
+      .from(marketingContacts)
+      .where(and(eq(marketingContacts.userId, userId), eq(marketingContacts.email, email)));
+    return contact || undefined;
+  }
+
+  async getMarketingContactByPhone(userId: string, phone: string): Promise<MarketingContact | undefined> {
+    const [contact] = await db
+      .select()
+      .from(marketingContacts)
+      .where(and(eq(marketingContacts.userId, userId), eq(marketingContacts.phone, phone)));
+    return contact || undefined;
+  }
+
+  async createMarketingContact(contact: InsertMarketingContact): Promise<MarketingContact> {
+    const [created] = await db
+      .insert(marketingContacts)
+      .values(contact as any)
+      .returning();
+    return created;
+  }
+
+  async updateMarketingContact(id: string, userId: string, updates: Partial<MarketingContact>): Promise<MarketingContact | undefined> {
+    const [updated] = await db
+      .update(marketingContacts)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(eq(marketingContacts.id, id), eq(marketingContacts.userId, userId)))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteMarketingContact(id: string, userId: string): Promise<void> {
+    await db
+      .delete(marketingContacts)
+      .where(and(eq(marketingContacts.id, id), eq(marketingContacts.userId, userId)));
+  }
+
+  async bulkCreateMarketingContacts(contacts: InsertMarketingContact[]): Promise<{ created: number; updated: number; errors: number }> {
+    let created = 0;
+    let updated = 0;
+    let errors = 0;
+    
+    for (const contact of contacts) {
+      try {
+        // Check for existing contact by email or phone
+        let existing: MarketingContact | undefined;
+        if (contact.email) {
+          existing = await this.getMarketingContactByEmail(contact.userId, contact.email);
+        }
+        if (!existing && contact.phone) {
+          existing = await this.getMarketingContactByPhone(contact.userId, contact.phone);
+        }
+        
+        if (existing) {
+          await this.updateMarketingContact(existing.id, contact.userId, contact as Partial<MarketingContact>);
+          updated++;
+        } else {
+          await this.createMarketingContact(contact);
+          created++;
+        }
+      } catch (error) {
+        errors++;
+      }
+    }
+    
+    return { created, updated, errors };
+  }
+
+  async getMarketingContactsCount(userId: string): Promise<number> {
+    const [result] = await db
+      .select({ count: count() })
+      .from(marketingContacts)
+      .where(eq(marketingContacts.userId, userId));
+    return result?.count || 0;
+  }
+
+  async getMarketingContactsBySegmentFilters(userId: string, filters: SegmentFilters): Promise<MarketingContact[]> {
+    const conditions = [eq(marketingContacts.userId, userId)];
+    
+    if (filters.visitsMin !== undefined) {
+      conditions.push(gte(marketingContacts.totalVisits, filters.visitsMin));
+    }
+    if (filters.visitsMax !== undefined) {
+      conditions.push(lte(marketingContacts.totalVisits, filters.visitsMax));
+    }
+    if (filters.inactiveDays !== undefined) {
+      const inactiveDate = new Date();
+      inactiveDate.setDate(inactiveDate.getDate() - filters.inactiveDays);
+      conditions.push(or(
+        isNull(marketingContacts.lastVisitAt),
+        lte(marketingContacts.lastVisitAt, inactiveDate)
+      )!);
+    }
+    if (filters.hasEmail === true) {
+      conditions.push(isNotNull(marketingContacts.email));
+    }
+    if (filters.hasPhone === true) {
+      conditions.push(isNotNull(marketingContacts.phone));
+    }
+    if (filters.source) {
+      conditions.push(eq(marketingContacts.source, filters.source));
+    }
+    if (filters.birthdayMonth !== undefined) {
+      conditions.push(sql`EXTRACT(MONTH FROM ${marketingContacts.birthDate}) = ${filters.birthdayMonth}`);
+    }
+    if (filters.createdAfter) {
+      conditions.push(gte(marketingContacts.createdAt, new Date(filters.createdAfter)));
+    }
+    if (filters.createdBefore) {
+      conditions.push(lte(marketingContacts.createdAt, new Date(filters.createdBefore)));
+    }
+    
+    return await db
+      .select()
+      .from(marketingContacts)
+      .where(and(...conditions))
+      .orderBy(desc(marketingContacts.createdAt));
+  }
+
+  async incrementContactEmailStats(contactId: string, stat: 'sent' | 'opened' | 'clicked'): Promise<void> {
+    const updates: any = { updatedAt: new Date() };
+    if (stat === 'sent') {
+      updates.totalEmailsSent = sql`${marketingContacts.totalEmailsSent} + 1`;
+      updates.lastEmailSentAt = new Date();
+    } else if (stat === 'opened') {
+      updates.totalEmailsOpened = sql`${marketingContacts.totalEmailsOpened} + 1`;
+    } else if (stat === 'clicked') {
+      updates.totalEmailsClicked = sql`${marketingContacts.totalEmailsClicked} + 1`;
+    }
+    await db.update(marketingContacts).set(updates).where(eq(marketingContacts.id, contactId));
+  }
+
+  async incrementContactSmsStats(contactId: string): Promise<void> {
+    await db
+      .update(marketingContacts)
+      .set({
+        totalSmsSent: sql`${marketingContacts.totalSmsSent} + 1`,
+        lastSmsSentAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(marketingContacts.id, contactId));
+  }
+
+  // Marketing Consent History
+  async createConsentHistory(contactId: string, action: string, channel: string, source: string, ipAddress?: string, userAgent?: string): Promise<MarketingConsentHistory> {
+    const [created] = await db
+      .insert(marketingConsentHistory)
+      .values({ contactId, action, channel, source, ipAddress, userAgent })
+      .returning();
+    return created;
+  }
+
+  async getConsentHistory(contactId: string): Promise<MarketingConsentHistory[]> {
+    return await db
+      .select()
+      .from(marketingConsentHistory)
+      .where(eq(marketingConsentHistory.contactId, contactId))
+      .orderBy(desc(marketingConsentHistory.createdAt));
+  }
+
+  // Marketing Segments
+  async getMarketingSegments(userId: string): Promise<MarketingSegment[]> {
+    return await db
+      .select()
+      .from(marketingSegments)
+      .where(eq(marketingSegments.userId, userId))
+      .orderBy(desc(marketingSegments.createdAt));
+  }
+
+  async getMarketingSegmentById(id: string, userId: string): Promise<MarketingSegment | undefined> {
+    const [segment] = await db
+      .select()
+      .from(marketingSegments)
+      .where(and(eq(marketingSegments.id, id), eq(marketingSegments.userId, userId)));
+    return segment || undefined;
+  }
+
+  async createMarketingSegment(segment: InsertMarketingSegment): Promise<MarketingSegment> {
+    const [created] = await db
+      .insert(marketingSegments)
+      .values(segment as any)
+      .returning();
+    return created;
+  }
+
+  async updateMarketingSegment(id: string, userId: string, updates: Partial<MarketingSegment>): Promise<MarketingSegment | undefined> {
+    const [updated] = await db
+      .update(marketingSegments)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(eq(marketingSegments.id, id), eq(marketingSegments.userId, userId)))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteMarketingSegment(id: string, userId: string): Promise<void> {
+    await db
+      .delete(marketingSegments)
+      .where(and(eq(marketingSegments.id, id), eq(marketingSegments.userId, userId)));
+  }
+
+  async updateSegmentContactCount(id: string, count: number): Promise<void> {
+    await db
+      .update(marketingSegments)
+      .set({ contactCount: count, lastCalculatedAt: new Date() })
+      .where(eq(marketingSegments.id, id));
+  }
+
+  // Marketing Templates
+  async getMarketingTemplates(userId: string, filters?: {
+    category?: string;
+    channel?: string;
+    businessType?: string;
+    includeSystem?: boolean;
+  }): Promise<MarketingTemplate[]> {
+    const conditions = [];
+    
+    if (filters?.includeSystem) {
+      conditions.push(or(
+        eq(marketingTemplates.userId, userId),
+        eq(marketingTemplates.isSystem, true)
+      )!);
+    } else {
+      conditions.push(eq(marketingTemplates.userId, userId));
+    }
+    
+    if (filters?.category) {
+      conditions.push(eq(marketingTemplates.category, filters.category));
+    }
+    if (filters?.channel) {
+      conditions.push(eq(marketingTemplates.channel, filters.channel));
+    }
+    if (filters?.businessType) {
+      conditions.push(or(
+        eq(marketingTemplates.businessType, filters.businessType),
+        eq(marketingTemplates.businessType, 'all')
+      )!);
+    }
+    
+    return await db
+      .select()
+      .from(marketingTemplates)
+      .where(and(...conditions))
+      .orderBy(desc(marketingTemplates.createdAt));
+  }
+
+  async getMarketingTemplateById(id: string, userId: string): Promise<MarketingTemplate | undefined> {
+    const [template] = await db
+      .select()
+      .from(marketingTemplates)
+      .where(and(
+        eq(marketingTemplates.id, id),
+        or(eq(marketingTemplates.userId, userId), eq(marketingTemplates.isSystem, true))!
+      ));
+    return template || undefined;
+  }
+
+  async createMarketingTemplate(template: InsertMarketingTemplate): Promise<MarketingTemplate> {
+    const [created] = await db
+      .insert(marketingTemplates)
+      .values(template as any)
+      .returning();
+    return created;
+  }
+
+  async updateMarketingTemplate(id: string, userId: string, updates: Partial<MarketingTemplate>): Promise<MarketingTemplate | undefined> {
+    const [updated] = await db
+      .update(marketingTemplates)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(eq(marketingTemplates.id, id), eq(marketingTemplates.userId, userId)))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteMarketingTemplate(id: string, userId: string): Promise<void> {
+    await db
+      .delete(marketingTemplates)
+      .where(and(eq(marketingTemplates.id, id), eq(marketingTemplates.userId, userId)));
+  }
+
+  async incrementTemplateUsage(id: string): Promise<void> {
+    await db
+      .update(marketingTemplates)
+      .set({ timesUsed: sql`${marketingTemplates.timesUsed} + 1` })
+      .where(eq(marketingTemplates.id, id));
+  }
+
+  async getSystemTemplates(filters?: { category?: string; channel?: string; businessType?: string }): Promise<MarketingTemplate[]> {
+    const conditions = [eq(marketingTemplates.isSystem, true), eq(marketingTemplates.isActive, true)];
+    
+    if (filters?.category) {
+      conditions.push(eq(marketingTemplates.category, filters.category));
+    }
+    if (filters?.channel) {
+      conditions.push(eq(marketingTemplates.channel, filters.channel));
+    }
+    if (filters?.businessType) {
+      conditions.push(or(
+        eq(marketingTemplates.businessType, filters.businessType),
+        eq(marketingTemplates.businessType, 'all'),
+        isNull(marketingTemplates.businessType)
+      )!);
+    }
+    
+    return await db
+      .select()
+      .from(marketingTemplates)
+      .where(and(...conditions))
+      .orderBy(asc(marketingTemplates.category), asc(marketingTemplates.name));
+  }
+
+  // Marketing Campaigns
+  async getMarketingCampaigns(userId: string, filters?: {
+    status?: string;
+    type?: string;
+    channel?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<MarketingCampaign[]> {
+    const conditions = [eq(marketingCampaigns.userId, userId)];
+    
+    if (filters?.status) {
+      conditions.push(eq(marketingCampaigns.status, filters.status));
+    }
+    if (filters?.type) {
+      conditions.push(eq(marketingCampaigns.type, filters.type));
+    }
+    if (filters?.channel) {
+      conditions.push(eq(marketingCampaigns.channel, filters.channel));
+    }
+    
+    let query = db
+      .select()
+      .from(marketingCampaigns)
+      .where(and(...conditions))
+      .orderBy(desc(marketingCampaigns.createdAt));
+    
+    if (filters?.limit) {
+      query = query.limit(filters.limit) as typeof query;
+    }
+    if (filters?.offset) {
+      query = query.offset(filters.offset) as typeof query;
+    }
+    
+    return await query;
+  }
+
+  async getMarketingCampaignById(id: string, userId: string): Promise<MarketingCampaign | undefined> {
+    const [campaign] = await db
+      .select()
+      .from(marketingCampaigns)
+      .where(and(eq(marketingCampaigns.id, id), eq(marketingCampaigns.userId, userId)));
+    return campaign || undefined;
+  }
+
+  async createMarketingCampaign(campaign: InsertMarketingCampaign): Promise<MarketingCampaign> {
+    const [created] = await db
+      .insert(marketingCampaigns)
+      .values(campaign as any)
+      .returning();
+    return created;
+  }
+
+  async updateMarketingCampaign(id: string, userId: string, updates: Partial<MarketingCampaign>): Promise<MarketingCampaign | undefined> {
+    const [updated] = await db
+      .update(marketingCampaigns)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(eq(marketingCampaigns.id, id), eq(marketingCampaigns.userId, userId)))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteMarketingCampaign(id: string, userId: string): Promise<void> {
+    await db
+      .delete(marketingCampaigns)
+      .where(and(eq(marketingCampaigns.id, id), eq(marketingCampaigns.userId, userId)));
+  }
+
+  async getScheduledCampaigns(): Promise<MarketingCampaign[]> {
+    const now = new Date();
+    return await db
+      .select()
+      .from(marketingCampaigns)
+      .where(and(
+        eq(marketingCampaigns.status, 'scheduled'),
+        lte(marketingCampaigns.scheduledAt, now)
+      ))
+      .orderBy(asc(marketingCampaigns.scheduledAt));
+  }
+
+  async updateCampaignStats(id: string, stats: Partial<{
+    totalRecipients: number;
+    totalSent: number;
+    totalDelivered: number;
+    totalOpened: number;
+    totalClicked: number;
+    totalConverted: number;
+    totalUnsubscribed: number;
+    totalBounced: number;
+    totalFailed: number;
+    totalRevenue: string;
+    emailCost: string;
+    smsCost: string;
+  }>): Promise<void> {
+    await db
+      .update(marketingCampaigns)
+      .set({ ...stats, updatedAt: new Date() })
+      .where(eq(marketingCampaigns.id, id));
+  }
+
+  // Marketing Sends
+  async createMarketingSend(send: Partial<MarketingSend> & { campaignId: string; contactId: string; channel: string }): Promise<MarketingSend> {
+    const [created] = await db
+      .insert(marketingSends)
+      .values(send as any)
+      .returning();
+    return created;
+  }
+
+  async getMarketingSendByTrackingId(trackingId: string): Promise<MarketingSend | undefined> {
+    const [send] = await db
+      .select()
+      .from(marketingSends)
+      .where(eq(marketingSends.trackingId, trackingId));
+    return send || undefined;
+  }
+
+  async updateMarketingSend(id: string, updates: Partial<MarketingSend>): Promise<MarketingSend | undefined> {
+    const [updated] = await db
+      .update(marketingSends)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(marketingSends.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async getMarketingSendsByCampaign(campaignId: string): Promise<MarketingSend[]> {
+    return await db
+      .select()
+      .from(marketingSends)
+      .where(eq(marketingSends.campaignId, campaignId))
+      .orderBy(desc(marketingSends.createdAt));
+  }
+
+  async getCampaignSendStats(campaignId: string): Promise<{
+    total: number;
+    sent: number;
+    delivered: number;
+    opened: number;
+    clicked: number;
+    bounced: number;
+    failed: number;
+    unsubscribed: number;
+  }> {
+    const sends = await this.getMarketingSendsByCampaign(campaignId);
+    return {
+      total: sends.length,
+      sent: sends.filter(s => s.sentAt).length,
+      delivered: sends.filter(s => s.deliveredAt).length,
+      opened: sends.filter(s => s.openedAt).length,
+      clicked: sends.filter(s => s.clickedAt).length,
+      bounced: sends.filter(s => s.bouncedAt).length,
+      failed: sends.filter(s => s.failedAt).length,
+      unsubscribed: sends.filter(s => s.unsubscribedAt).length
+    };
+  }
+
+  // Marketing Click Events
+  async createClickEvent(sendId: string, url: string, ipAddress?: string, userAgent?: string, device?: string, browser?: string, os?: string): Promise<MarketingClickEvent> {
+    const [created] = await db
+      .insert(marketingClickEvents)
+      .values({ sendId, url, ipAddress, userAgent, device, browser, os })
+      .returning();
+    return created;
+  }
+
+  async getClickEventsBySend(sendId: string): Promise<MarketingClickEvent[]> {
+    return await db
+      .select()
+      .from(marketingClickEvents)
+      .where(eq(marketingClickEvents.sendId, sendId))
+      .orderBy(desc(marketingClickEvents.clickedAt));
+  }
+
+  // Marketing Automations
+  async getMarketingAutomations(userId: string): Promise<MarketingAutomation[]> {
+    return await db
+      .select()
+      .from(marketingAutomations)
+      .where(eq(marketingAutomations.userId, userId))
+      .orderBy(desc(marketingAutomations.createdAt));
+  }
+
+  async getMarketingAutomationById(id: string, userId: string): Promise<MarketingAutomation | undefined> {
+    const [automation] = await db
+      .select()
+      .from(marketingAutomations)
+      .where(and(eq(marketingAutomations.id, id), eq(marketingAutomations.userId, userId)));
+    return automation || undefined;
+  }
+
+  async createMarketingAutomation(automation: InsertMarketingAutomation): Promise<MarketingAutomation> {
+    const [created] = await db
+      .insert(marketingAutomations)
+      .values(automation as any)
+      .returning();
+    return created;
+  }
+
+  async updateMarketingAutomation(id: string, userId: string, updates: Partial<MarketingAutomation>): Promise<MarketingAutomation | undefined> {
+    const [updated] = await db
+      .update(marketingAutomations)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(eq(marketingAutomations.id, id), eq(marketingAutomations.userId, userId)))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteMarketingAutomation(id: string, userId: string): Promise<void> {
+    await db
+      .delete(marketingAutomations)
+      .where(and(eq(marketingAutomations.id, id), eq(marketingAutomations.userId, userId)));
+  }
+
+  async getActiveAutomationsByTrigger(triggerType: string): Promise<MarketingAutomation[]> {
+    return await db
+      .select()
+      .from(marketingAutomations)
+      .where(and(
+        eq(marketingAutomations.isActive, true),
+        eq(marketingAutomations.triggerType, triggerType)
+      ));
+  }
+
+  async incrementAutomationStats(id: string, stat: 'triggered' | 'completed' | 'failed'): Promise<void> {
+    const updates: any = { updatedAt: new Date() };
+    if (stat === 'triggered') {
+      updates.totalTriggered = sql`${marketingAutomations.totalTriggered} + 1`;
+      updates.lastTriggeredAt = new Date();
+    } else if (stat === 'completed') {
+      updates.totalCompleted = sql`${marketingAutomations.totalCompleted} + 1`;
+    } else if (stat === 'failed') {
+      updates.totalFailed = sql`${marketingAutomations.totalFailed} + 1`;
+    }
+    await db.update(marketingAutomations).set(updates).where(eq(marketingAutomations.id, id));
+  }
+
+  // Marketing Automation Logs
+  async createAutomationLog(log: Partial<MarketingAutomationLog> & { automationId: string; contactId: string; status: string }): Promise<MarketingAutomationLog> {
+    const [created] = await db
+      .insert(marketingAutomationLogs)
+      .values(log as any)
+      .returning();
+    return created;
+  }
+
+  async updateAutomationLog(id: string, updates: Partial<MarketingAutomationLog>): Promise<MarketingAutomationLog | undefined> {
+    const [updated] = await db
+      .update(marketingAutomationLogs)
+      .set(updates)
+      .where(eq(marketingAutomationLogs.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async getPendingAutomationLogs(): Promise<MarketingAutomationLog[]> {
+    const now = new Date();
+    return await db
+      .select()
+      .from(marketingAutomationLogs)
+      .where(and(
+        eq(marketingAutomationLogs.status, 'running'),
+        or(
+          isNull(marketingAutomationLogs.nextStepAt),
+          lte(marketingAutomationLogs.nextStepAt, now)
+        )!
+      ))
+      .orderBy(asc(marketingAutomationLogs.triggeredAt));
+  }
+
+  async getAutomationLogsByContact(contactId: string): Promise<MarketingAutomationLog[]> {
+    return await db
+      .select()
+      .from(marketingAutomationLogs)
+      .where(eq(marketingAutomationLogs.contactId, contactId))
+      .orderBy(desc(marketingAutomationLogs.triggeredAt));
+  }
+
+  // Marketing Analytics
+  async getMarketingOverviewStats(userId: string, period?: 'week' | 'month' | 'year'): Promise<{
+    totalContacts: number;
+    newContactsPeriod: number;
+    totalCampaigns: number;
+    campaignsSentPeriod: number;
+    totalEmailsSent: number;
+    avgOpenRate: number;
+    avgClickRate: number;
+    totalRevenue: number;
+    costPerConversion: number;
+  }> {
+    const periodStart = new Date();
+    if (period === 'week') {
+      periodStart.setDate(periodStart.getDate() - 7);
+    } else if (period === 'month') {
+      periodStart.setMonth(periodStart.getMonth() - 1);
+    } else {
+      periodStart.setFullYear(periodStart.getFullYear() - 1);
+    }
+    
+    // Total contacts
+    const [contactsResult] = await db
+      .select({ count: count() })
+      .from(marketingContacts)
+      .where(eq(marketingContacts.userId, userId));
+    
+    // New contacts in period
+    const [newContactsResult] = await db
+      .select({ count: count() })
+      .from(marketingContacts)
+      .where(and(
+        eq(marketingContacts.userId, userId),
+        gte(marketingContacts.createdAt, periodStart)
+      ));
+    
+    // Total campaigns
+    const [campaignsResult] = await db
+      .select({ count: count() })
+      .from(marketingCampaigns)
+      .where(eq(marketingCampaigns.userId, userId));
+    
+    // Campaigns sent in period
+    const [sentCampaignsResult] = await db
+      .select({ count: count() })
+      .from(marketingCampaigns)
+      .where(and(
+        eq(marketingCampaigns.userId, userId),
+        eq(marketingCampaigns.status, 'sent'),
+        gte(marketingCampaigns.sentAt, periodStart)
+      ));
+    
+    // Aggregate campaign stats
+    const campaigns = await db
+      .select()
+      .from(marketingCampaigns)
+      .where(and(
+        eq(marketingCampaigns.userId, userId),
+        eq(marketingCampaigns.status, 'sent')
+      ));
+    
+    const totalEmailsSent = campaigns.reduce((sum, c) => sum + (c.totalSent || 0), 0);
+    const totalOpened = campaigns.reduce((sum, c) => sum + (c.totalOpened || 0), 0);
+    const totalClicked = campaigns.reduce((sum, c) => sum + (c.totalClicked || 0), 0);
+    const totalConverted = campaigns.reduce((sum, c) => sum + (c.totalConverted || 0), 0);
+    const totalRevenue = campaigns.reduce((sum, c) => sum + parseFloat(c.totalRevenue || '0'), 0);
+    const totalCost = campaigns.reduce((sum, c) => sum + parseFloat(c.emailCost || '0') + parseFloat(c.smsCost || '0'), 0);
+    
+    return {
+      totalContacts: contactsResult?.count || 0,
+      newContactsPeriod: newContactsResult?.count || 0,
+      totalCampaigns: campaignsResult?.count || 0,
+      campaignsSentPeriod: sentCampaignsResult?.count || 0,
+      totalEmailsSent,
+      avgOpenRate: totalEmailsSent > 0 ? (totalOpened / totalEmailsSent) * 100 : 0,
+      avgClickRate: totalEmailsSent > 0 ? (totalClicked / totalEmailsSent) * 100 : 0,
+      totalRevenue,
+      costPerConversion: totalConverted > 0 ? totalCost / totalConverted : 0
+    };
+  }
+
+  async getCampaignPerformanceChart(userId: string, period?: 'week' | 'month' | 'year'): Promise<Array<{
+    date: string;
+    emailsSent: number;
+    opened: number;
+    clicked: number;
+    conversions: number;
+  }>> {
+    const periodStart = new Date();
+    if (period === 'week') {
+      periodStart.setDate(periodStart.getDate() - 7);
+    } else if (period === 'month') {
+      periodStart.setMonth(periodStart.getMonth() - 1);
+    } else {
+      periodStart.setFullYear(periodStart.getFullYear() - 1);
+    }
+    
+    const campaigns = await db
+      .select()
+      .from(marketingCampaigns)
+      .where(and(
+        eq(marketingCampaigns.userId, userId),
+        eq(marketingCampaigns.status, 'sent'),
+        gte(marketingCampaigns.sentAt, periodStart)
+      ))
+      .orderBy(asc(marketingCampaigns.sentAt));
+    
+    // Group by date
+    const dateMap = new Map<string, { emailsSent: number; opened: number; clicked: number; conversions: number }>();
+    
+    for (const campaign of campaigns) {
+      if (!campaign.sentAt) continue;
+      const dateKey = campaign.sentAt.toISOString().split('T')[0];
+      const existing = dateMap.get(dateKey) || { emailsSent: 0, opened: 0, clicked: 0, conversions: 0 };
+      dateMap.set(dateKey, {
+        emailsSent: existing.emailsSent + (campaign.totalSent || 0),
+        opened: existing.opened + (campaign.totalOpened || 0),
+        clicked: existing.clicked + (campaign.totalClicked || 0),
+        conversions: existing.conversions + (campaign.totalConverted || 0)
+      });
+    }
+    
+    return Array.from(dateMap.entries()).map(([date, stats]) => ({
+      date,
+      ...stats
+    }));
   }
 }
 

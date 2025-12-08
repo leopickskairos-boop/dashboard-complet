@@ -44,6 +44,18 @@ The project utilizes a modern web stack for a responsive and professional user i
     -   Company branding customization (logo, colors)
     -   Automatic charging for no-shows with failure tracking
     -   Statistics and recovery metrics
+-   **Marketing Module**: Complete marketing automation system with:
+    -   8-table architecture (marketing_contacts, marketing_consent_history, marketing_segments, marketing_templates, marketing_campaigns, marketing_sends, marketing_automations, marketing_automation_logs)
+    -   Contact management with CSV import, SpeedAI sync, tags, and RGPD-compliant consent tracking
+    -   Campaign creation for email, SMS, or multi-channel with scheduling support
+    -   Reusable templates with dynamic variables ({prenom}, {nom}, {email}, etc.)
+    -   Dynamic segments with auto-update filters (optIn, tags, source, date range, etc.)
+    -   Marketing automations with 6 trigger types: new_contact, birthday, inactive, tag_added, segment_joined, custom_event
+    -   5 action types: send_email, send_sms, send_both, add_tag, remove_tag
+    -   Complete analytics dashboard with KPIs, performance charts, and industry benchmarks
+    -   Email tracking with open/click pixels via Resend webhooks
+    -   Public RGPD-compliant unsubscribe page (/unsubscribe/:trackingId)
+    -   Dashboard pages: Overview, Contacts, Campaigns, Templates, Segments, Automations, Analytics
 -   **Reviews & Reputation Management System**: Complete review collection and management system with:
     -   7-table architecture (review_config, review_incentives, review_requests, reviews, review_alerts, review_sources, review_sync_logs)
     -   Automated review request sending via email (SMS prepared)

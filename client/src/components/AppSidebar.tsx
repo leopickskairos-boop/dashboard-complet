@@ -1,4 +1,4 @@
-import { LayoutDashboard, Bell, User, Shield, CreditCard, Calendar, History, Settings, Star, MessageSquare, BarChart3, Send, QrCode } from "lucide-react";
+import { LayoutDashboard, Bell, User, Shield, CreditCard, Calendar, History, Settings, Star, MessageSquare, BarChart3, Send, QrCode, Megaphone, Users, Mail, Filter, Workflow, TrendingUp } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -76,6 +76,44 @@ const reviewsItems = [
     title: "Statistiques",
     url: "/reviews/stats",
     icon: BarChart3,
+  },
+];
+
+const marketingItems = [
+  {
+    title: "Vue d'ensemble",
+    url: "/marketing",
+    icon: Megaphone,
+  },
+  {
+    title: "Contacts",
+    url: "/marketing/contacts",
+    icon: Users,
+  },
+  {
+    title: "Campagnes",
+    url: "/marketing/campaigns",
+    icon: Mail,
+  },
+  {
+    title: "Templates",
+    url: "/marketing/templates",
+    icon: Send,
+  },
+  {
+    title: "Segments",
+    url: "/marketing/segments",
+    icon: Filter,
+  },
+  {
+    title: "Automations",
+    url: "/marketing/automations",
+    icon: Workflow,
+  },
+  {
+    title: "Analytics",
+    url: "/marketing/analytics",
+    icon: TrendingUp,
   },
 ];
 
@@ -160,6 +198,27 @@ export function AppSidebar() {
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild isActive={location === item.url || (item.url === "/reviews" && location.startsWith("/reviews/") && !reviewsItems.some(i => i.url !== "/reviews" && location === i.url))}>
                     <Link href={item.url} data-testid={`link-reviews-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                      <item.icon />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel className="flex items-center gap-2 text-[#C8B88A]">
+            <Megaphone className="h-4 w-4" />
+            Marketing
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {marketingItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild isActive={location === item.url || (item.url === "/marketing" && location.startsWith("/marketing/") && !marketingItems.some(i => i.url !== "/marketing" && location === i.url))}>
+                    <Link href={item.url} data-testid={`link-marketing-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
                       <item.icon />
                       <span>{item.title}</span>
                     </Link>
