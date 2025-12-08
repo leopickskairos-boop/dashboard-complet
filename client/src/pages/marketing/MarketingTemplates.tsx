@@ -55,6 +55,15 @@ const templateFormSchema = z.object({
 
 type TemplateFormData = z.infer<typeof templateFormSchema>;
 
+const aiGenerateSchema = z.object({
+  description: z.string().min(10, "Décrivez votre template en au moins 10 caractères"),
+  channel: z.enum(['email', 'sms']).default('email'),
+  businessType: z.string().default('général'),
+  tone: z.enum(['professionnel', 'amical', 'formel', 'décontracté', 'luxe']).default('professionnel'),
+});
+
+type AIGenerateFormData = z.infer<typeof aiGenerateSchema>;
+
 const categoryIcons: Record<string, any> = {
   promo: Gift,
   birthday: Cake,
@@ -70,9 +79,11 @@ export default function MarketingTemplates() {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isAIGenerateOpen, setIsAIGenerateOpen] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewTemplate, setPreviewTemplate] = useState<any>(null);
   const [editingTemplate, setEditingTemplate] = useState<any>(null);
+  const [generatedTemplate, setGeneratedTemplate] = useState<any>(null);
 
   const { data: templates, isLoading } = useQuery<any[]>({
     queryKey: [`/api/marketing/templates?category=${categoryFilter}`],
@@ -101,7 +112,7 @@ export default function MarketingTemplates() {
     onSuccess: () => {
       toast({ title: editingTemplate ? "Template modifié" : "Template créé" });
       handleCloseCreate();
-      queryClientInst.invalidateQueries({ predicate: (query) => query.queryKey[0]?.toString().startsWith('/api/marketing/templates') });
+      queryClientInst.invalidateQueries({ predicate: (query) => query.queryKey[0]?.toString().startsWith('/api/marketing/templates') || false });
     },
     onError: (error: any) => {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
@@ -114,15 +125,72 @@ export default function MarketingTemplates() {
     },
     onSuccess: () => {
       toast({ title: "Template supprimé" });
-      queryClientInst.invalidateQueries({ predicate: (query) => query.queryKey[0]?.toString().startsWith('/api/marketing/templates') });
+      queryClientInst.invalidateQueries({ predicate: (query) => query.queryKey[0]?.toString().startsWith('/api/marketing/templates') || false });
     },
     onError: (error: any) => {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
     },
   });
 
+  const aiForm = useForm<AIGenerateFormData>({
+    resolver: zodResolver(aiGenerateSchema),
+    defaultValues: {
+      description: "",
+      channel: "email",
+      businessType: "restaurant",
+      tone: "professionnel",
+    },
+  });
+
+  const aiGenerateMutation = useMutation({
+    mutationFn: async (data: AIGenerateFormData) => {
+      const response = await apiRequest('POST', '/api/marketing/templates/generate-ai', data);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      if (data.template) {
+        setGeneratedTemplate(data.template);
+        toast({ 
+          title: "Template généré !",
+          description: "Vérifiez le résultat et sauvegardez-le si vous êtes satisfait."
+        });
+      }
+    },
+    onError: (error: any) => {
+      toast({ title: "Erreur de génération", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const saveGeneratedTemplate = async () => {
+    if (!generatedTemplate) return;
+    
+    try {
+      await apiRequest('POST', '/api/marketing/templates', {
+        name: generatedTemplate.name,
+        channel: generatedTemplate.channel,
+        category: generatedTemplate.category,
+        emailSubject: generatedTemplate.subject,
+        emailContent: generatedTemplate.htmlContent,
+        smsContent: generatedTemplate.textContent,
+      });
+      
+      toast({ title: "Template sauvegardé !" });
+      setIsAIGenerateOpen(false);
+      setGeneratedTemplate(null);
+      aiForm.reset();
+      queryClientInst.invalidateQueries({ predicate: (query) => query.queryKey[0]?.toString().startsWith('/api/marketing/templates') || false });
+    } catch (error: any) {
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+    }
+  };
+
   const onSubmit = (data: TemplateFormData) => {
     createMutation.mutate(data);
+  };
+
+  const onAIGenerate = (data: AIGenerateFormData) => {
+    setGeneratedTemplate(null);
+    aiGenerateMutation.mutate(data);
   };
 
   const handleEdit = (template: any) => {
@@ -170,10 +238,21 @@ export default function MarketingTemplates() {
             Modèles d'emails et SMS réutilisables
           </p>
         </div>
-        <Button onClick={() => setIsCreateOpen(true)} data-testid="button-new-template">
-          <Plus className="h-4 w-4 mr-2" />
-          Nouveau template
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => setIsAIGenerateOpen(true)} 
+            data-testid="button-ai-generate"
+            className="border-[#C8B88A]/30 text-[#C8B88A] hover:bg-[#C8B88A]/10"
+          >
+            <Sparkles className="h-4 w-4 mr-2" />
+            Générer par IA
+          </Button>
+          <Button onClick={() => setIsCreateOpen(true)} data-testid="button-new-template">
+            <Plus className="h-4 w-4 mr-2" />
+            Nouveau template
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -426,6 +505,248 @@ export default function MarketingTemplates() {
               }}>
                 <Edit className="h-4 w-4 mr-2" />
                 Modifier
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isAIGenerateOpen} onOpenChange={(open) => {
+        setIsAIGenerateOpen(open);
+        if (!open) {
+          setGeneratedTemplate(null);
+          aiForm.reset();
+        }
+      }}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-[#C8B88A]" />
+              Générer un template par IA
+            </DialogTitle>
+            <DialogDescription>
+              Décrivez le template que vous souhaitez créer et l'IA le générera pour vous.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <Form {...aiForm}>
+                <form onSubmit={aiForm.handleSubmit(onAIGenerate)} className="space-y-4">
+                  <FormField
+                    control={aiForm.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description du template</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Ex: Un email de bienvenue chaleureux pour les nouveaux clients d'un restaurant gastronomique, avec une offre de -10% sur la première commande..."
+                            className="min-h-[120px]"
+                            {...field}
+                            data-testid="input-ai-description"
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Soyez précis sur le ton, le contenu souhaité et les offres à inclure.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={aiForm.control}
+                      name="channel"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Canal</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-ai-channel">
+                                <SelectValue />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="email">Email</SelectItem>
+                              <SelectItem value="sms">SMS</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={aiForm.control}
+                      name="tone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Ton</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-ai-tone">
+                                <SelectValue />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="professionnel">Professionnel</SelectItem>
+                              <SelectItem value="amical">Amical</SelectItem>
+                              <SelectItem value="formel">Formel</SelectItem>
+                              <SelectItem value="décontracté">Décontracté</SelectItem>
+                              <SelectItem value="luxe">Luxe</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={aiForm.control}
+                    name="businessType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Type d'entreprise</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-ai-business">
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="restaurant">Restaurant</SelectItem>
+                            <SelectItem value="hotel">Hôtel</SelectItem>
+                            <SelectItem value="spa">Spa / Bien-être</SelectItem>
+                            <SelectItem value="retail">Commerce</SelectItem>
+                            <SelectItem value="service">Services</SelectItem>
+                            <SelectItem value="medical">Médical</SelectItem>
+                            <SelectItem value="général">Général</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <Button 
+                    type="submit" 
+                    disabled={aiGenerateMutation.isPending}
+                    className="w-full bg-gradient-to-r from-[#C8B88A] to-[#d4c79c] text-black hover:from-[#d4c79c] hover:to-[#C8B88A]"
+                    data-testid="button-generate-ai"
+                  >
+                    {aiGenerateMutation.isPending ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                        Génération en cours...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-4 w-4 mr-2" />
+                        Générer le template
+                      </>
+                    )}
+                  </Button>
+                </form>
+              </Form>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold">Aperçu</h3>
+                {generatedTemplate && (
+                  <Badge variant="outline" className="text-[#4CEFAD] border-[#4CEFAD]/50">
+                    <Star className="h-3 w-3 mr-1" />
+                    Généré
+                  </Badge>
+                )}
+              </div>
+
+              {!generatedTemplate && !aiGenerateMutation.isPending && (
+                <div className="h-[400px] border border-dashed border-muted rounded-lg flex items-center justify-center">
+                  <div className="text-center text-muted-foreground">
+                    <Sparkles className="h-12 w-12 mx-auto mb-4 opacity-30" />
+                    <p>L'aperçu du template apparaîtra ici</p>
+                  </div>
+                </div>
+              )}
+
+              {aiGenerateMutation.isPending && (
+                <div className="h-[400px] border border-dashed border-[#C8B88A]/30 rounded-lg flex items-center justify-center">
+                  <div className="text-center">
+                    <RefreshCw className="h-12 w-12 mx-auto mb-4 text-[#C8B88A] animate-spin" />
+                    <p className="text-[#C8B88A]">L'IA génère votre template...</p>
+                    <p className="text-sm text-muted-foreground mt-2">Cela peut prendre quelques secondes</p>
+                  </div>
+                </div>
+              )}
+
+              {generatedTemplate && (
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-1">Nom</p>
+                    <p className="font-medium">{generatedTemplate.name}</p>
+                  </div>
+                  
+                  {generatedTemplate.subject && (
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground mb-1">Sujet</p>
+                      <p className="p-2 bg-muted rounded text-sm">{generatedTemplate.subject}</p>
+                    </div>
+                  )}
+
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-1">Contenu</p>
+                    <div className="max-h-[280px] overflow-y-auto border rounded-lg">
+                      {generatedTemplate.htmlContent ? (
+                        <div 
+                          className="p-4 bg-white text-black"
+                          dangerouslySetInnerHTML={{ __html: generatedTemplate.htmlContent }}
+                        />
+                      ) : (
+                        <p className="p-4 font-mono text-sm">{generatedTemplate.textContent}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {generatedTemplate.variables && generatedTemplate.variables.length > 0 && (
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground mb-2">Variables détectées</p>
+                      <div className="flex flex-wrap gap-1">
+                        {generatedTemplate.variables.map((v: string) => (
+                          <Badge key={v} variant="secondary" className="text-xs">
+                            {`{${v}}`}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setIsAIGenerateOpen(false);
+                setGeneratedTemplate(null);
+                aiForm.reset();
+              }}
+            >
+              Annuler
+            </Button>
+            {generatedTemplate && (
+              <Button 
+                onClick={saveGeneratedTemplate}
+                className="bg-[#4CEFAD] text-black hover:bg-[#3dd99a]"
+                data-testid="button-save-ai-template"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Sauvegarder le template
               </Button>
             )}
           </DialogFooter>

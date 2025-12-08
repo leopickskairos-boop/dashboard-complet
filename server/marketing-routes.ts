@@ -2,6 +2,7 @@ import { Express, Request, Response } from "express";
 import { storage } from "./storage";
 import { requireAuth, requireVerified, requireSubscription } from "./auth";
 import { z } from "zod";
+import OpenAI from "openai";
 import {
   insertMarketingContactSchema,
   insertMarketingSegmentSchema,
@@ -12,6 +13,12 @@ import {
   importContactsSchema,
   createQuickCampaignSchema,
 } from "@shared/schema";
+
+// the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
+const openai = new OpenAI({
+  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY
+});
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -474,6 +481,97 @@ export function registerMarketingRoutes(app: Express) {
     } catch (error: any) {
       console.error("[Marketing] Delete template error:", error);
       res.status(500).json({ error: "Erreur lors de la suppression du template" });
+    }
+  });
+
+  // Generate template with AI
+  app.post("/api/marketing/templates/generate-ai", requireAuth, requireVerified, async (req: Request, res: Response) => {
+    try {
+      const { description, channel, businessType, tone, language } = req.body;
+      
+      if (!description || description.length < 10) {
+        return res.status(400).json({ error: "Veuillez fournir une description détaillée (au moins 10 caractères)" });
+      }
+
+      const channelType = channel || 'email';
+      const businessCategory = businessType || 'général';
+      const toneStyle = tone || 'professionnel';
+      const lang = language || 'fr';
+
+      const systemPrompt = `Tu es un expert en email marketing et en design HTML. Tu génères des templates d'emails professionnels, responsives et esthétiques.
+
+RÈGLES IMPORTANTES:
+1. Le HTML doit être compatible avec tous les clients email (Outlook, Gmail, Apple Mail, etc.)
+2. Utilise des tables pour le layout (pas de flexbox/grid qui ne sont pas supportés)
+3. Tous les styles doivent être inline (pas de balise <style>)
+4. Utilise une largeur maximale de 600px centrée
+5. Le design doit être professionnel avec les couleurs de marque SpeedAI: 
+   - Or/Doré: #C8B88A (pour les accents, boutons, titres)
+   - Vert menthe: #4CEFAD (pour les indicateurs positifs)
+   - Fond sombre: #1a1a2e ou #0f0f1a
+   - Texte clair: #ffffff et #a0a0a0
+6. Inclus des variables dynamiques avec la syntaxe {variable}: {prenom}, {nom}, {email}, {entreprise}, {date}, etc.
+7. Le contenu doit être en ${lang === 'fr' ? 'français' : 'anglais'}
+8. Le ton doit être ${toneStyle}
+9. Inclus un header avec logo placeholder, un corps de message et un footer avec liens de désinscription
+
+Réponds UNIQUEMENT en JSON avec ce format exact:
+{
+  "name": "Nom du template",
+  "subject": "Objet de l'email avec {prenom}",
+  "htmlContent": "Le code HTML complet du template",
+  "textContent": "Version texte brut du message",
+  "category": "welcome|promotional|newsletter|transactional|reminder|followup",
+  "variables": ["prenom", "nom", "autres variables utilisées"]
+}`;
+
+      const userPrompt = `Génère un template ${channelType === 'sms' ? 'SMS' : 'email HTML'} pour: ${description}
+
+Type d'entreprise: ${businessCategory}
+Canal: ${channelType}
+Ton: ${toneStyle}
+
+${channelType === 'sms' ? 'Pour un SMS, limite le contenu à 160 caractères maximum et ne génère pas de HTML.' : 'Génère un email HTML complet avec un design professionnel et moderne.'}`;
+
+      console.log("[Marketing AI] Generating template for:", description);
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-5", // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt }
+        ],
+        response_format: { type: "json_object" },
+        max_completion_tokens: 8192,
+      });
+
+      const content = response.choices[0]?.message?.content;
+      if (!content) {
+        throw new Error("Pas de réponse de l'IA");
+      }
+
+      const generatedTemplate = JSON.parse(content);
+
+      console.log("[Marketing AI] Template generated successfully:", generatedTemplate.name);
+
+      res.json({
+        success: true,
+        template: {
+          name: generatedTemplate.name,
+          subject: generatedTemplate.subject,
+          htmlContent: generatedTemplate.htmlContent,
+          textContent: generatedTemplate.textContent,
+          category: generatedTemplate.category || 'promotional',
+          channel: channelType,
+          variables: generatedTemplate.variables || [],
+        }
+      });
+    } catch (error: any) {
+      console.error("[Marketing AI] Generate template error:", error);
+      res.status(500).json({ 
+        error: "Erreur lors de la génération du template",
+        details: error.message 
+      });
     }
   });
 
