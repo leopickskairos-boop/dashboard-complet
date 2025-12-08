@@ -27,19 +27,26 @@ export default function MarketingOverview() {
   const [period, setPeriod] = useState<'week' | 'month' | 'year'>('month');
 
   const { data: stats, isLoading: statsLoading } = useQuery<{
-    contacts: { total: number; newThisPeriod: number; changePercent: number };
-    campaigns: { total: number; active: number; sent: number };
-    emails: { sent: number; opened: number; clicked: number; openRate: number; clickRate: number };
-    sms: { sent: number; delivered: number; deliveryRate: number };
-    segments: { total: number; contacts: number };
+    totalContacts: number;
+    newContactsPeriod: number;
+    totalCampaigns: number;
+    campaignsSentPeriod: number;
+    totalEmailsSent: number;
+    avgOpenRate: number;
+    avgClickRate: number;
+    totalRevenue: number;
+    costPerConversion: number;
   }>({
     queryKey: [`/api/marketing/analytics/overview?period=${period}`],
   });
 
-  const { data: chartData, isLoading: chartLoading } = useQuery<{
-    labels: string[];
-    datasets: { date: string; sent: number; opened: number; clicked: number }[];
-  }>({
+  const { data: chartData, isLoading: chartLoading } = useQuery<Array<{
+    date: string;
+    emailsSent: number;
+    opened: number;
+    clicked: number;
+    conversions: number;
+  }>>({
     queryKey: [`/api/marketing/analytics/performance?period=${period}`],
   });
 
@@ -128,27 +135,26 @@ export default function MarketingOverview() {
           <>
             {renderKpiCard(
               "Contacts",
-              stats?.contacts.total?.toLocaleString() || "0",
-              `+${stats?.contacts.newThisPeriod || 0} cette période`,
-              <Users className="h-5 w-5" />,
-              stats?.contacts.changePercent
+              stats?.totalContacts?.toLocaleString() || "0",
+              `+${stats?.newContactsPeriod || 0} cette période`,
+              <Users className="h-5 w-5" />
             )}
             {renderKpiCard(
               "Emails envoyés",
-              stats?.emails.sent?.toLocaleString() || "0",
-              `${(stats?.emails.openRate || 0).toFixed(1)}% taux d'ouverture`,
+              stats?.totalEmailsSent?.toLocaleString() || "0",
+              `${(stats?.avgOpenRate || 0).toFixed(1)}% taux d'ouverture`,
               <Mail className="h-5 w-5" />
             )}
             {renderKpiCard(
               "Taux de clic",
-              `${(stats?.emails.clickRate || 0).toFixed(1)}%`,
-              `${stats?.emails.clicked || 0} clics au total`,
+              `${(stats?.avgClickRate || 0).toFixed(1)}%`,
+              `${stats?.campaignsSentPeriod || 0} campagnes envoyées`,
               <MousePointer className="h-5 w-5" />
             )}
             {renderKpiCard(
-              "Campagnes actives",
-              stats?.campaigns.active || 0,
-              `${stats?.campaigns.total || 0} campagnes au total`,
+              "Campagnes",
+              stats?.totalCampaigns || 0,
+              `${stats?.campaignsSentPeriod || 0} envoyées cette période`,
               <Megaphone className="h-5 w-5" />
             )}
           </>
@@ -166,9 +172,9 @@ export default function MarketingOverview() {
           <CardContent>
             {chartLoading ? (
               <Skeleton className="h-[300px] w-full" />
-            ) : (
+            ) : chartData && chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={chartData?.datasets || []}>
+                <LineChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#333" />
                   <XAxis dataKey="date" stroke="#888" fontSize={12} />
                   <YAxis stroke="#888" fontSize={12} />
@@ -183,7 +189,7 @@ export default function MarketingOverview() {
                   <Legend />
                   <Line
                     type="monotone"
-                    dataKey="sent"
+                    dataKey="emailsSent"
                     name="Envoyés"
                     stroke="#C8B88A"
                     strokeWidth={2}
@@ -207,6 +213,10 @@ export default function MarketingOverview() {
                   />
                 </LineChart>
               </ResponsiveContainer>
+            ) : (
+              <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                Aucune donnée disponible pour cette période
+              </div>
             )}
           </CardContent>
         </Card>
@@ -222,13 +232,13 @@ export default function MarketingOverview() {
             <Link href="/marketing/contacts">
               <Button variant="outline" className="w-full justify-start" data-testid="link-quick-contacts">
                 <Users className="h-4 w-4 mr-3 text-[#C8B88A]" />
-                Contacts ({stats?.contacts.total || 0})
+                Contacts ({stats?.totalContacts || 0})
               </Button>
             </Link>
             <Link href="/marketing/segments">
               <Button variant="outline" className="w-full justify-start" data-testid="link-quick-segments">
                 <Filter className="h-4 w-4 mr-3 text-[#C8B88A]" />
-                Segments ({stats?.segments?.total || 0})
+                Segments
               </Button>
             </Link>
             <Link href="/marketing/templates">
