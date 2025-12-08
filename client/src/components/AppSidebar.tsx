@@ -1,4 +1,4 @@
-import { LayoutDashboard, Bell, User, Shield, CreditCard, Calendar, History, Settings, Star, MessageSquare, BarChart3, Send } from "lucide-react";
+import { LayoutDashboard, Bell, User, Shield, CreditCard, Calendar, History, Settings, Star, MessageSquare, BarChart3, Send, QrCode } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -61,6 +61,11 @@ const reviewsItems = [
     title: "Campagnes",
     url: "/reviews/campaigns",
     icon: Send,
+  },
+  {
+    title: "QR & Widgets",
+    url: "/reviews/widgets",
+    icon: QrCode,
   },
   {
     title: "Tous les avis",

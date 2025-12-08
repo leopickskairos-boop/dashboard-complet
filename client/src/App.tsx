@@ -38,7 +38,10 @@ import ReviewsSettings from "@/pages/reviews/ReviewsSettings";
 import ReviewsCampaigns from "@/pages/reviews/ReviewsCampaigns";
 import ReviewsList from "@/pages/reviews/ReviewsList";
 import ReviewsStats from "@/pages/reviews/ReviewsStats";
+import ReviewsWidgets from "@/pages/reviews/ReviewsWidgets";
 import ReviewPage from "@/pages/reviews/ReviewPage";
+import ReviewsEmbed from "@/pages/reviews/ReviewsEmbed";
+import ReviewCollect from "@/pages/reviews/ReviewCollect";
 
 function Router() {
   return (
@@ -156,6 +159,14 @@ function Router() {
         </ProtectedRoute>
       </Route>
 
+      <Route path="/reviews/widgets">
+        <ProtectedRoute requireVerified={true} requireSubscription={true}>
+          <DashboardLayout>
+            <ReviewsWidgets />
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+
       <Route path="/reviews">
         <ProtectedRoute requireVerified={true} requireSubscription={true}>
           <DashboardLayout>
@@ -164,8 +175,10 @@ function Router() {
         </ProtectedRoute>
       </Route>
 
-      {/* Reviews - Public page (no auth required) */}
+      {/* Reviews - Public pages (no auth required) */}
       <Route path="/review/:token" component={ReviewPage} />
+      <Route path="/review/collect" component={ReviewCollect} />
+      <Route path="/embed/reviews" component={ReviewsEmbed} />
 
       <Route component={NotFound} />
     </Switch>

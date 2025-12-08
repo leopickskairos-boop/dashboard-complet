@@ -4870,6 +4870,108 @@ Format: Utilise des bullet points et reste concis (max 200 mots).`;
     }
   });
 
+  // ===== PUBLIC EMBED ENDPOINTS =====
+  
+  // Helper: Validate UUID format
+  const isValidUUID = (str: string): boolean => {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(str);
+  };
+  
+  // Public endpoint to get reviews for embed widget (by user ID or domain)
+  app.get("/api/reviews/public/embed/:userId", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const { max = "5" } = req.query;
+      
+      // Validate userId format
+      if (!userId || !isValidUUID(userId)) {
+        return res.status(400).json({ message: "ID utilisateur invalide" });
+      }
+      
+      // Rate limiting: cache for 5 minutes
+      res.setHeader('Cache-Control', 'public, max-age=300');
+      
+      // Get user's review config
+      const config = await storage.getReviewConfig(userId);
+      
+      if (!config) {
+        return res.status(404).json({ message: "Configuration non trouvée" });
+      }
+      
+      // Limit max reviews to prevent abuse
+      const parsed = parseInt(max as string, 10);
+      const maxReviews = Math.min(Number.isFinite(parsed) && parsed > 0 ? parsed : 5, 20);
+      
+      // Get positive reviews only (4+ stars)
+      const reviews = await storage.getReviews(userId, {
+        ratingMin: 4,
+        limit: maxReviews,
+      });
+      
+      // Get stats
+      const stats = await storage.getReviewStats(userId, 'all');
+      
+      res.json({
+        reviews: reviews.map(r => ({
+          id: r.id,
+          authorName: r.authorName,
+          rating: r.rating,
+          content: r.content,
+          platform: r.platform,
+          publishedAt: r.publishedAt,
+        })),
+        stats: {
+          globalScore: stats.globalScore,
+          totalReviews: stats.totalReviews,
+        },
+        config: {
+          companyName: config.companyName,
+        },
+      });
+    } catch (error: any) {
+      console.error("[Reviews] Error fetching embed data:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // Public page for collecting reviews (redirects to platforms)
+  app.get("/api/reviews/public/collect/:userId", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      
+      // Validate userId format
+      if (!userId || !isValidUUID(userId)) {
+        return res.status(400).json({ message: "ID utilisateur invalide" });
+      }
+      
+      // Rate limiting: cache for 1 hour (platform URLs don't change often)
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+      
+      const config = await storage.getReviewConfig(userId);
+      
+      if (!config) {
+        return res.status(404).json({ message: "Configuration non trouvée" });
+      }
+      
+      res.json({
+        platforms: {
+          google: config.googleReviewUrl,
+          tripadvisor: config.tripadvisorUrl,
+          facebook: config.facebookPageUrl,
+          yelp: config.yelpUrl,
+          doctolib: config.doctolibUrl,
+          pagesJaunes: config.pagesJaunesUrl,
+        },
+        priority: config.platformsPriority || ['google', 'tripadvisor', 'facebook'],
+        companyName: config.companyName,
+      });
+    } catch (error: any) {
+      console.error("[Reviews] Error fetching collect data:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
   // ===== N8N REVIEWS API ENDPOINTS =====
   // These endpoints use N8N Master API Key authentication for automated workflows
 
