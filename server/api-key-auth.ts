@@ -27,15 +27,50 @@ function isN8nMasterKey(apiKey: string): boolean {
  */
 export async function requireApiKey(req: Request, res: Response, next: NextFunction) {
   try {
+    // ===== DEBUG: Log ALL headers for troubleshooting =====
+    console.log("\n" + "=".repeat(60));
+    console.log("🔍 [API KEY DEBUG] Incoming request to:", req.method, req.path);
+    console.log("📋 [API KEY DEBUG] ALL Headers received:");
+    for (const [key, value] of Object.entries(req.headers)) {
+      if (key.toLowerCase() === 'authorization') {
+        // Mask part of the API key for security
+        const maskedValue = typeof value === 'string' && value.length > 30 
+          ? value.substring(0, 30) + "..." + value.substring(value.length - 10)
+          : value;
+        console.log(`   ${key}: ${maskedValue}`);
+        console.log(`   [FULL LENGTH]: ${typeof value === 'string' ? value.length : 'N/A'} chars`);
+        // Check for hidden characters
+        if (typeof value === 'string') {
+          const charCodes = value.slice(0, 10).split('').map(c => c.charCodeAt(0));
+          console.log(`   [FIRST 10 CHAR CODES]: ${charCodes.join(', ')}`);
+        }
+      } else {
+        console.log(`   ${key}: ${value}`);
+      }
+    }
+    console.log("=".repeat(60));
+    
     const authHeader = req.headers.authorization;
     let apiKey: string | null = null;
 
     // Try to get API key from Authorization header first
     if (authHeader) {
+      console.log("🔑 [DEBUG] Raw authHeader length:", authHeader.length);
+      console.log("🔑 [DEBUG] Raw authHeader:", JSON.stringify(authHeader));
+      
       const parts = authHeader.split(" ");
+      console.log("🔑 [DEBUG] Parts after split:", parts.length, "| Part[0]:", JSON.stringify(parts[0]), "| Part[1] length:", parts[1]?.length);
+      
       if (parts.length === 2 && parts[0] === "Bearer") {
         apiKey = parts[1];
+        console.log("🔑 [DEBUG] Extracted API key length:", apiKey.length);
+        console.log("🔑 [DEBUG] API key first 30 chars:", apiKey.substring(0, 30));
+        console.log("🔑 [DEBUG] API key last 10 chars:", apiKey.substring(apiKey.length - 10));
+      } else {
+        console.log("❌ [DEBUG] Header format issue - parts:", parts.length, "| parts[0]:", JSON.stringify(parts[0]));
       }
+    } else {
+      console.log("❌ [DEBUG] No Authorization header found");
     }
     
     // Fallback: Try to get API key from request body (N8N sends it as dashboard_api_key)

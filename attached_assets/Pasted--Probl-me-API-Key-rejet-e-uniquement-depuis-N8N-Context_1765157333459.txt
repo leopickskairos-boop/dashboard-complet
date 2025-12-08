@@ -1,0 +1,45 @@
+🐛 Problème : API Key rejetée uniquement depuis N8N
+Contexte
+L'endpoint /api/webhooks/n8n fonctionne parfaitement avec un curl direct, mais retourne 401 "Invalid API key" quand la requête vient de N8N.
+Ce qui fonctionne ✅
+bashcurl -X POST "https://vocal-dash-leosedilleau41.replit.app/api/webhooks/n8n" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer speedai_live_238bc33272d57033cb5b0536f1d5db7ab839d591c440ec876ef06f480ff43205" \
+  -d '{"call_id": "test", "agent_id": "agent_24572fd2ed314b65ce45b3240f"}'
+→ Réponse : OK ✅
+Ce qui ne fonctionne pas ❌
+La même requête envoyée depuis N8N avec :
+
+URL : https://vocal-dash-leosedilleau41.replit.app/api/webhooks/n8n
+Header : Authorization: Bearer speedai_live_238bc33272d57033cb5b0536f1d5db7ab839d591c440ec876ef06f480ff43205
+Body : JSON identique
+
+→ Réponse : 401 "Invalid API key" ❌
+Ce qu'on a testé
+
+✅ Vérifié que la clé existe en base et correspond au hash (bcrypt.compare = true)
+✅ Testé avec la clé en dur dans N8N (pas de variable)
+✅ Testé avec l'URL en dur dans N8N
+✅ Supprimé le doublon Content-Type
+✅ Recréé le header Authorization manuellement
+✅ Vérifié qu'il n'y a pas d'espace avant/après la clé
+
+Headers envoyés par N8N
+json{
+  "content-type": "application/json",
+  "authorization": "Bearer speedai_live_238bc33272d57033cb5b0536f1d5db7ab839d591c440ec876ef06f480ff43205",
+  "accept": "application/json,text/html,application/xhtml+xml,application/xml,text/*;q=0.9, image/*;q=0.8, */*;q=0.7"
+}
+Hypothèses
+
+User-Agent différent - N8N envoie un User-Agent différent de curl, peut-être bloqué ?
+Headers supplémentaires - N8N ajoute des headers (accept, etc.) qui perturbent le middleware ?
+Encoding du header - Différence d'encoding entre curl et N8N ?
+IP/Origin bloqué - N8N Cloud a une IP différente ?
+
+Demande
+Peux-tu :
+
+Logger les headers complets reçus par /api/webhooks/n8n pour voir la différence entre curl et N8N ?
+Vérifier le middleware requireApiKey pour voir s'il y a une condition qui rejette certaines requêtes ?
+Ajouter un log pour afficher la clé API extraite avant la comparaison bcrypt ?
