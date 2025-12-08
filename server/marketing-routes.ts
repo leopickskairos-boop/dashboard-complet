@@ -374,9 +374,9 @@ export function registerMarketingRoutes(app: Express) {
       const { category, channel, businessType, includeSystem } = req.query;
       
       const templates = await storage.getMarketingTemplates(userId, {
-        category: category as string | undefined,
-        channel: channel as string | undefined,
-        businessType: businessType as string | undefined,
+        category: category && category !== 'all' ? category as string : undefined,
+        channel: channel && channel !== 'all' ? channel as string : undefined,
+        businessType: businessType && businessType !== 'all' ? businessType as string : undefined,
         includeSystem: includeSystem !== 'false',
       });
       
