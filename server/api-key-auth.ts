@@ -66,6 +66,46 @@ export async function requireApiKey(req: Request, res: Response, next: NextFunct
         console.log("🔑 [DEBUG] Extracted API key length:", apiKey.length);
         console.log("🔑 [DEBUG] API key first 30 chars:", apiKey.substring(0, 30));
         console.log("🔑 [DEBUG] API key last 10 chars:", apiKey.substring(apiKey.length - 10));
+        
+        // ===== DETAILED CHARACTER ANALYSIS =====
+        console.log("\n🔬 [CHAR ANALYSIS] Full API key character analysis:");
+        console.log("   Expected length: 77 | Actual length:", apiKey.length);
+        console.log("   First 5 chars:", JSON.stringify(apiKey.substring(0, 5)));
+        console.log("   Last 5 chars:", JSON.stringify(apiKey.substring(apiKey.length - 5)));
+        
+        // Show char codes for first 15 chars
+        const first15Codes = [...apiKey.slice(0, 15)].map((c, i) => `${i}:${c}(${c.charCodeAt(0)})`);
+        console.log("   First 15 char codes:", first15Codes.join(' '));
+        
+        // Show char codes for last 15 chars
+        const last15 = apiKey.slice(-15);
+        const last15Codes = [...last15].map((c, i) => `${apiKey.length - 15 + i}:${c}(${c.charCodeAt(0)})`);
+        console.log("   Last 15 char codes:", last15Codes.join(' '));
+        
+        // Check for any non-hex characters after prefix
+        const keyPart = apiKey.replace('speedai_live_', '');
+        const nonHexMatch = keyPart.match(/[^0-9a-f]/g);
+        if (nonHexMatch) {
+          console.log("   ⚠️ NON-HEX CHARS FOUND:", nonHexMatch.map(c => `'${c}'(${c.charCodeAt(0)})`).join(', '));
+        } else {
+          console.log("   ✅ All hex chars valid after prefix");
+        }
+        
+        // Check for whitespace
+        if (apiKey.includes(' ') || apiKey.includes('\n') || apiKey.includes('\r') || apiKey.includes('\t')) {
+          console.log("   ⚠️ WHITESPACE DETECTED IN KEY!");
+        }
+        
+        // Trim test
+        const trimmedKey = apiKey.trim();
+        if (trimmedKey !== apiKey) {
+          console.log("   ⚠️ KEY HAS TRAILING/LEADING WHITESPACE!");
+          console.log("   Original length:", apiKey.length, "| Trimmed length:", trimmedKey.length);
+          apiKey = trimmedKey; // Auto-fix!
+          console.log("   ✅ Auto-fixed by trimming");
+        }
+        console.log("");
+        
       } else {
         console.log("❌ [DEBUG] Header format issue - parts:", parts.length, "| parts[0]:", JSON.stringify(parts[0]));
       }
