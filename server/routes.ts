@@ -96,6 +96,34 @@ function getFrontendUrl(): string {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // ===== DIAGNOSTIC ENDPOINT (temporary for debugging) =====
+  app.get("/api/debug/api-key-status", async (req, res) => {
+    try {
+      const usersWithApiKeys = await storage.getAllUsersWithApiKey();
+      const dbHost = process.env.PGHOST || 'unknown';
+      
+      res.json({
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV || 'unknown',
+        database: {
+          host: dbHost.substring(0, 20) + '...',
+          connected: true
+        },
+        usersWithApiKeys: usersWithApiKeys.length,
+        users: usersWithApiKeys.map(u => ({
+          email: u.email,
+          hasHash: !!u.apiKeyHash,
+          hashPrefix: u.apiKeyHash?.substring(0, 15) + '...',
+          accountStatus: (u as any).accountStatus || 'unknown',
+          subscriptionStatus: u.subscriptionStatus
+        })),
+        codeVersion: "2024-12-08-v2-nullable-fields"
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // ===== AUTHENTICATION ROUTES =====
 
   // Signup
