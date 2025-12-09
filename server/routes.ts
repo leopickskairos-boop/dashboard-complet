@@ -43,6 +43,8 @@ import {
 import { pushNotificationService } from "./push-notification.service";
 import { registerMarketingRoutes } from "./marketing-routes";
 import integrationRoutes from "./integration-routes";
+import { sendCardRequestEmail, sendConfirmationEmail, isEmailConfigured } from "./services/guarantee-email.service";
+import { sendGuaranteeCardRequestSms, sendGuaranteeConfirmationSms, isSmsConfigured } from "./services/twilio-sms.service";
 
 // Extend Express Request type to include user property
 declare global {
@@ -3563,6 +3565,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: 'pending',
       });
       
+      // Track email/SMS sending results
+      const notificationResults = {
+        emailSent: false,
+        smsSent: false,
+        emailError: null as string | null,
+        smsError: null as string | null,
+      };
+      
+      // Send email if configured and enabled
+      if (config.autoSendEmailOnCreate !== false && data.customer_email && isEmailConfigured(config)) {
+        try {
+          const emailResult = await sendCardRequestEmail({
+            config,
+            session,
+            checkoutUrl: checkoutSession.url!,
+          });
+          notificationResults.emailSent = emailResult.success;
+          if (!emailResult.success) {
+            notificationResults.emailError = emailResult.error || 'Unknown error';
+          }
+          console.log(`📧 [Guarantee] Card request email ${emailResult.success ? 'sent' : 'failed'} for ${data.customer_email}`);
+        } catch (emailError: any) {
+          console.error('[Guarantee] Error sending card request email:', emailError);
+          notificationResults.emailError = emailError.message;
+        }
+      }
+      
+      // Send SMS if configured and enabled
+      if (config.autoSendSmsOnCreate && data.customer_phone && isSmsConfigured(config)) {
+        try {
+          const smsResult = await sendGuaranteeCardRequestSms(
+            data.customer_phone,
+            data.customer_name,
+            config.companyName || 'Établissement',
+            checkoutSession.url!,
+            new Date(data.reservation_date),
+            nbPersons,
+            config
+          );
+          notificationResults.smsSent = smsResult.success;
+          if (!smsResult.success) {
+            notificationResults.smsError = smsResult.error || 'Unknown error';
+          }
+          console.log(`📱 [Guarantee] Card request SMS ${smsResult.success ? 'sent' : 'failed'} for ${data.customer_phone}`);
+        } catch (smsError: any) {
+          console.error('[Guarantee] Error sending card request SMS:', smsError);
+          notificationResults.smsError = smsError.message;
+        }
+      }
+      
       // Return enriched response for N8N
       res.json({
         success: true,
@@ -3585,6 +3637,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           totalAmount: (config.penaltyAmount || 30) * nbPersons,
           currency: "EUR",
         },
+        notifications: notificationResults,
       });
     } catch (error: any) {
       console.error('[Guarantee] Error creating session:', error);
