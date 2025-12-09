@@ -26,6 +26,15 @@ import {
   marketingAutomations,
   marketingAutomationLogs,
   marketingClickEvents,
+  externalConnections,
+  externalSyncJobs,
+  externalFieldMappings,
+  externalCustomers,
+  externalOrders,
+  externalProducts,
+  externalActivities,
+  integrationWebhooks,
+  integrationProviderConfigs,
   type User, 
   type InsertUser, 
   type Call, 
@@ -74,7 +83,17 @@ import {
   type InsertMarketingAutomation,
   type MarketingAutomationLog,
   type MarketingClickEvent,
-  type SegmentFilters
+  type SegmentFilters,
+  type ExternalConnection,
+  type InsertExternalConnection,
+  type ExternalSyncJob,
+  type ExternalFieldMapping,
+  type ExternalCustomer,
+  type ExternalOrder,
+  type ExternalProduct,
+  type ExternalActivity,
+  type IntegrationWebhook,
+  type IntegrationProviderConfig
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lte, desc, sql, count, isNotNull, or, asc, like, ilike, isNull, inArray, ne, lt, gt } from "drizzle-orm";
@@ -438,6 +457,130 @@ export interface IStorage {
     clicked: number;
     conversions: number;
   }>>;
+  
+  // ===== EXTERNAL INTEGRATIONS SYSTEM =====
+  
+  // External Connections
+  getExternalConnections(userId: string): Promise<ExternalConnection[]>;
+  getExternalConnectionById(id: string, userId: string): Promise<ExternalConnection | undefined>;
+  getExternalConnectionByProvider(userId: string, provider: string): Promise<ExternalConnection | undefined>;
+  createExternalConnection(connection: Partial<ExternalConnection> & { userId: string; provider: string; name: string; authType: string }): Promise<ExternalConnection>;
+  updateExternalConnection(id: string, userId: string, updates: Partial<ExternalConnection>): Promise<ExternalConnection | undefined>;
+  deleteExternalConnection(id: string, userId: string): Promise<void>;
+  getActiveConnections(userId: string): Promise<ExternalConnection[]>;
+  
+  // External Sync Jobs
+  createSyncJob(job: Partial<ExternalSyncJob> & { connectionId: string; userId: string; jobType: string }): Promise<ExternalSyncJob>;
+  updateSyncJob(id: string, updates: Partial<ExternalSyncJob>): Promise<ExternalSyncJob | undefined>;
+  getSyncJobsByConnection(connectionId: string, limit?: number): Promise<ExternalSyncJob[]>;
+  getLatestSyncJob(connectionId: string): Promise<ExternalSyncJob | undefined>;
+  getPendingSyncJobs(): Promise<ExternalSyncJob[]>;
+  
+  // External Field Mappings
+  getFieldMappings(connectionId: string): Promise<ExternalFieldMapping[]>;
+  getFieldMappingByEntity(connectionId: string, entityType: string): Promise<ExternalFieldMapping | undefined>;
+  upsertFieldMapping(connectionId: string, entityType: string, mappings: object, customFields?: object): Promise<ExternalFieldMapping>;
+  deleteFieldMapping(id: string): Promise<void>;
+  
+  // External Customers
+  getExternalCustomers(userId: string, filters?: {
+    search?: string;
+    source?: string;
+    segment?: string;
+    minSpent?: number;
+    maxSpent?: number;
+    limit?: number;
+    offset?: number;
+  }): Promise<ExternalCustomer[]>;
+  getExternalCustomerById(id: string, userId: string): Promise<ExternalCustomer | undefined>;
+  getExternalCustomerByExternalId(userId: string, externalId: string, source: string): Promise<ExternalCustomer | undefined>;
+  createExternalCustomer(customer: Partial<ExternalCustomer> & { userId: string }): Promise<ExternalCustomer>;
+  updateExternalCustomer(id: string, userId: string, updates: Partial<ExternalCustomer>): Promise<ExternalCustomer | undefined>;
+  upsertExternalCustomer(userId: string, externalId: string, source: string, data: Partial<ExternalCustomer>): Promise<ExternalCustomer>;
+  deleteExternalCustomer(id: string, userId: string): Promise<void>;
+  getExternalCustomersCount(userId: string): Promise<number>;
+  recalculateCustomerStats(customerId: string): Promise<void>;
+  getTopCustomers(userId: string, limit?: number): Promise<ExternalCustomer[]>;
+  
+  // External Orders
+  getExternalOrders(userId: string, filters?: {
+    customerId?: string;
+    source?: string;
+    status?: string;
+    dateFrom?: Date;
+    dateTo?: Date;
+    minAmount?: number;
+    maxAmount?: number;
+    limit?: number;
+    offset?: number;
+  }): Promise<ExternalOrder[]>;
+  getExternalOrderById(id: string, userId: string): Promise<ExternalOrder | undefined>;
+  getExternalOrderByExternalId(userId: string, externalId: string, source: string): Promise<ExternalOrder | undefined>;
+  createExternalOrder(order: Partial<ExternalOrder> & { userId: string; externalId: string; externalSource: string; totalAmount: string; orderDate: Date }): Promise<ExternalOrder>;
+  updateExternalOrder(id: string, userId: string, updates: Partial<ExternalOrder>): Promise<ExternalOrder | undefined>;
+  upsertExternalOrder(userId: string, externalId: string, source: string, data: Partial<ExternalOrder>): Promise<ExternalOrder>;
+  deleteExternalOrder(id: string, userId: string): Promise<void>;
+  getOrderStats(userId: string, period?: 'week' | 'month' | 'year' | 'all'): Promise<{
+    totalOrders: number;
+    totalRevenue: number;
+    avgOrderValue: number;
+    ordersByStatus: Record<string, number>;
+    ordersByChannel: Record<string, number>;
+    revenueBySource: Record<string, number>;
+  }>;
+  getCustomerOrders(customerId: string): Promise<ExternalOrder[]>;
+  
+  // External Products
+  getExternalProducts(userId: string, filters?: {
+    search?: string;
+    category?: string;
+    source?: string;
+    isActive?: boolean;
+    limit?: number;
+    offset?: number;
+  }): Promise<ExternalProduct[]>;
+  getExternalProductById(id: string, userId: string): Promise<ExternalProduct | undefined>;
+  getExternalProductByExternalId(userId: string, externalId: string, source: string): Promise<ExternalProduct | undefined>;
+  createExternalProduct(product: Partial<ExternalProduct> & { userId: string; externalId: string; externalSource: string; name: string }): Promise<ExternalProduct>;
+  upsertExternalProduct(userId: string, externalId: string, source: string, data: Partial<ExternalProduct>): Promise<ExternalProduct>;
+  deleteExternalProduct(id: string, userId: string): Promise<void>;
+  getTopProducts(userId: string, limit?: number): Promise<ExternalProduct[]>;
+  
+  // External Activities
+  getExternalActivities(userId: string, filters?: {
+    customerId?: string;
+    activityType?: string;
+    dateFrom?: Date;
+    dateTo?: Date;
+    limit?: number;
+    offset?: number;
+  }): Promise<ExternalActivity[]>;
+  createExternalActivity(activity: Partial<ExternalActivity> & { userId: string; externalSource: string; activityType: string; activityDate: Date }): Promise<ExternalActivity>;
+  getCustomerActivities(customerId: string): Promise<ExternalActivity[]>;
+  
+  // Integration Webhooks
+  getIntegrationWebhooks(connectionId: string): Promise<IntegrationWebhook[]>;
+  createIntegrationWebhook(webhook: Partial<IntegrationWebhook> & { connectionId: string; userId: string; event: string }): Promise<IntegrationWebhook>;
+  updateIntegrationWebhook(id: string, updates: Partial<IntegrationWebhook>): Promise<IntegrationWebhook | undefined>;
+  deleteIntegrationWebhook(id: string): Promise<void>;
+  
+  // Integration Provider Configs
+  getProviderConfigs(): Promise<IntegrationProviderConfig[]>;
+  getProviderConfigByProvider(provider: string): Promise<IntegrationProviderConfig | undefined>;
+  getProviderConfigsByCategory(category: string): Promise<IntegrationProviderConfig[]>;
+  
+  // Integration Analytics
+  getIntegrationStats(userId: string): Promise<{
+    totalConnections: number;
+    activeConnections: number;
+    totalCustomers: number;
+    totalOrders: number;
+    totalRevenue: number;
+    lastSyncAt: Date | null;
+    syncErrorsLast24h: number;
+    customersBySource: Record<string, number>;
+    revenueBySource: Record<string, number>;
+  }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2947,6 +3090,691 @@ export class DatabaseStorage implements IStorage {
       date,
       ...stats
     }));
+  }
+
+  // ===== EXTERNAL INTEGRATIONS SYSTEM IMPLEMENTATION =====
+
+  // External Connections
+  async getExternalConnections(userId: string): Promise<ExternalConnection[]> {
+    return db.select().from(externalConnections)
+      .where(eq(externalConnections.userId, userId))
+      .orderBy(desc(externalConnections.createdAt));
+  }
+
+  async getExternalConnectionById(id: string, userId: string): Promise<ExternalConnection | undefined> {
+    const [connection] = await db.select().from(externalConnections)
+      .where(and(eq(externalConnections.id, id), eq(externalConnections.userId, userId)));
+    return connection || undefined;
+  }
+
+  async getExternalConnectionByProvider(userId: string, provider: string): Promise<ExternalConnection | undefined> {
+    const [connection] = await db.select().from(externalConnections)
+      .where(and(eq(externalConnections.userId, userId), eq(externalConnections.provider, provider)));
+    return connection || undefined;
+  }
+
+  async createExternalConnection(connection: Partial<ExternalConnection> & { userId: string; provider: string; name: string; authType: string }): Promise<ExternalConnection> {
+    const [created] = await db.insert(externalConnections).values(connection).returning();
+    return created;
+  }
+
+  async updateExternalConnection(id: string, userId: string, updates: Partial<ExternalConnection>): Promise<ExternalConnection | undefined> {
+    const [updated] = await db.update(externalConnections)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(eq(externalConnections.id, id), eq(externalConnections.userId, userId)))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteExternalConnection(id: string, userId: string): Promise<void> {
+    await db.delete(externalConnections)
+      .where(and(eq(externalConnections.id, id), eq(externalConnections.userId, userId)));
+  }
+
+  async getActiveConnections(userId: string): Promise<ExternalConnection[]> {
+    return db.select().from(externalConnections)
+      .where(and(
+        eq(externalConnections.userId, userId),
+        eq(externalConnections.status, 'active'),
+        eq(externalConnections.syncEnabled, true)
+      ))
+      .orderBy(desc(externalConnections.lastSyncAt));
+  }
+
+  // External Sync Jobs
+  async createSyncJob(job: Partial<ExternalSyncJob> & { connectionId: string; userId: string; jobType: string }): Promise<ExternalSyncJob> {
+    const [created] = await db.insert(externalSyncJobs).values(job).returning();
+    return created;
+  }
+
+  async updateSyncJob(id: string, updates: Partial<ExternalSyncJob>): Promise<ExternalSyncJob | undefined> {
+    const [updated] = await db.update(externalSyncJobs)
+      .set(updates)
+      .where(eq(externalSyncJobs.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async getSyncJobsByConnection(connectionId: string, limit: number = 10): Promise<ExternalSyncJob[]> {
+    return db.select().from(externalSyncJobs)
+      .where(eq(externalSyncJobs.connectionId, connectionId))
+      .orderBy(desc(externalSyncJobs.createdAt))
+      .limit(limit);
+  }
+
+  async getLatestSyncJob(connectionId: string): Promise<ExternalSyncJob | undefined> {
+    const [job] = await db.select().from(externalSyncJobs)
+      .where(eq(externalSyncJobs.connectionId, connectionId))
+      .orderBy(desc(externalSyncJobs.createdAt))
+      .limit(1);
+    return job || undefined;
+  }
+
+  async getPendingSyncJobs(): Promise<ExternalSyncJob[]> {
+    return db.select().from(externalSyncJobs)
+      .where(eq(externalSyncJobs.status, 'pending'))
+      .orderBy(asc(externalSyncJobs.createdAt));
+  }
+
+  // External Field Mappings
+  async getFieldMappings(connectionId: string): Promise<ExternalFieldMapping[]> {
+    return db.select().from(externalFieldMappings)
+      .where(eq(externalFieldMappings.connectionId, connectionId));
+  }
+
+  async getFieldMappingByEntity(connectionId: string, entityType: string): Promise<ExternalFieldMapping | undefined> {
+    const [mapping] = await db.select().from(externalFieldMappings)
+      .where(and(
+        eq(externalFieldMappings.connectionId, connectionId),
+        eq(externalFieldMappings.entityType, entityType)
+      ));
+    return mapping || undefined;
+  }
+
+  async upsertFieldMapping(connectionId: string, entityType: string, mappings: object, customFields?: object): Promise<ExternalFieldMapping> {
+    const existing = await this.getFieldMappingByEntity(connectionId, entityType);
+    if (existing) {
+      const [updated] = await db.update(externalFieldMappings)
+        .set({ mappings, customFields, updatedAt: new Date() })
+        .where(eq(externalFieldMappings.id, existing.id))
+        .returning();
+      return updated;
+    }
+    const [created] = await db.insert(externalFieldMappings)
+      .values({ connectionId, entityType, mappings, customFields })
+      .returning();
+    return created;
+  }
+
+  async deleteFieldMapping(id: string): Promise<void> {
+    await db.delete(externalFieldMappings).where(eq(externalFieldMappings.id, id));
+  }
+
+  // External Customers
+  async getExternalCustomers(userId: string, filters?: {
+    search?: string;
+    source?: string;
+    segment?: string;
+    minSpent?: number;
+    maxSpent?: number;
+    limit?: number;
+    offset?: number;
+  }): Promise<ExternalCustomer[]> {
+    const conditions = [eq(externalCustomers.userId, userId)];
+    
+    if (filters?.search) {
+      conditions.push(or(
+        ilike(externalCustomers.email, `%${filters.search}%`),
+        ilike(externalCustomers.firstName, `%${filters.search}%`),
+        ilike(externalCustomers.lastName, `%${filters.search}%`),
+        ilike(externalCustomers.phone, `%${filters.search}%`),
+        ilike(externalCustomers.companyName, `%${filters.search}%`)
+      )!);
+    }
+    if (filters?.source) {
+      conditions.push(eq(externalCustomers.externalSource, filters.source));
+    }
+    if (filters?.segment) {
+      conditions.push(eq(externalCustomers.customerSegment, filters.segment));
+    }
+    if (filters?.minSpent !== undefined) {
+      conditions.push(gte(externalCustomers.totalSpent, String(filters.minSpent)));
+    }
+    if (filters?.maxSpent !== undefined) {
+      conditions.push(lte(externalCustomers.totalSpent, String(filters.maxSpent)));
+    }
+    
+    let query = db.select().from(externalCustomers)
+      .where(and(...conditions))
+      .orderBy(desc(externalCustomers.totalSpent));
+    
+    if (filters?.limit) {
+      query = query.limit(filters.limit) as typeof query;
+    }
+    if (filters?.offset) {
+      query = query.offset(filters.offset) as typeof query;
+    }
+    
+    return query;
+  }
+
+  async getExternalCustomerById(id: string, userId: string): Promise<ExternalCustomer | undefined> {
+    const [customer] = await db.select().from(externalCustomers)
+      .where(and(eq(externalCustomers.id, id), eq(externalCustomers.userId, userId)));
+    return customer || undefined;
+  }
+
+  async getExternalCustomerByExternalId(userId: string, externalId: string, source: string): Promise<ExternalCustomer | undefined> {
+    const [customer] = await db.select().from(externalCustomers)
+      .where(and(
+        eq(externalCustomers.userId, userId),
+        eq(externalCustomers.externalId, externalId),
+        eq(externalCustomers.externalSource, source)
+      ));
+    return customer || undefined;
+  }
+
+  async createExternalCustomer(customer: Partial<ExternalCustomer> & { userId: string }): Promise<ExternalCustomer> {
+    const [created] = await db.insert(externalCustomers).values(customer).returning();
+    return created;
+  }
+
+  async updateExternalCustomer(id: string, userId: string, updates: Partial<ExternalCustomer>): Promise<ExternalCustomer | undefined> {
+    const [updated] = await db.update(externalCustomers)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(eq(externalCustomers.id, id), eq(externalCustomers.userId, userId)))
+      .returning();
+    return updated || undefined;
+  }
+
+  async upsertExternalCustomer(userId: string, externalId: string, source: string, data: Partial<ExternalCustomer>): Promise<ExternalCustomer> {
+    const existing = await this.getExternalCustomerByExternalId(userId, externalId, source);
+    if (existing) {
+      const updated = await this.updateExternalCustomer(existing.id, userId, data);
+      return updated!;
+    }
+    return this.createExternalCustomer({ ...data, userId, externalId, externalSource: source });
+  }
+
+  async deleteExternalCustomer(id: string, userId: string): Promise<void> {
+    await db.delete(externalCustomers)
+      .where(and(eq(externalCustomers.id, id), eq(externalCustomers.userId, userId)));
+  }
+
+  async getExternalCustomersCount(userId: string): Promise<number> {
+    const [result] = await db.select({ count: count() }).from(externalCustomers)
+      .where(eq(externalCustomers.userId, userId));
+    return result?.count || 0;
+  }
+
+  async recalculateCustomerStats(customerId: string): Promise<void> {
+    const orders = await db.select().from(externalOrders)
+      .where(eq(externalOrders.customerId, customerId));
+    
+    const totalOrders = orders.length;
+    const totalSpent = orders.reduce((sum, o) => sum + parseFloat(o.totalAmount || '0'), 0);
+    const avgOrderValue = totalOrders > 0 ? totalSpent / totalOrders : 0;
+    const lastOrderAt = orders.length > 0 ? orders.sort((a, b) => 
+      new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime()
+    )[0].orderDate : null;
+    const firstOrderAt = orders.length > 0 ? orders.sort((a, b) => 
+      new Date(a.orderDate).getTime() - new Date(b.orderDate).getTime()
+    )[0].orderDate : null;
+    
+    // Determine customer segment based on spending
+    let customerSegment = 'new';
+    if (totalOrders === 0) customerSegment = 'new';
+    else if (totalSpent > 1000) customerSegment = 'vip';
+    else if (totalOrders > 5) customerSegment = 'regular';
+    else if (lastOrderAt && new Date(lastOrderAt) < new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)) {
+      customerSegment = 'at_risk';
+    }
+    
+    await db.update(externalCustomers)
+      .set({
+        totalOrders,
+        totalSpent: String(totalSpent),
+        avgOrderValue: String(avgOrderValue),
+        lastOrderAt,
+        firstOrderAt,
+        lifetimeValue: String(totalSpent),
+        customerSegment,
+        updatedAt: new Date()
+      })
+      .where(eq(externalCustomers.id, customerId));
+  }
+
+  async getTopCustomers(userId: string, limit: number = 10): Promise<ExternalCustomer[]> {
+    return db.select().from(externalCustomers)
+      .where(eq(externalCustomers.userId, userId))
+      .orderBy(desc(externalCustomers.totalSpent))
+      .limit(limit);
+  }
+
+  // External Orders
+  async getExternalOrders(userId: string, filters?: {
+    customerId?: string;
+    source?: string;
+    status?: string;
+    dateFrom?: Date;
+    dateTo?: Date;
+    minAmount?: number;
+    maxAmount?: number;
+    limit?: number;
+    offset?: number;
+  }): Promise<ExternalOrder[]> {
+    const conditions = [eq(externalOrders.userId, userId)];
+    
+    if (filters?.customerId) {
+      conditions.push(eq(externalOrders.customerId, filters.customerId));
+    }
+    if (filters?.source) {
+      conditions.push(eq(externalOrders.externalSource, filters.source));
+    }
+    if (filters?.status) {
+      conditions.push(eq(externalOrders.status, filters.status));
+    }
+    if (filters?.dateFrom) {
+      conditions.push(gte(externalOrders.orderDate, filters.dateFrom));
+    }
+    if (filters?.dateTo) {
+      conditions.push(lte(externalOrders.orderDate, filters.dateTo));
+    }
+    if (filters?.minAmount !== undefined) {
+      conditions.push(gte(externalOrders.totalAmount, String(filters.minAmount)));
+    }
+    if (filters?.maxAmount !== undefined) {
+      conditions.push(lte(externalOrders.totalAmount, String(filters.maxAmount)));
+    }
+    
+    let query = db.select().from(externalOrders)
+      .where(and(...conditions))
+      .orderBy(desc(externalOrders.orderDate));
+    
+    if (filters?.limit) {
+      query = query.limit(filters.limit) as typeof query;
+    }
+    if (filters?.offset) {
+      query = query.offset(filters.offset) as typeof query;
+    }
+    
+    return query;
+  }
+
+  async getExternalOrderById(id: string, userId: string): Promise<ExternalOrder | undefined> {
+    const [order] = await db.select().from(externalOrders)
+      .where(and(eq(externalOrders.id, id), eq(externalOrders.userId, userId)));
+    return order || undefined;
+  }
+
+  async getExternalOrderByExternalId(userId: string, externalId: string, source: string): Promise<ExternalOrder | undefined> {
+    const [order] = await db.select().from(externalOrders)
+      .where(and(
+        eq(externalOrders.userId, userId),
+        eq(externalOrders.externalId, externalId),
+        eq(externalOrders.externalSource, source)
+      ));
+    return order || undefined;
+  }
+
+  async createExternalOrder(order: Partial<ExternalOrder> & { userId: string; externalId: string; externalSource: string; totalAmount: string; orderDate: Date }): Promise<ExternalOrder> {
+    const [created] = await db.insert(externalOrders).values(order).returning();
+    
+    // Update customer stats if linked
+    if (created.customerId) {
+      await this.recalculateCustomerStats(created.customerId);
+    }
+    
+    return created;
+  }
+
+  async updateExternalOrder(id: string, userId: string, updates: Partial<ExternalOrder>): Promise<ExternalOrder | undefined> {
+    const [updated] = await db.update(externalOrders)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(eq(externalOrders.id, id), eq(externalOrders.userId, userId)))
+      .returning();
+    
+    // Recalculate customer stats if linked
+    if (updated?.customerId) {
+      await this.recalculateCustomerStats(updated.customerId);
+    }
+    
+    return updated || undefined;
+  }
+
+  async upsertExternalOrder(userId: string, externalId: string, source: string, data: Partial<ExternalOrder>): Promise<ExternalOrder> {
+    const existing = await this.getExternalOrderByExternalId(userId, externalId, source);
+    if (existing) {
+      const updated = await this.updateExternalOrder(existing.id, userId, data);
+      return updated!;
+    }
+    return this.createExternalOrder({ 
+      ...data, 
+      userId, 
+      externalId, 
+      externalSource: source,
+      totalAmount: data.totalAmount || '0',
+      orderDate: data.orderDate || new Date()
+    });
+  }
+
+  async deleteExternalOrder(id: string, userId: string): Promise<void> {
+    const order = await this.getExternalOrderById(id, userId);
+    await db.delete(externalOrders)
+      .where(and(eq(externalOrders.id, id), eq(externalOrders.userId, userId)));
+    
+    // Recalculate customer stats if linked
+    if (order?.customerId) {
+      await this.recalculateCustomerStats(order.customerId);
+    }
+  }
+
+  async getOrderStats(userId: string, period?: 'week' | 'month' | 'year' | 'all'): Promise<{
+    totalOrders: number;
+    totalRevenue: number;
+    avgOrderValue: number;
+    ordersByStatus: Record<string, number>;
+    ordersByChannel: Record<string, number>;
+    revenueBySource: Record<string, number>;
+  }> {
+    let dateFilter: Date | undefined;
+    if (period === 'week') {
+      dateFilter = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    } else if (period === 'month') {
+      dateFilter = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    } else if (period === 'year') {
+      dateFilter = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
+    }
+    
+    const conditions = [eq(externalOrders.userId, userId)];
+    if (dateFilter) {
+      conditions.push(gte(externalOrders.orderDate, dateFilter));
+    }
+    
+    const orders = await db.select().from(externalOrders).where(and(...conditions));
+    
+    const totalOrders = orders.length;
+    const totalRevenue = orders.reduce((sum, o) => sum + parseFloat(o.totalAmount || '0'), 0);
+    const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+    
+    const ordersByStatus: Record<string, number> = {};
+    const ordersByChannel: Record<string, number> = {};
+    const revenueBySource: Record<string, number> = {};
+    
+    for (const order of orders) {
+      const status = order.status || 'unknown';
+      const channel = order.channel || 'unknown';
+      const source = order.externalSource;
+      
+      ordersByStatus[status] = (ordersByStatus[status] || 0) + 1;
+      ordersByChannel[channel] = (ordersByChannel[channel] || 0) + 1;
+      revenueBySource[source] = (revenueBySource[source] || 0) + parseFloat(order.totalAmount || '0');
+    }
+    
+    return { totalOrders, totalRevenue, avgOrderValue, ordersByStatus, ordersByChannel, revenueBySource };
+  }
+
+  async getCustomerOrders(customerId: string): Promise<ExternalOrder[]> {
+    return db.select().from(externalOrders)
+      .where(eq(externalOrders.customerId, customerId))
+      .orderBy(desc(externalOrders.orderDate));
+  }
+
+  // External Products
+  async getExternalProducts(userId: string, filters?: {
+    search?: string;
+    category?: string;
+    source?: string;
+    isActive?: boolean;
+    limit?: number;
+    offset?: number;
+  }): Promise<ExternalProduct[]> {
+    const conditions = [eq(externalProducts.userId, userId)];
+    
+    if (filters?.search) {
+      conditions.push(or(
+        ilike(externalProducts.name, `%${filters.search}%`),
+        ilike(externalProducts.description, `%${filters.search}%`),
+        ilike(externalProducts.sku, `%${filters.search}%`)
+      )!);
+    }
+    if (filters?.category) {
+      conditions.push(eq(externalProducts.category, filters.category));
+    }
+    if (filters?.source) {
+      conditions.push(eq(externalProducts.externalSource, filters.source));
+    }
+    if (filters?.isActive !== undefined) {
+      conditions.push(eq(externalProducts.isActive, filters.isActive));
+    }
+    
+    let query = db.select().from(externalProducts)
+      .where(and(...conditions))
+      .orderBy(desc(externalProducts.totalRevenue));
+    
+    if (filters?.limit) {
+      query = query.limit(filters.limit) as typeof query;
+    }
+    if (filters?.offset) {
+      query = query.offset(filters.offset) as typeof query;
+    }
+    
+    return query;
+  }
+
+  async getExternalProductById(id: string, userId: string): Promise<ExternalProduct | undefined> {
+    const [product] = await db.select().from(externalProducts)
+      .where(and(eq(externalProducts.id, id), eq(externalProducts.userId, userId)));
+    return product || undefined;
+  }
+
+  async getExternalProductByExternalId(userId: string, externalId: string, source: string): Promise<ExternalProduct | undefined> {
+    const [product] = await db.select().from(externalProducts)
+      .where(and(
+        eq(externalProducts.userId, userId),
+        eq(externalProducts.externalId, externalId),
+        eq(externalProducts.externalSource, source)
+      ));
+    return product || undefined;
+  }
+
+  async createExternalProduct(product: Partial<ExternalProduct> & { userId: string; externalId: string; externalSource: string; name: string }): Promise<ExternalProduct> {
+    const [created] = await db.insert(externalProducts).values(product).returning();
+    return created;
+  }
+
+  async upsertExternalProduct(userId: string, externalId: string, source: string, data: Partial<ExternalProduct>): Promise<ExternalProduct> {
+    const existing = await this.getExternalProductByExternalId(userId, externalId, source);
+    if (existing) {
+      const [updated] = await db.update(externalProducts)
+        .set({ ...data, updatedAt: new Date() })
+        .where(eq(externalProducts.id, existing.id))
+        .returning();
+      return updated;
+    }
+    return this.createExternalProduct({ 
+      ...data, 
+      userId, 
+      externalId, 
+      externalSource: source,
+      name: data.name || 'Unknown Product'
+    });
+  }
+
+  async deleteExternalProduct(id: string, userId: string): Promise<void> {
+    await db.delete(externalProducts)
+      .where(and(eq(externalProducts.id, id), eq(externalProducts.userId, userId)));
+  }
+
+  async getTopProducts(userId: string, limit: number = 10): Promise<ExternalProduct[]> {
+    return db.select().from(externalProducts)
+      .where(eq(externalProducts.userId, userId))
+      .orderBy(desc(externalProducts.totalRevenue))
+      .limit(limit);
+  }
+
+  // External Activities
+  async getExternalActivities(userId: string, filters?: {
+    customerId?: string;
+    activityType?: string;
+    dateFrom?: Date;
+    dateTo?: Date;
+    limit?: number;
+    offset?: number;
+  }): Promise<ExternalActivity[]> {
+    const conditions = [eq(externalActivities.userId, userId)];
+    
+    if (filters?.customerId) {
+      conditions.push(eq(externalActivities.customerId, filters.customerId));
+    }
+    if (filters?.activityType) {
+      conditions.push(eq(externalActivities.activityType, filters.activityType));
+    }
+    if (filters?.dateFrom) {
+      conditions.push(gte(externalActivities.activityDate, filters.dateFrom));
+    }
+    if (filters?.dateTo) {
+      conditions.push(lte(externalActivities.activityDate, filters.dateTo));
+    }
+    
+    let query = db.select().from(externalActivities)
+      .where(and(...conditions))
+      .orderBy(desc(externalActivities.activityDate));
+    
+    if (filters?.limit) {
+      query = query.limit(filters.limit) as typeof query;
+    }
+    if (filters?.offset) {
+      query = query.offset(filters.offset) as typeof query;
+    }
+    
+    return query;
+  }
+
+  async createExternalActivity(activity: Partial<ExternalActivity> & { userId: string; externalSource: string; activityType: string; activityDate: Date }): Promise<ExternalActivity> {
+    const [created] = await db.insert(externalActivities).values(activity).returning();
+    return created;
+  }
+
+  async getCustomerActivities(customerId: string): Promise<ExternalActivity[]> {
+    return db.select().from(externalActivities)
+      .where(eq(externalActivities.customerId, customerId))
+      .orderBy(desc(externalActivities.activityDate));
+  }
+
+  // Integration Webhooks
+  async getIntegrationWebhooks(connectionId: string): Promise<IntegrationWebhook[]> {
+    return db.select().from(integrationWebhooks)
+      .where(eq(integrationWebhooks.connectionId, connectionId));
+  }
+
+  async createIntegrationWebhook(webhook: Partial<IntegrationWebhook> & { connectionId: string; userId: string; event: string }): Promise<IntegrationWebhook> {
+    const [created] = await db.insert(integrationWebhooks).values(webhook).returning();
+    return created;
+  }
+
+  async updateIntegrationWebhook(id: string, updates: Partial<IntegrationWebhook>): Promise<IntegrationWebhook | undefined> {
+    const [updated] = await db.update(integrationWebhooks)
+      .set(updates)
+      .where(eq(integrationWebhooks.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteIntegrationWebhook(id: string): Promise<void> {
+    await db.delete(integrationWebhooks).where(eq(integrationWebhooks.id, id));
+  }
+
+  // Integration Provider Configs
+  async getProviderConfigs(): Promise<IntegrationProviderConfig[]> {
+    return db.select().from(integrationProviderConfigs)
+      .where(eq(integrationProviderConfigs.isEnabled, true))
+      .orderBy(asc(integrationProviderConfigs.displayName));
+  }
+
+  async getProviderConfigByProvider(provider: string): Promise<IntegrationProviderConfig | undefined> {
+    const [config] = await db.select().from(integrationProviderConfigs)
+      .where(eq(integrationProviderConfigs.provider, provider));
+    return config || undefined;
+  }
+
+  async getProviderConfigsByCategory(category: string): Promise<IntegrationProviderConfig[]> {
+    return db.select().from(integrationProviderConfigs)
+      .where(and(
+        eq(integrationProviderConfigs.category, category),
+        eq(integrationProviderConfigs.isEnabled, true)
+      ))
+      .orderBy(asc(integrationProviderConfigs.displayName));
+  }
+
+  // Integration Analytics
+  async getIntegrationStats(userId: string): Promise<{
+    totalConnections: number;
+    activeConnections: number;
+    totalCustomers: number;
+    totalOrders: number;
+    totalRevenue: number;
+    lastSyncAt: Date | null;
+    syncErrorsLast24h: number;
+    customersBySource: Record<string, number>;
+    revenueBySource: Record<string, number>;
+  }> {
+    // Get connections
+    const connections = await this.getExternalConnections(userId);
+    const totalConnections = connections.length;
+    const activeConnections = connections.filter(c => c.status === 'active').length;
+    const lastSyncAt = connections
+      .filter(c => c.lastSyncAt)
+      .sort((a, b) => new Date(b.lastSyncAt!).getTime() - new Date(a.lastSyncAt!).getTime())[0]?.lastSyncAt || null;
+    
+    // Get customer count
+    const [customerCount] = await db.select({ count: count() }).from(externalCustomers)
+      .where(eq(externalCustomers.userId, userId));
+    const totalCustomers = customerCount?.count || 0;
+    
+    // Get orders and revenue
+    const orders = await db.select().from(externalOrders)
+      .where(eq(externalOrders.userId, userId));
+    const totalOrders = orders.length;
+    const totalRevenue = orders.reduce((sum, o) => sum + parseFloat(o.totalAmount || '0'), 0);
+    
+    // Calculate customers by source
+    const customers = await db.select().from(externalCustomers)
+      .where(eq(externalCustomers.userId, userId));
+    const customersBySource: Record<string, number> = {};
+    for (const c of customers) {
+      const source = c.externalSource || 'unknown';
+      customersBySource[source] = (customersBySource[source] || 0) + 1;
+    }
+    
+    // Calculate revenue by source
+    const revenueBySource: Record<string, number> = {};
+    for (const o of orders) {
+      const source = o.externalSource;
+      revenueBySource[source] = (revenueBySource[source] || 0) + parseFloat(o.totalAmount || '0');
+    }
+    
+    // Count sync errors in last 24h
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const [errorCount] = await db.select({ count: count() }).from(externalSyncJobs)
+      .where(and(
+        eq(externalSyncJobs.userId, userId),
+        eq(externalSyncJobs.status, 'failed'),
+        gte(externalSyncJobs.createdAt, yesterday)
+      ));
+    const syncErrorsLast24h = errorCount?.count || 0;
+    
+    return {
+      totalConnections,
+      activeConnections,
+      totalCustomers,
+      totalOrders,
+      totalRevenue,
+      lastSyncAt,
+      syncErrorsLast24h,
+      customersBySource,
+      revenueBySource
+    };
   }
 }
 
