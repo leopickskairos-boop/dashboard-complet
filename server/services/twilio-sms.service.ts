@@ -152,85 +152,8 @@ export async function sendReviewRequestSms(
 }
 
 interface GuaranteeSmsConfig {
-  twilioAccountSid?: string | null;
-  twilioAuthToken?: string | null;
-  twilioFromNumber?: string | null;
   companyName?: string | null;
-}
-
-class ClientTwilioService {
-  private accountSid: string;
-  private authToken: string;
-  private fromNumber: string;
-  private baseUrl = 'https://api.twilio.com/2010-04-01';
-
-  constructor(config: GuaranteeSmsConfig) {
-    this.accountSid = config.twilioAccountSid || '';
-    this.authToken = config.twilioAuthToken || '';
-    this.fromNumber = config.twilioFromNumber || '';
-  }
-
-  isConfigured(): boolean {
-    return !!(this.accountSid && this.authToken && this.fromNumber);
-  }
-
-  private formatPhoneNumber(phone: string): string | null {
-    let cleaned = phone.replace(/[^\d+]/g, '');
-    
-    if (!cleaned.startsWith('+')) {
-      if (cleaned.startsWith('0') && cleaned.length === 10) {
-        cleaned = '+33' + cleaned.substring(1);
-      } else if (cleaned.length >= 11) {
-        cleaned = '+' + cleaned;
-      } else {
-        return null;
-      }
-    }
-
-    if (/^\+\d{10,15}$/.test(cleaned)) {
-      return cleaned;
-    }
-    return null;
-  }
-
-  async sendSms(to: string, message: string): Promise<SmsResult> {
-    const formattedTo = this.formatPhoneNumber(to);
-    if (!formattedTo) {
-      return { success: false, error: 'Invalid phone number format' };
-    }
-
-    try {
-      const url = `${this.baseUrl}/Accounts/${this.accountSid}/Messages.json`;
-      
-      const body = new URLSearchParams({
-        To: formattedTo,
-        From: this.fromNumber,
-        Body: message,
-      });
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Basic ${Buffer.from(`${this.accountSid}:${this.authToken}`).toString('base64')}`,
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: body.toString(),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        console.error('[ClientTwilioSMS] API Error:', data);
-        return { success: false, error: data.message || 'Failed to send SMS' };
-      }
-
-      console.log(`✅ [ClientTwilioSMS] Message sent to ${formattedTo}, SID: ${data.sid}`);
-      return { success: true, messageId: data.sid };
-    } catch (error: any) {
-      console.error('[ClientTwilioSMS] Error:', error);
-      return { success: false, error: error.message };
-    }
-  }
+  smsEnabled?: boolean;
 }
 
 function formatDateShort(date: Date): string {
@@ -246,27 +169,18 @@ export async function sendGuaranteeCardRequestSms(
   companyName: string,
   checkoutUrl: string,
   reservationDate: Date,
-  nbPersons: number,
-  config?: GuaranteeSmsConfig
+  nbPersons: number
 ): Promise<SmsResult> {
-  let service: TwilioSmsService | ClientTwilioService;
-  
-  if (config?.twilioAccountSid && config?.twilioAuthToken && config?.twilioFromNumber) {
-    service = new ClientTwilioService(config);
-  } else {
-    service = getTwilioService();
-  }
+  const service = getTwilioService();
 
   if (!service.isConfigured()) {
+    console.warn('[GuaranteeSMS] Platform Twilio not configured');
     return { success: false, error: 'SMS service not configured' };
   }
 
   const dateStr = formatDateShort(reservationDate);
   const message = `${companyName} - Réservation ${dateStr}\n\nBonjour ${customerName},\nPour confirmer votre table (${nbPersons} pers.), enregistrez votre CB :\n${checkoutUrl}\n\n🔒 Sécurisé, non débité`;
 
-  if (service instanceof ClientTwilioService) {
-    return service.sendSms(phone, message);
-  }
   return service.sendSms({ to: phone, message });
 }
 
@@ -276,18 +190,12 @@ export async function sendGuaranteeConfirmationSms(
   companyName: string,
   reservationDate: Date,
   reservationTime: string | null,
-  nbPersons: number,
-  config?: GuaranteeSmsConfig
+  nbPersons: number
 ): Promise<SmsResult> {
-  let service: TwilioSmsService | ClientTwilioService;
-  
-  if (config?.twilioAccountSid && config?.twilioAuthToken && config?.twilioFromNumber) {
-    service = new ClientTwilioService(config);
-  } else {
-    service = getTwilioService();
-  }
+  const service = getTwilioService();
 
   if (!service.isConfigured()) {
+    console.warn('[GuaranteeSMS] Platform Twilio not configured');
     return { success: false, error: 'SMS service not configured' };
   }
 
@@ -295,17 +203,11 @@ export async function sendGuaranteeConfirmationSms(
   const timeStr = reservationTime ? ` à ${reservationTime}` : '';
   const message = `✓ Réservation confirmée !\n\n${companyName}\n📅 ${dateStr}${timeStr}\n👥 ${nbPersons} personne${nbPersons > 1 ? 's' : ''}\n\nÀ bientôt ${customerName} !`;
 
-  if (service instanceof ClientTwilioService) {
-    return service.sendSms(phone, message);
-  }
   return service.sendSms({ to: phone, message });
 }
 
-export function isSmsConfigured(config?: GuaranteeSmsConfig): boolean {
-  if (config?.twilioAccountSid && config?.twilioAuthToken && config?.twilioFromNumber) {
-    return true;
-  }
+export function isSmsConfigured(): boolean {
   return getTwilioService().isConfigured();
 }
 
-export { TwilioSmsService, ClientTwilioService };
+export { TwilioSmsService };

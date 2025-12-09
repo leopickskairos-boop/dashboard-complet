@@ -50,9 +50,6 @@ interface GuaranteeConfig {
   companyPhone: string | null;
   stripeAccountId?: string | null;
   smsEnabled: boolean;
-  twilioAccountSid: string | null;
-  twilioAuthToken: string | null;
-  twilioFromNumber: string | null;
   autoSendEmailOnCreate: boolean;
   autoSendSmsOnCreate: boolean;
   autoSendEmailOnValidation: boolean;
@@ -601,14 +598,20 @@ export default function GuaranteeSettings() {
       key: 'sms' as SectionKey,
       icon: MessageSquare,
       iconColor: 'text-purple-400',
-      title: 'Configuration SMS (Twilio)',
+      title: 'Notifications SMS',
       description: localConfig.smsEnabled ? 'Activé' : 'Désactivé',
       content: (
         <div className="space-y-4">
+          <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4">
+            <h4 className="text-purple-300 font-medium">SMS géré par SpeedAI</h4>
+            <p className="text-sm text-gray-400 mt-1">
+              Les SMS sont envoyés via le compte Twilio de SpeedAI. Aucune configuration nécessaire de votre côté.
+            </p>
+          </div>
           <div className="flex items-center justify-between">
             <div>
               <Label className="text-gray-300">Activer les SMS</Label>
-              <p className="text-xs text-gray-500 mt-1">Envoyer des SMS de confirmation aux clients</p>
+              <p className="text-xs text-gray-500 mt-1">Envoyer des SMS automatiques aux clients</p>
             </div>
             <Switch
               checked={localConfig.smsEnabled}
@@ -616,48 +619,6 @@ export default function GuaranteeSettings() {
               data-testid="switch-sms-enabled"
             />
           </div>
-          
-          {localConfig.smsEnabled && (
-            <>
-              <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4">
-                <h4 className="text-purple-300 font-medium">Configuration Twilio</h4>
-                <p className="text-sm text-gray-400 mt-1">
-                  Créez un compte sur <a href="https://www.twilio.com" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline">Twilio</a> pour obtenir vos identifiants.
-                </p>
-              </div>
-              <div>
-                <Label className="text-gray-300">Account SID</Label>
-                <Input
-                  value={localConfig.twilioAccountSid || ''}
-                  onChange={(e) => handleConfigChange('twilioAccountSid', e.target.value || null)}
-                  placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-                  className="mt-2 bg-white/5 border-white/10"
-                  data-testid="input-twilio-sid"
-                />
-              </div>
-              <div>
-                <Label className="text-gray-300">Auth Token</Label>
-                <Input
-                  type="password"
-                  value={localConfig.twilioAuthToken || ''}
-                  onChange={(e) => handleConfigChange('twilioAuthToken', e.target.value || null)}
-                  placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-                  className="mt-2 bg-white/5 border-white/10"
-                  data-testid="input-twilio-token"
-                />
-              </div>
-              <div>
-                <Label className="text-gray-300">Numéro d'envoi (From)</Label>
-                <Input
-                  value={localConfig.twilioFromNumber || ''}
-                  onChange={(e) => handleConfigChange('twilioFromNumber', e.target.value || null)}
-                  placeholder="+33612345678"
-                  className="mt-2 bg-white/5 border-white/10"
-                  data-testid="input-twilio-from"
-                />
-              </div>
-            </>
-          )}
         </div>
       ),
     },

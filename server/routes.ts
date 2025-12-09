@@ -764,8 +764,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 }
               }
               
-              // Send confirmation SMS if enabled
-              if (config && config.autoSendSmsOnValidation && guaranteeSession.customerPhone && isSmsConfigured(config)) {
+              // Send confirmation SMS if enabled (uses SpeedAI platform Twilio)
+              if (config && config.autoSendSmsOnValidation && guaranteeSession.customerPhone && isSmsConfigured()) {
                 try {
                   const smsResult = await sendGuaranteeConfirmationSms(
                     guaranteeSession.customerPhone,
@@ -773,8 +773,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     config.companyName || 'Établissement',
                     new Date(guaranteeSession.reservationDate),
                     guaranteeSession.reservationTime,
-                    guaranteeSession.nbPersons,
-                    config
+                    guaranteeSession.nbPersons
                   );
                   console.log(`📱 [Stripe Webhook] Confirmation SMS ${smsResult.success ? 'sent' : 'failed'} for ${guaranteeSession.customerPhone}`);
                 } catch (smsError) {
@@ -3629,8 +3628,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Send SMS if configured and enabled
-      if (config.autoSendSmsOnCreate && data.customer_phone && isSmsConfigured(config)) {
+      // Send SMS if configured and enabled (uses SpeedAI platform Twilio)
+      if (config.autoSendSmsOnCreate && data.customer_phone && isSmsConfigured()) {
         try {
           const smsResult = await sendGuaranteeCardRequestSms(
             data.customer_phone,
@@ -3638,8 +3637,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             config.companyName || 'Établissement',
             checkoutSession.url!,
             new Date(data.reservation_date),
-            nbPersons,
-            config
+            nbPersons
           );
           notificationResults.smsSent = smsResult.success;
           if (!smsResult.success) {

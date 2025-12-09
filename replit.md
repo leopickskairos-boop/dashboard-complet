@@ -45,13 +45,13 @@ The project utilizes a modern web stack for a responsive and professional user i
     -   Automatic charging for no-shows with failure tracking
     -   Statistics and recovery metrics
     -   **Automated Notification System**:
-        -   Client-specific SMTP configuration (Gmail App Password)
-        -   Client-specific Twilio SMS integration
+        -   Client-specific SMTP configuration (Gmail App Password) for personalized emails
+        -   Centralized SMS via SpeedAI Twilio (no client config needed)
         -   Auto email+SMS on session creation (card validation request)
         -   Auto email+SMS on card validation (booking confirmation)
         -   Professional branded email templates with company logo and colors
         -   SMS with short links for mobile validation
-        -   Configurable notification toggles per client
+        -   Configurable notification toggles per client (smsEnabled, autoSend toggles)
         -   N8N calendar booking trigger on successful card validation
 -   **Marketing Module**: Complete marketing automation system with:
     -   8-table architecture (marketing_contacts, marketing_consent_history, marketing_segments, marketing_templates, marketing_campaigns, marketing_sends, marketing_automations, marketing_automation_logs)
