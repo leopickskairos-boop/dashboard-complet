@@ -1905,3 +1905,527 @@ export const segmentFiltersSchema = z.object({
 export type ImportContacts = z.infer<typeof importContactsSchema>;
 export type CreateQuickCampaign = z.infer<typeof createQuickCampaignSchema>;
 export type SegmentFilters = z.infer<typeof segmentFiltersSchema>;
+
+// ===== EXTERNAL INTEGRATIONS SYSTEM =====
+
+// Integration provider enum - all supported CRMs and databases
+export const integrationProviderEnum = pgEnum('integration_provider', [
+  // Generic CRMs
+  'hubspot',
+  'salesforce',
+  'zoho',
+  'pipedrive',
+  'monday',
+  'notion',
+  'airtable',
+  // Restaurant/Hospitality
+  'zenchef',
+  'thefork',
+  'resy',
+  'opentable',
+  'lightspeed_restaurant',
+  // Hotel/Lodging
+  'mews',
+  'cloudbeds',
+  'opera_pms',
+  'booking_com',
+  'airbnb',
+  // Medical
+  'doctolib',
+  'drchrono',
+  'kareo',
+  // E-commerce
+  'shopify',
+  'woocommerce',
+  'prestashop',
+  'magento',
+  'stripe',
+  // Databases
+  'postgresql',
+  'mysql',
+  'mongodb',
+  'google_sheets',
+  // Other
+  'custom_api',
+  'webhook'
+]);
+
+// Integration auth type enum
+export const integrationAuthTypeEnum = pgEnum('integration_auth_type', [
+  'oauth2',
+  'api_key',
+  'basic_auth',
+  'database_credentials',
+  'webhook_secret'
+]);
+
+// Integration sync status enum
+export const integrationSyncStatusEnum = pgEnum('integration_sync_status', [
+  'pending',
+  'syncing',
+  'success',
+  'partial',
+  'failed'
+]);
+
+// Integration entity type enum - canonical data types
+export const integrationEntityTypeEnum = pgEnum('integration_entity_type', [
+  'contact',
+  'company',
+  'deal',
+  'order',
+  'reservation',
+  'appointment',
+  'product',
+  'invoice',
+  'payment',
+  'activity',
+  'custom'
+]);
+
+// External connections table - stores CRM/DB connection configs
+export const externalConnections = pgTable("external_connections", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  
+  // Provider info
+  provider: text("provider").notNull(), // 'hubspot', 'salesforce', etc.
+  name: text("name").notNull(), // User-friendly name (e.g., "Mon HubSpot Principal")
+  description: text("description"),
+  
+  // Authentication
+  authType: text("auth_type").notNull(), // 'oauth2', 'api_key', 'database_credentials'
+  
+  // OAuth2 tokens (encrypted)
+  accessToken: text("access_token"),
+  refreshToken: text("refresh_token"),
+  tokenExpiresAt: timestamp("token_expires_at"),
+  scopes: text("scopes").array(),
+  
+  // API Key auth
+  apiKey: text("api_key"), // Encrypted
+  apiSecret: text("api_secret"), // Encrypted
+  
+  // Database connection (encrypted)
+  connectionString: text("connection_string"),
+  dbHost: text("db_host"),
+  dbPort: integer("db_port"),
+  dbName: text("db_name"),
+  dbUser: text("db_user"),
+  dbPassword: text("db_password"),
+  
+  // Webhook config
+  webhookUrl: text("webhook_url"),
+  webhookSecret: text("webhook_secret"),
+  
+  // Provider-specific config
+  instanceUrl: text("instance_url"), // For Salesforce, custom instances
+  accountId: text("account_id"), // External account identifier
+  
+  // Status
+  status: text("status").notNull().default("pending"), // 'pending', 'active', 'error', 'disconnected'
+  lastError: text("last_error"),
+  lastErrorAt: timestamp("last_error_at"),
+  
+  // Sync settings
+  syncEnabled: boolean("sync_enabled").notNull().default(true),
+  syncFrequency: text("sync_frequency").default("daily"), // 'realtime', 'hourly', 'daily', 'weekly', 'manual'
+  syncDirection: text("sync_direction").default("pull"), // 'pull', 'push', 'bidirectional'
+  
+  // Entity types to sync
+  enabledEntities: text("enabled_entities").array().default(sql`ARRAY['contact', 'order']::text[]`),
+  
+  // Timestamps
+  connectedAt: timestamp("connected_at"),
+  lastSyncAt: timestamp("last_sync_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Insert schema for external connections
+export const insertExternalConnectionSchema = createInsertSchema(externalConnections).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Types for external connections
+export type InsertExternalConnection = z.infer<typeof insertExternalConnectionSchema>;
+export type ExternalConnection = typeof externalConnections.$inferSelect;
+
+// External sync jobs table - tracks sync operations
+export const externalSyncJobs = pgTable("external_sync_jobs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  connectionId: varchar("connection_id").notNull().references(() => externalConnections.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  
+  // Job info
+  jobType: text("job_type").notNull(), // 'full', 'incremental', 'entity_specific'
+  entityTypes: text("entity_types").array(), // Which entities to sync
+  
+  // Status
+  status: text("status").notNull().default("pending"), // 'pending', 'running', 'completed', 'failed', 'cancelled'
+  progress: integer("progress").default(0), // 0-100
+  
+  // Sync checkpoint (for incremental syncs)
+  checkpoint: jsonb("checkpoint"), // { lastSyncedId, lastModifiedDate, cursor }
+  
+  // Results
+  totalRecords: integer("total_records").default(0),
+  processedRecords: integer("processed_records").default(0),
+  createdRecords: integer("created_records").default(0),
+  updatedRecords: integer("updated_records").default(0),
+  failedRecords: integer("failed_records").default(0),
+  skippedRecords: integer("skipped_records").default(0),
+  
+  // Error tracking
+  errors: jsonb("errors"), // Array of { record, error, timestamp }
+  
+  // Timestamps
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Types for sync jobs
+export type ExternalSyncJob = typeof externalSyncJobs.$inferSelect;
+
+// Field mappings table - maps external fields to canonical schema
+export const externalFieldMappings = pgTable("external_field_mappings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  connectionId: varchar("connection_id").notNull().references(() => externalConnections.id, { onDelete: 'cascade' }),
+  
+  // Entity type this mapping applies to
+  entityType: text("entity_type").notNull(), // 'contact', 'order', etc.
+  
+  // Mapping config
+  mappings: jsonb("mappings").notNull(), // { sourceField: targetField, transforms: [] }
+  
+  // Custom fields
+  customFields: jsonb("custom_fields"), // Additional fields to capture
+  
+  // Status
+  isActive: boolean("is_active").notNull().default(true),
+  
+  // Timestamps
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Types for field mappings
+export type ExternalFieldMapping = typeof externalFieldMappings.$inferSelect;
+
+// External customers table - unified customer data from all sources
+export const externalCustomers = pgTable("external_customers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  connectionId: varchar("connection_id").references(() => externalConnections.id, { onDelete: 'set null' }),
+  
+  // External references
+  externalId: text("external_id"), // ID in external system
+  externalSource: text("external_source"), // 'hubspot', 'salesforce', etc.
+  
+  // Link to marketing contact if exists
+  marketingContactId: varchar("marketing_contact_id").references(() => marketingContacts.id, { onDelete: 'set null' }),
+  
+  // Contact info
+  email: text("email"),
+  phone: text("phone"),
+  firstName: text("first_name"),
+  lastName: text("last_name"),
+  
+  // Company info
+  companyName: text("company_name"),
+  companyId: text("company_id"),
+  jobTitle: text("job_title"),
+  
+  // Address
+  address: text("address"),
+  city: text("city"),
+  postalCode: text("postal_code"),
+  country: text("country"),
+  
+  // Financial summary (calculated from orders/transactions)
+  totalSpent: decimal("total_spent", { precision: 12, scale: 2 }).default("0"),
+  totalOrders: integer("total_orders").default(0),
+  avgOrderValue: decimal("avg_order_value", { precision: 10, scale: 2 }),
+  lastOrderAt: timestamp("last_order_at"),
+  firstOrderAt: timestamp("first_order_at"),
+  
+  // Customer value scoring
+  lifetimeValue: decimal("lifetime_value", { precision: 12, scale: 2 }).default("0"),
+  customerScore: integer("customer_score"), // 0-100
+  customerSegment: text("customer_segment"), // 'vip', 'regular', 'new', 'at_risk', 'lost'
+  
+  // Engagement
+  totalVisits: integer("total_visits").default(0),
+  lastVisitAt: timestamp("last_visit_at"),
+  
+  // Additional data (raw from source)
+  metadata: jsonb("metadata"),
+  
+  // Sync tracking
+  lastSyncedAt: timestamp("last_synced_at"),
+  syncStatus: text("sync_status").default("synced"), // 'synced', 'pending', 'conflict'
+  
+  // Timestamps
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Types for external customers
+export type ExternalCustomer = typeof externalCustomers.$inferSelect;
+
+// External orders/transactions table - all purchases from CRM/POS
+export const externalOrders = pgTable("external_orders", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  connectionId: varchar("connection_id").references(() => externalConnections.id, { onDelete: 'set null' }),
+  customerId: varchar("customer_id").references(() => externalCustomers.id, { onDelete: 'set null' }),
+  
+  // External references
+  externalId: text("external_id").notNull(), // Order ID in external system
+  externalSource: text("external_source").notNull(),
+  
+  // Order info
+  orderNumber: text("order_number"),
+  orderType: text("order_type"), // 'sale', 'refund', 'reservation', 'booking'
+  status: text("status"), // 'pending', 'confirmed', 'completed', 'cancelled', 'refunded'
+  
+  // Financial
+  subtotal: decimal("subtotal", { precision: 12, scale: 2 }),
+  taxAmount: decimal("tax_amount", { precision: 10, scale: 2 }),
+  discountAmount: decimal("discount_amount", { precision: 10, scale: 2 }),
+  tipAmount: decimal("tip_amount", { precision: 10, scale: 2 }),
+  totalAmount: decimal("total_amount", { precision: 12, scale: 2 }).notNull(),
+  currency: text("currency").default("EUR"),
+  
+  // Payment
+  paymentStatus: text("payment_status"), // 'pending', 'paid', 'partial', 'refunded'
+  paymentMethod: text("payment_method"), // 'card', 'cash', 'bank_transfer', etc.
+  
+  // Order details
+  itemsCount: integer("items_count"),
+  items: jsonb("items"), // Array of { name, quantity, unitPrice, total }
+  
+  // For reservations/appointments
+  reservationDate: timestamp("reservation_date"),
+  reservationTime: text("reservation_time"),
+  partySize: integer("party_size"),
+  tableName: text("table_name"),
+  
+  // Channel info
+  channel: text("channel"), // 'in_store', 'online', 'phone', 'app'
+  
+  // Staff/attribution
+  staffName: text("staff_name"),
+  staffId: text("staff_id"),
+  
+  // Customer details at time of order
+  customerName: text("customer_name"),
+  customerEmail: text("customer_email"),
+  customerPhone: text("customer_phone"),
+  
+  // Notes
+  notes: text("notes"),
+  
+  // Raw data from source
+  metadata: jsonb("metadata"),
+  
+  // Timestamps
+  orderDate: timestamp("order_date").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Types for external orders
+export type ExternalOrder = typeof externalOrders.$inferSelect;
+
+// External products table - products/services from connected systems
+export const externalProducts = pgTable("external_products", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  connectionId: varchar("connection_id").references(() => externalConnections.id, { onDelete: 'set null' }),
+  
+  // External references
+  externalId: text("external_id").notNull(),
+  externalSource: text("external_source").notNull(),
+  
+  // Product info
+  name: text("name").notNull(),
+  description: text("description"),
+  category: text("category"),
+  sku: text("sku"),
+  
+  // Pricing
+  price: decimal("price", { precision: 10, scale: 2 }),
+  currency: text("currency").default("EUR"),
+  
+  // Status
+  isActive: boolean("is_active").default(true),
+  
+  // Stats (calculated)
+  totalSold: integer("total_sold").default(0),
+  totalRevenue: decimal("total_revenue", { precision: 12, scale: 2 }).default("0"),
+  
+  // Metadata
+  metadata: jsonb("metadata"),
+  
+  // Timestamps
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Types for external products
+export type ExternalProduct = typeof externalProducts.$inferSelect;
+
+// External activities table - all customer interactions from CRM
+export const externalActivities = pgTable("external_activities", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  connectionId: varchar("connection_id").references(() => externalConnections.id, { onDelete: 'set null' }),
+  customerId: varchar("customer_id").references(() => externalCustomers.id, { onDelete: 'set null' }),
+  
+  // External references
+  externalId: text("external_id"),
+  externalSource: text("external_source").notNull(),
+  
+  // Activity info
+  activityType: text("activity_type").notNull(), // 'call', 'email', 'meeting', 'note', 'task', 'visit'
+  subject: text("subject"),
+  description: text("description"),
+  
+  // Outcome
+  outcome: text("outcome"), // 'completed', 'no_answer', 'scheduled', etc.
+  
+  // Staff
+  staffName: text("staff_name"),
+  staffId: text("staff_id"),
+  
+  // Timestamps
+  activityDate: timestamp("activity_date").notNull(),
+  duration: integer("duration"), // In minutes
+  
+  // Metadata
+  metadata: jsonb("metadata"),
+  
+  // Timestamps
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Types for external activities
+export type ExternalActivity = typeof externalActivities.$inferSelect;
+
+// Integration webhooks table - for real-time sync
+export const integrationWebhooks = pgTable("integration_webhooks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  connectionId: varchar("connection_id").notNull().references(() => externalConnections.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  
+  // Webhook config
+  event: text("event").notNull(), // 'contact.created', 'order.completed', etc.
+  webhookId: text("webhook_id"), // ID in external system
+  
+  // Status
+  isActive: boolean("is_active").default(true),
+  
+  // Stats
+  totalReceived: integer("total_received").default(0),
+  lastReceivedAt: timestamp("last_received_at"),
+  
+  // Timestamps
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Types for integration webhooks
+export type IntegrationWebhook = typeof integrationWebhooks.$inferSelect;
+
+// Integration provider configs table - stores provider-specific metadata
+export const integrationProviderConfigs = pgTable("integration_provider_configs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Provider info
+  provider: text("provider").notNull().unique(),
+  displayName: text("display_name").notNull(),
+  description: text("description"),
+  category: text("category").notNull(), // 'crm', 'restaurant', 'hotel', 'medical', 'ecommerce', 'database'
+  
+  // Logo/branding
+  logoUrl: text("logo_url"),
+  color: text("color"), // Brand color hex
+  
+  // Auth config
+  authType: text("auth_type").notNull(),
+  oauthAuthUrl: text("oauth_auth_url"),
+  oauthTokenUrl: text("oauth_token_url"),
+  requiredScopes: text("required_scopes").array(),
+  
+  // API config
+  apiBaseUrl: text("api_base_url"),
+  apiVersion: text("api_version"),
+  
+  // Rate limits
+  rateLimitRequests: integer("rate_limit_requests"),
+  rateLimitWindow: integer("rate_limit_window"), // In seconds
+  
+  // Supported entities
+  supportedEntities: text("supported_entities").array(),
+  
+  // Feature flags
+  supportsWebhooks: boolean("supports_webhooks").default(false),
+  supportsRealtime: boolean("supports_realtime").default(false),
+  supportsBidirectional: boolean("supports_bidirectional").default(false),
+  
+  // Status
+  isEnabled: boolean("is_enabled").default(true),
+  isPremium: boolean("is_premium").default(false), // Requires premium plan
+  
+  // Timestamps
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Types for provider configs
+export type IntegrationProviderConfig = typeof integrationProviderConfigs.$inferSelect;
+
+// ===== INTEGRATION API SCHEMAS =====
+
+// Schema for creating a new connection
+export const createConnectionSchema = z.object({
+  provider: z.string().min(1),
+  name: z.string().min(1),
+  description: z.string().optional(),
+  authType: z.enum(['oauth2', 'api_key', 'basic_auth', 'database_credentials', 'webhook_secret']),
+  syncFrequency: z.enum(['realtime', 'hourly', 'daily', 'weekly', 'manual']).default('daily'),
+  syncDirection: z.enum(['pull', 'push', 'bidirectional']).default('pull'),
+  enabledEntities: z.array(z.string()).default(['contact', 'order']),
+});
+
+// Schema for OAuth callback
+export const oauthCallbackSchema = z.object({
+  code: z.string().min(1),
+  state: z.string().min(1),
+});
+
+// Schema for API key connection
+export const apiKeyConnectionSchema = z.object({
+  apiKey: z.string().min(1),
+  apiSecret: z.string().optional(),
+  instanceUrl: z.string().optional(),
+});
+
+// Schema for database connection
+export const databaseConnectionSchema = z.object({
+  host: z.string().min(1),
+  port: z.number().int().min(1).max(65535),
+  database: z.string().min(1),
+  username: z.string().min(1),
+  password: z.string().min(1),
+  ssl: z.boolean().default(true),
+});
+
+// Types
+export type CreateConnection = z.infer<typeof createConnectionSchema>;
+export type OAuthCallback = z.infer<typeof oauthCallbackSchema>;
+export type APIKeyConnection = z.infer<typeof apiKeyConnectionSchema>;
+export type DatabaseConnection = z.infer<typeof databaseConnectionSchema>;
