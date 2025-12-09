@@ -27,6 +27,49 @@ export class IntegrationService {
     return adapter.testConnection();
   }
 
+  async testCredentials(
+    provider: string, 
+    credentials: { apiKey?: string; apiSecret?: string; instanceUrl?: string }
+  ): Promise<TestConnectionResult> {
+    if (!isProviderSupported(provider)) {
+      return { success: false, message: `Provider ${provider} non supporté pour le moment` };
+    }
+
+    const mockConnection = {
+      id: 'test',
+      userId: 'test',
+      provider,
+      name: 'Test Connection',
+      authType: 'api_key',
+      status: 'pending',
+      syncEnabled: false,
+      syncFrequency: 'daily',
+      enabledEntities: [] as string[],
+      lastSyncAt: null,
+      lastError: null,
+      connectedAt: null,
+      createdAt: new Date(),
+      description: null,
+      instanceUrl: credentials.instanceUrl || null,
+      accessToken: null,
+      refreshToken: null,
+      tokenExpiresAt: null,
+      apiKey: null,
+      apiSecret: null,
+      accountId: null,
+      metadata: null
+    };
+
+    const decrypted = {
+      apiKey: credentials.apiKey,
+      apiSecret: credentials.apiSecret,
+      instanceUrl: credentials.instanceUrl
+    };
+
+    const adapter = createAdapter(mockConnection, decrypted);
+    return adapter.testConnection();
+  }
+
   async syncConnection(connectionId: string, userId: string, fullSync: boolean = false): Promise<SyncResult> {
     const connection = await storage.getExternalConnectionWithCredentials(connectionId, userId);
     

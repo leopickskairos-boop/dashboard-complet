@@ -5,9 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -30,7 +28,11 @@ import {
   Stethoscope,
   ShoppingCart,
   HardDrive,
-  Cog
+  Cog,
+  ArrowLeft,
+  ArrowRight,
+  Shield,
+  Loader2
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
@@ -75,6 +77,16 @@ interface Connection {
   lastError: string | null;
   connectedAt: string | null;
   createdAt: string;
+}
+
+interface TestResult {
+  success: boolean;
+  message: string;
+  accountInfo?: {
+    name?: string;
+    id?: string;
+    plan?: string;
+  };
 }
 
 const categoryLabels: Record<string, string> = {
@@ -158,13 +170,21 @@ const ProviderLogo = ({ provider, color, size = "md" }: { provider: string; colo
   );
 };
 
+type WizardStep = 1 | 2 | 3;
+
 export default function IntegrationConnections() {
   const { toast } = useToast();
-  const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
+  
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [wizardStep, setWizardStep] = useState<WizardStep>(1);
+  const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
+  
   const [connectionName, setConnectionName] = useState("");
-  const [apiKeyInput, setApiKeyInput] = useState("");
-  const [apiSecretInput, setApiSecretInput] = useState("");
+  const [apiKey, setApiKey] = useState("");
+  const [apiSecret, setApiSecret] = useState("");
+  
+  const [testResult, setTestResult] = useState<TestResult | null>(null);
+  const [isTesting, setIsTesting] = useState(false);
 
   const { data: providers, isLoading: loadingProviders } = useQuery<Provider[]>({
     queryKey: ["/api/integrations/providers"],
@@ -174,42 +194,27 @@ export default function IntegrationConnections() {
     queryKey: ["/api/integrations/connections"],
   });
 
-  const createConnectionMutation = useMutation({
-    mutationFn: async (data: { provider: string; name: string; authType: string }) => {
-      return apiRequest("POST", "/api/integrations/connections", data);
+  const createAndConnectMutation = useMutation({
+    mutationFn: async (data: { 
+      provider: string; 
+      name: string; 
+      authType: string;
+      apiKey?: string;
+      apiSecret?: string;
+    }) => {
+      const response = await apiRequest("POST", "/api/integrations/connections/create-and-connect", data);
+      return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/integrations/connections"] });
-      toast({ title: "Connexion créée", description: "Vous pouvez maintenant configurer les identifiants." });
-      setIsAddDialogOpen(false);
-      setSelectedProvider(null);
-      setConnectionName("");
+      toast({ 
+        title: "Connexion créée avec succès!", 
+        description: `${selectedProvider?.displayName} est maintenant connecté à SpeedAI.`
+      });
+      resetWizard();
     },
     onError: (error: Error) => {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
-    }
-  });
-
-  const connectApiKeyMutation = useMutation({
-    mutationFn: async ({ id, apiKey, apiSecret }: { id: string; apiKey: string; apiSecret?: string }) => {
-      const response = await apiRequest("POST", `/api/integrations/connections/${id}/connect-apikey`, { apiKey, apiSecret });
-      return response.json();
-    },
-    onSuccess: (data: { success: boolean; message: string; accountInfo?: { name?: string } }) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/integrations/connections"] });
-      if (data.success) {
-        toast({ 
-          title: "Connexion réussie!", 
-          description: data.accountInfo?.name 
-            ? `Connecté à ${data.accountInfo.name}. La synchronisation peut maintenant commencer.`
-            : data.message
-        });
-      }
-      setApiKeyInput("");
-      setApiSecretInput("");
-    },
-    onError: (error: Error) => {
-      toast({ title: "Échec de connexion", description: error.message, variant: "destructive" });
     }
   });
 
@@ -231,7 +236,7 @@ export default function IntegrationConnections() {
       const response = await apiRequest("POST", `/api/integrations/connections/${id}/sync`, { fullSync: true });
       return response.json();
     },
-    onSuccess: (data: { success: boolean; message: string; details?: { customersImported: number; ordersImported: number; transactionsImported: number } }) => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/integrations/connections"] });
       if (data.success) {
         toast({ 
@@ -259,6 +264,74 @@ export default function IntegrationConnections() {
     return acc;
   }, {} as Record<string, Provider[]>) || {};
 
+  const resetWizard = () => {
+    setIsAddDialogOpen(false);
+    setWizardStep(1);
+    setSelectedProvider(null);
+    setConnectionName("");
+    setApiKey("");
+    setApiSecret("");
+    setTestResult(null);
+    setIsTesting(false);
+  };
+
+  const handleProviderSelect = (provider: Provider) => {
+    setSelectedProvider(provider);
+    setConnectionName(`Mon ${provider.displayName}`);
+    setApiKey("");
+    setApiSecret("");
+    setTestResult(null);
+    setIsTesting(false);
+    setWizardStep(2);
+  };
+
+  const handleTestConnection = async () => {
+    if (!selectedProvider || !apiKey) return;
+    
+    setIsTesting(true);
+    setTestResult(null);
+    
+    try {
+      const response = await apiRequest("POST", "/api/integrations/test-credentials", {
+        provider: selectedProvider.provider,
+        apiKey,
+        apiSecret: apiSecret || undefined
+      });
+      const result = await response.json();
+      setTestResult(result);
+      
+      if (result.success) {
+        setWizardStep(3);
+      }
+    } catch (error) {
+      setTestResult({
+        success: false,
+        message: error instanceof Error ? error.message : "Erreur de connexion"
+      });
+    } finally {
+      setIsTesting(false);
+    }
+  };
+
+  const handleOAuthConnect = async () => {
+    if (!selectedProvider) return;
+    
+    const oauthUrl = `/api/integrations/oauth/${selectedProvider.provider}/start`;
+    window.location.href = oauthUrl;
+  };
+
+  const handleCreateConnection = () => {
+    if (!selectedProvider || !connectionName) return;
+    
+    createAndConnectMutation.mutate({
+      provider: selectedProvider.provider,
+      name: connectionName,
+      authType: selectedProvider.authType,
+      apiKey: apiKey || undefined,
+      apiSecret: apiSecret || undefined
+    });
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "active":
@@ -272,13 +345,300 @@ export default function IntegrationConnections() {
     }
   };
 
-  const handleCreateConnection = () => {
-    if (!selectedProvider || !connectionName) return;
-    createConnectionMutation.mutate({
-      provider: selectedProvider.provider,
-      name: connectionName,
-      authType: selectedProvider.authType,
-    });
+  const StepIndicator = () => (
+    <div className="flex items-center justify-center gap-2 mb-6">
+      {[1, 2, 3].map((step) => (
+        <div key={step} className="flex items-center">
+          <div 
+            className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
+              step === wizardStep 
+                ? "bg-primary text-primary-foreground" 
+                : step < wizardStep 
+                  ? "bg-green-500 text-white"
+                  : "bg-muted text-muted-foreground"
+            }`}
+          >
+            {step < wizardStep ? <CheckCircle className="h-4 w-4" /> : step}
+          </div>
+          {step < 3 && (
+            <div className={`w-12 h-0.5 mx-1 ${step < wizardStep ? "bg-green-500" : "bg-muted"}`} />
+          )}
+        </div>
+      ))}
+    </div>
+  );
+
+  const renderStep1 = () => (
+    <div className="space-y-6">
+      <div className="text-center mb-4">
+        <h3 className="font-semibold">Étape 1 : Sélectionnez une intégration</h3>
+        <p className="text-sm text-muted-foreground">Choisissez le CRM ou la base de données à connecter</p>
+      </div>
+      
+      {loadingProviders ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <span className="ml-2 text-muted-foreground">Chargement...</span>
+        </div>
+      ) : Object.keys(groupedProviders).length === 0 ? (
+        <div className="text-center py-12 text-muted-foreground">
+          Aucune intégration disponible
+        </div>
+      ) : (
+        Object.entries(groupedProviders).map(([category, categoryProviders]) => (
+          <div key={category}>
+            <h3 className="text-sm font-semibold mb-3 flex items-center gap-2 text-muted-foreground">
+              <CategoryIcon category={category} />
+              {categoryLabels[category] || category}
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {categoryProviders.map((provider) => (
+                <button
+                  key={provider.provider}
+                  onClick={() => handleProviderSelect(provider)}
+                  className="p-4 rounded-lg border text-left hover-elevate transition-all"
+                  data-testid={`button-provider-${provider.provider}`}
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <ProviderLogo provider={provider.provider} color={provider.color} size="md" />
+                    <div className="min-w-0">
+                      <div className="font-medium truncate">{provider.displayName}</div>
+                      {provider.isPremium && (
+                        <Badge variant="secondary" className="text-xs">Premium</Badge>
+                      )}
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground line-clamp-2">
+                    {provider.description}
+                  </p>
+                </button>
+              ))}
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  );
+
+  const renderStep2 = () => {
+    if (!selectedProvider) return null;
+
+    return (
+      <div className="space-y-6">
+        <div className="text-center mb-4">
+          <h3 className="font-semibold">Étape 2 : Configurez la connexion</h3>
+          <p className="text-sm text-muted-foreground">Entrez vos identifiants {selectedProvider.displayName}</p>
+        </div>
+
+        <div className="flex items-center gap-4 p-4 rounded-lg bg-muted">
+          <ProviderLogo provider={selectedProvider.provider} color={selectedProvider.color} size="lg" />
+          <div className="min-w-0 flex-1">
+            <h3 className="font-semibold">{selectedProvider.displayName}</h3>
+            <p className="text-sm text-muted-foreground">{selectedProvider.description}</p>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="connection-name">Nom de la connexion</Label>
+            <Input
+              id="connection-name"
+              placeholder={`Mon ${selectedProvider.displayName}`}
+              value={connectionName}
+              onChange={(e) => setConnectionName(e.target.value)}
+              data-testid="input-connection-name"
+            />
+          </div>
+
+          {selectedProvider.authType === "api_key" ? (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="api-key" className="flex items-center gap-2">
+                  <Key className="h-4 w-4" />
+                  Clé API
+                </Label>
+                <Input
+                  id="api-key"
+                  type="password"
+                  placeholder="Entrez votre clé API"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  data-testid="input-api-key"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Trouvez votre clé API dans les paramètres de votre compte {selectedProvider.displayName}
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="api-secret">Secret API (optionnel)</Label>
+                <Input
+                  id="api-secret"
+                  type="password"
+                  placeholder="Entrez votre secret API si requis"
+                  value={apiSecret}
+                  onChange={(e) => setApiSecret(e.target.value)}
+                  data-testid="input-api-secret"
+                />
+              </div>
+
+              {testResult && !testResult.success && (
+                <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                  <span>{testResult.message}</span>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="p-6 rounded-lg border border-dashed text-center space-y-4">
+              <div className="flex justify-center">
+                <div className="p-3 rounded-full bg-muted">
+                  <Shield className="h-8 w-8 text-muted-foreground" />
+                </div>
+              </div>
+              <div>
+                <h4 className="font-medium mb-1">Autorisation OAuth requise</h4>
+                <p className="text-sm text-muted-foreground">
+                  Vous serez redirigé vers {selectedProvider.displayName} pour autoriser l'accès sécurisé à vos données.
+                </p>
+              </div>
+              <Button onClick={handleOAuthConnect} className="w-full">
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Autoriser {selectedProvider.displayName}
+              </Button>
+            </div>
+          )}
+        </div>
+
+        <DialogFooter className="gap-2">
+          <Button variant="outline" onClick={() => {
+            setApiKey("");
+            setApiSecret("");
+            setTestResult(null);
+            setWizardStep(1);
+          }}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Retour
+          </Button>
+          {selectedProvider.authType === "api_key" && (
+            <Button 
+              onClick={handleTestConnection}
+              disabled={!apiKey || isTesting}
+              data-testid="button-test-connection"
+            >
+              {isTesting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Test en cours...
+                </>
+              ) : (
+                <>
+                  <Link2 className="h-4 w-4 mr-2" />
+                  Tester la connexion
+                </>
+              )}
+            </Button>
+          )}
+        </DialogFooter>
+      </div>
+    );
+  };
+
+  const renderStep3 = () => {
+    if (!selectedProvider || !testResult?.success) return null;
+
+    return (
+      <div className="space-y-6">
+        <div className="text-center mb-4">
+          <h3 className="font-semibold">Étape 3 : Confirmez la connexion</h3>
+          <p className="text-sm text-muted-foreground">Vérifiez les détails et finalisez</p>
+        </div>
+
+        <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/20">
+          <div className="flex items-center gap-3 mb-3">
+            <CheckCircle className="h-5 w-5 text-green-500" />
+            <span className="font-medium text-green-700 dark:text-green-400">Connexion réussie!</span>
+          </div>
+          {testResult.accountInfo && (
+            <div className="text-sm space-y-1 text-muted-foreground">
+              {testResult.accountInfo.name && (
+                <p>Compte: <span className="text-foreground font-medium">{testResult.accountInfo.name}</span></p>
+              )}
+              {testResult.accountInfo.id && (
+                <p>ID: <span className="text-foreground">{testResult.accountInfo.id}</span></p>
+              )}
+              {testResult.accountInfo.plan && (
+                <p>Plan: <span className="text-foreground">{testResult.accountInfo.plan}</span></p>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="p-4 rounded-lg border space-y-4">
+          <div className="flex items-center gap-3">
+            <ProviderLogo provider={selectedProvider.provider} color={selectedProvider.color} size="md" />
+            <div>
+              <h4 className="font-medium">{connectionName}</h4>
+              <p className="text-sm text-muted-foreground">{selectedProvider.displayName}</p>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <h5 className="text-sm font-medium">Données synchronisées:</h5>
+            <div className="flex flex-wrap gap-1">
+              {selectedProvider.supportedEntities.map(entity => (
+                <Badge key={entity} variant="outline" className="text-xs capitalize">{entity}</Badge>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2 text-center text-sm">
+            <div className="p-2 rounded bg-muted">
+              <div className={selectedProvider.supportsWebhooks ? "text-green-500" : "text-muted-foreground"}>
+                {selectedProvider.supportsWebhooks ? "✓" : "✗"}
+              </div>
+              <div className="text-xs text-muted-foreground">Webhooks</div>
+            </div>
+            <div className="p-2 rounded bg-muted">
+              <div className={selectedProvider.supportsRealtime ? "text-green-500" : "text-muted-foreground"}>
+                {selectedProvider.supportsRealtime ? "✓" : "✗"}
+              </div>
+              <div className="text-xs text-muted-foreground">Temps réel</div>
+            </div>
+            <div className="p-2 rounded bg-muted">
+              <div className={selectedProvider.supportsBidirectional ? "text-green-500" : "text-muted-foreground"}>
+                {selectedProvider.supportsBidirectional ? "✓" : "✗"}
+              </div>
+              <div className="text-xs text-muted-foreground">Bidirectionnel</div>
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter className="gap-2">
+          <Button variant="outline" onClick={() => setWizardStep(2)}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Retour
+          </Button>
+          <Button 
+            onClick={handleCreateConnection}
+            disabled={createAndConnectMutation.isPending}
+            data-testid="button-confirm-connection"
+          >
+            {createAndConnectMutation.isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Création...
+              </>
+            ) : (
+              <>
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Créer la connexion
+              </>
+            )}
+          </Button>
+        </DialogFooter>
+      </div>
+    );
   };
 
   return (
@@ -290,142 +650,33 @@ export default function IntegrationConnections() {
             Gérez vos intégrations CRM et bases de données
           </p>
         </div>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
+          if (!open) resetWizard();
+          else setIsAddDialogOpen(true);
+        }}>
           <DialogTrigger asChild>
             <Button data-testid="button-add-connection">
               <Plus className="h-4 w-4 mr-2" />
               Ajouter une connexion
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Ajouter une intégration</DialogTitle>
+              <DialogTitle>Nouvelle intégration</DialogTitle>
               <DialogDescription>
-                Sélectionnez le service à connecter à SpeedAI
+                Connectez votre CRM ou base de données en quelques étapes
               </DialogDescription>
             </DialogHeader>
 
-            {!selectedProvider ? (
-              <div className="space-y-6">
-                {loadingProviders ? (
-                  <div className="flex items-center justify-center py-12">
-                    <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
-                    <span className="ml-2 text-muted-foreground">Chargement des intégrations...</span>
-                  </div>
-                ) : Object.keys(groupedProviders).length === 0 ? (
-                  <div className="text-center py-12 text-muted-foreground">
-                    Aucune intégration disponible
-                  </div>
-                ) : (
-                  Object.entries(groupedProviders).map(([category, categoryProviders]) => (
-                    <div key={category}>
-                      <h3 className="text-sm font-semibold mb-3 flex items-center gap-2 text-muted-foreground">
-                        <CategoryIcon category={category} />
-                        {categoryLabels[category] || category}
-                      </h3>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                        {categoryProviders.map((provider) => (
-                          <button
-                            key={provider.provider}
-                            onClick={() => setSelectedProvider(provider)}
-                            className="p-4 rounded-lg border text-left hover-elevate transition-all"
-                            data-testid={`button-provider-${provider.provider}`}
-                          >
-                            <div className="flex items-center gap-3 mb-2">
-                              <ProviderLogo provider={provider.provider} color={provider.color} size="md" />
-                              <div className="min-w-0">
-                                <div className="font-medium truncate">{provider.displayName}</div>
-                                {provider.isPremium && (
-                                  <Badge variant="secondary" className="text-xs">Premium</Badge>
-                                )}
-                              </div>
-                            </div>
-                            <p className="text-xs text-muted-foreground line-clamp-2">
-                              {provider.description}
-                            </p>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="flex items-center gap-4 p-4 rounded-lg bg-muted">
-                  <ProviderLogo provider={selectedProvider.provider} color={selectedProvider.color} size="lg" />
-                  <div className="min-w-0 flex-1">
-                    <h3 className="font-semibold">{selectedProvider.displayName}</h3>
-                    <p className="text-sm text-muted-foreground">{selectedProvider.description}</p>
-                  </div>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="ml-auto"
-                    onClick={() => setSelectedProvider(null)}
-                  >
-                    Changer
-                  </Button>
-                </div>
+            <StepIndicator />
 
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="connection-name">Nom de la connexion</Label>
-                    <Input
-                      id="connection-name"
-                      placeholder={`Mon ${selectedProvider.displayName}`}
-                      value={connectionName}
-                      onChange={(e) => setConnectionName(e.target.value)}
-                      data-testid="input-connection-name"
-                    />
-                  </div>
-
-                  <div className="p-4 rounded-lg border space-y-3">
-                    <h4 className="font-medium">Fonctionnalités</h4>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div className="flex items-center gap-2">
-                        <Badge variant={selectedProvider.supportsWebhooks ? "default" : "secondary"}>
-                          {selectedProvider.supportsWebhooks ? "✓" : "✗"} Webhooks
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant={selectedProvider.supportsRealtime ? "default" : "secondary"}>
-                          {selectedProvider.supportsRealtime ? "✓" : "✗"} Temps réel
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant={selectedProvider.supportsBidirectional ? "default" : "secondary"}>
-                          {selectedProvider.supportsBidirectional ? "✓" : "✗"} Bidirectionnel
-                        </Badge>
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {selectedProvider.supportedEntities.map(entity => (
-                        <Badge key={entity} variant="outline" className="text-xs capitalize">{entity}</Badge>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setSelectedProvider(null)}>
-                    Retour
-                  </Button>
-                  <Button 
-                    onClick={handleCreateConnection}
-                    disabled={!connectionName || createConnectionMutation.isPending}
-                    data-testid="button-create-connection"
-                  >
-                    {createConnectionMutation.isPending ? "Création..." : "Créer la connexion"}
-                  </Button>
-                </DialogFooter>
-              </div>
-            )}
+            {wizardStep === 1 && renderStep1()}
+            {wizardStep === 2 && renderStep2()}
+            {wizardStep === 3 && renderStep3()}
           </DialogContent>
         </Dialog>
       </div>
 
-      {/* Existing Connections */}
       {loadingConnections ? (
         <div className="grid gap-4 md:grid-cols-2">
           {[...Array(2)].map((_, i) => (
@@ -459,56 +710,6 @@ export default function IntegrationConnections() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {connection.status === "pending" && connection.authType === "api_key" && (
-                    <div className="p-4 rounded-lg border border-dashed space-y-3">
-                      <h4 className="font-medium flex items-center gap-2">
-                        <Key className="h-4 w-4" />
-                        Configurer les identifiants
-                      </h4>
-                      <div className="space-y-2">
-                        <Input
-                          placeholder="Clé API"
-                          type="password"
-                          value={apiKeyInput}
-                          onChange={(e) => setApiKeyInput(e.target.value)}
-                          data-testid="input-api-key"
-                        />
-                        <Input
-                          placeholder="Secret API (optionnel)"
-                          type="password"
-                          value={apiSecretInput}
-                          onChange={(e) => setApiSecretInput(e.target.value)}
-                          data-testid="input-api-secret"
-                        />
-                        <Button 
-                          onClick={() => connectApiKeyMutation.mutate({ 
-                            id: connection.id, 
-                            apiKey: apiKeyInput, 
-                            apiSecret: apiSecretInput || undefined 
-                          })}
-                          disabled={!apiKeyInput || connectApiKeyMutation.isPending}
-                          className="w-full"
-                          data-testid="button-connect-api-key"
-                        >
-                          <Link2 className="h-4 w-4 mr-2" />
-                          {connectApiKeyMutation.isPending ? "Connexion..." : "Connecter"}
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-
-                  {connection.status === "pending" && connection.authType === "oauth2" && (
-                    <div className="p-4 rounded-lg border border-dashed text-center">
-                      <Button className="w-full">
-                        <ExternalLink className="h-4 w-4 mr-2" />
-                        Autoriser {provider?.displayName}
-                      </Button>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        Vous serez redirigé vers {provider?.displayName} pour autoriser l'accès
-                      </p>
-                    </div>
-                  )}
-
                   {connection.status === "active" && (
                     <div className="space-y-3">
                       <div className="flex items-center justify-between text-sm">
@@ -537,6 +738,13 @@ export default function IntegrationConnections() {
                       {connection.lastError}
                     </div>
                   )}
+
+                  {connection.status === "pending" && (
+                    <div className="p-3 rounded-lg bg-muted text-sm text-muted-foreground text-center">
+                      <Clock className="h-4 w-4 inline mr-2" />
+                      Configuration en attente
+                    </div>
+                  )}
                 </CardContent>
                 <CardFooter className="gap-2">
                   {connection.status === "active" && (
@@ -547,7 +755,7 @@ export default function IntegrationConnections() {
                       disabled={triggerSyncMutation.isPending}
                       data-testid={`button-sync-${connection.id}`}
                     >
-                      <RefreshCw className="h-4 w-4 mr-1" />
+                      <RefreshCw className={`h-4 w-4 mr-1 ${triggerSyncMutation.isPending ? 'animate-spin' : ''}`} />
                       Sync
                     </Button>
                   )}

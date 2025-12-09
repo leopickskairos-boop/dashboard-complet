@@ -53,6 +53,133 @@ router.get("/providers/category/:category", requireAuth, async (req: Request, re
   }
 });
 
+// ===== TEST CREDENTIALS (without creating connection) =====
+
+// Test credentials before creating connection
+router.post("/test-credentials", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const { provider, apiKey, apiSecret, instanceUrl } = req.body;
+    
+    if (!provider || !apiKey) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Provider et clé API requis" 
+      });
+    }
+    
+    // Check if provider is supported
+    if (!isProviderSupported(provider)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Le provider ${provider} n'est pas encore supporté pour les tests de connexion` 
+      });
+    }
+    
+    // Test the connection directly with credentials
+    const result = await integrationService.testCredentials(provider, {
+      apiKey,
+      apiSecret,
+      instanceUrl
+    });
+    
+    res.json(result);
+  } catch (error) {
+    console.error("Error testing credentials:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Erreur lors du test des identifiants" 
+    });
+  }
+});
+
+// ===== CREATE AND CONNECT (one-step) =====
+
+// Create connection and connect with credentials in one step
+router.post("/connections/create-and-connect", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const userId = getUserId(req);
+    const { provider, name, authType, apiKey, apiSecret, instanceUrl } = req.body;
+    
+    if (!provider || !name) {
+      return res.status(400).json({ error: "Provider et nom requis" });
+    }
+    
+    // Check if connection already exists for this provider
+    const existing = await storage.getExternalConnectionByProvider(userId, provider);
+    if (existing) {
+      return res.status(400).json({ error: "Une connexion existe déjà pour ce provider" });
+    }
+    
+    // Create the connection with credentials
+    const connection = await storage.createExternalConnection({
+      userId,
+      provider,
+      name,
+      authType: authType || "api_key",
+      apiKey,
+      apiSecret,
+      instanceUrl,
+      status: "pending"
+    });
+    
+    // If we have API credentials, test and activate
+    if (apiKey && isProviderSupported(provider)) {
+      const testResult = await integrationService.testConnection(connection.id, userId);
+      
+      if (testResult.success) {
+        await storage.updateExternalConnection(connection.id, userId, {
+          status: "active",
+          connectedAt: new Date(),
+          accountId: testResult.accountInfo?.id,
+          lastError: null
+        });
+        
+        return res.status(201).json({
+          success: true,
+          message: "Connexion créée et activée",
+          connection: {
+            ...connection,
+            status: "active",
+            apiKey: "[SECURED]",
+            apiSecret: apiSecret ? "[SECURED]" : null
+          },
+          accountInfo: testResult.accountInfo
+        });
+      } else {
+        await storage.updateExternalConnection(connection.id, userId, {
+          status: "error",
+          lastError: testResult.message
+        });
+        
+        return res.status(400).json({
+          success: false,
+          message: testResult.message,
+          connection: {
+            ...connection,
+            status: "error",
+            apiKey: "[SECURED]",
+            apiSecret: apiSecret ? "[SECURED]" : null
+          }
+        });
+      }
+    }
+    
+    // If no credentials or unsupported provider, just create pending connection
+    res.status(201).json({
+      success: true,
+      message: "Connexion créée (configuration requise)",
+      connection: {
+        ...connection,
+        apiKey: connection.apiKey ? "[SECURED]" : null,
+        apiSecret: connection.apiSecret ? "[SECURED]" : null
+      }
+    });
+  } catch (error) {
+    console.error("Error creating and connecting:", error);
+    res.status(500).json({ error: "Erreur lors de la création de la connexion" });
+  }
+});
+
 // ===== EXTERNAL CONNECTIONS =====
 
 // Get all connections for user
