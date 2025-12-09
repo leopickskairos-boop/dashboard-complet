@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from "express";
 import { storage } from "./storage";
 import { createConnectionSchema, User } from "@shared/schema";
 import { z } from "zod";
+import crypto from "crypto";
 import { requireAuth } from "./auth";
 import { integrationService } from "./integrations/integration-service";
 import { isProviderSupported, getSupportedProviders } from "./integrations/adapter-factory";
@@ -1129,6 +1130,218 @@ router.get("/oauth-status", requireAuth, async (req: Request, res: Response) => 
     zoho: false,
     google: false
   });
+});
+
+// ===== WEBHOOK CONNECTIONS =====
+
+// Temporary server-side storage for pending webhook credentials
+// Key: pendingToken, Value: { userId, webhookId, webhookSecret, expiresAt }
+const pendingWebhookCredentials = new Map<string, {
+  userId: string;
+  webhookId: string;
+  webhookSecret: string;
+  expiresAt: Date;
+}>();
+
+// Cleanup expired entries every 5 minutes
+setInterval(() => {
+  const now = new Date();
+  Array.from(pendingWebhookCredentials.entries()).forEach(([key, value]) => {
+    if (value.expiresAt < now) {
+      pendingWebhookCredentials.delete(key);
+    }
+  });
+}, 5 * 60 * 1000);
+
+// Generate webhook credentials server-side and store temporarily (secure)
+router.post("/connections/generate-webhook-credentials", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const userId = getUserId(req);
+    
+    // Generate secure credentials
+    const webhookId = `wh_${crypto.randomBytes(16).toString('hex')}`;
+    const webhookSecret = `whsec_${crypto.randomBytes(32).toString('hex')}`;
+    const pendingToken = crypto.randomBytes(32).toString('hex');
+    
+    const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+      ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+      : `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`;
+    
+    const webhookUrl = `${baseUrl}/api/integrations/webhooks/incoming/${webhookId}`;
+    
+    // Store credentials temporarily (expires in 30 minutes)
+    pendingWebhookCredentials.set(pendingToken, {
+      userId,
+      webhookId,
+      webhookSecret,
+      expiresAt: new Date(Date.now() + 30 * 60 * 1000)
+    });
+    
+    res.json({
+      pendingToken,  // Client must send this to create-webhook
+      webhookUrl,
+      webhookSecret  // Show once for user to copy
+    });
+  } catch (error) {
+    console.error("Error generating webhook credentials:", error);
+    res.status(500).json({ error: "Erreur lors de la génération des identifiants webhook" });
+  }
+});
+
+// Create webhook connection using pre-generated credentials from pendingToken
+router.post("/connections/create-webhook", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const userId = getUserId(req);
+    const { name, pendingToken } = req.body;
+    
+    if (!name || typeof name !== 'string' || name.trim().length === 0) {
+      return res.status(400).json({ error: "Nom de connexion requis" });
+    }
+    
+    if (!pendingToken) {
+      return res.status(400).json({ error: "Token de confirmation requis" });
+    }
+    
+    // Retrieve and validate pre-generated credentials
+    const pending = pendingWebhookCredentials.get(pendingToken);
+    
+    if (!pending) {
+      return res.status(400).json({ error: "Token invalide ou expiré. Veuillez regénérer les identifiants." });
+    }
+    
+    if (pending.userId !== userId) {
+      return res.status(403).json({ error: "Token non autorisé pour cet utilisateur." });
+    }
+    
+    if (pending.expiresAt < new Date()) {
+      pendingWebhookCredentials.delete(pendingToken);
+      return res.status(400).json({ error: "Token expiré. Veuillez regénérer les identifiants." });
+    }
+    
+    // Delete the pending token immediately to prevent reuse
+    pendingWebhookCredentials.delete(pendingToken);
+    
+    const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+      ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+      : `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`;
+    
+    const webhookUrl = `${baseUrl}/api/integrations/webhooks/incoming/${pending.webhookId}`;
+    
+    // Create the connection using stored credentials
+    const connection = await storage.createExternalConnection({
+      userId,
+      provider: "webhook",
+      name: name.trim(),
+      authType: "webhook_secret",
+      webhookSecret: pending.webhookSecret,
+      webhookUrl,
+      accountId: pending.webhookId,
+      status: "active",
+      connectedAt: new Date()
+    });
+    
+    res.status(201).json({
+      success: true,
+      message: "Webhook configuré avec succès",
+      connection: {
+        ...connection,
+        webhookSecret: "[SECURED]"
+      },
+      webhookEndpoint: webhookUrl,
+      webhookId: pending.webhookId
+      // Note: webhookSecret not returned here - user should have copied it from generate step
+    });
+  } catch (error) {
+    console.error("Error creating webhook connection:", error);
+    res.status(500).json({ error: "Erreur lors de la création du webhook" });
+  }
+});
+
+// ===== INCOMING WEBHOOK ENDPOINT (NO AUTH - receives external data) =====
+
+// Receive incoming webhook data from external systems
+router.post("/webhooks/incoming/:webhookId", async (req: Request, res: Response) => {
+  try {
+    const { webhookId } = req.params;
+    const signature = req.headers['x-speedai-signature'] as string || req.headers['x-webhook-signature'] as string;
+    const payload = req.body;
+    
+    console.log(`[Webhook] Received data for webhook: ${webhookId}`);
+    
+    // Find the connection by webhookId (stored in accountId)
+    const connections = await storage.getAllActiveConnections();
+    const connection = connections.find((c: any) => c.accountId === webhookId && c.provider === "webhook");
+    
+    if (!connection) {
+      console.warn(`[Webhook] Unknown webhook ID: ${webhookId}`);
+      return res.status(404).json({ error: "Webhook not found" });
+    }
+    
+    // Verify signature (required if webhook has a secret configured)
+    if (connection.webhookSecret) {
+      if (!signature) {
+        console.warn(`[Webhook] Missing signature for webhook: ${webhookId}`);
+        return res.status(401).json({ error: "Missing signature header (X-SpeedAI-Signature)" });
+      }
+      
+      try {
+        // Note: HMAC is computed on JSON.stringify(payload) - external systems must sign the same format
+        const payloadString = typeof payload === 'string' ? payload : JSON.stringify(payload);
+        const expectedSignature = crypto
+          .createHmac('sha256', connection.webhookSecret)
+          .update(payloadString)
+          .digest('hex');
+        
+        // Extract signature value (handle "sha256=" prefix)
+        const providedSig = signature.startsWith('sha256=') ? signature.slice(7) : signature;
+        
+        // Validate signature format before comparison
+        if (!/^[a-fA-F0-9]{64}$/.test(providedSig)) {
+          console.warn(`[Webhook] Malformed signature format for webhook: ${webhookId}`);
+          return res.status(401).json({ error: "Invalid signature format" });
+        }
+        
+        // Use timing-safe comparison to prevent timing attacks
+        const expectedBuffer = Buffer.from(expectedSignature, 'hex');
+        const providedBuffer = Buffer.from(providedSig, 'hex');
+        
+        if (!crypto.timingSafeEqual(expectedBuffer, providedBuffer)) {
+          console.warn(`[Webhook] Invalid signature for webhook: ${webhookId}`);
+          return res.status(401).json({ error: "Invalid signature" });
+        }
+      } catch (sigError) {
+        console.warn(`[Webhook] Signature verification error for webhook: ${webhookId}`, sigError);
+        return res.status(401).json({ error: "Invalid signature" });
+      }
+    }
+    
+    // Log the webhook data
+    console.log(`[Webhook] Processing data from ${connection.name}:`, {
+      type: payload.type || payload.event || 'unknown',
+      data: payload.data ? 'present' : 'none'
+    });
+    
+    // Update last sync time
+    await storage.updateExternalConnection(connection.id, connection.userId, {
+      lastSyncAt: new Date()
+    });
+    
+    // Process the webhook data based on type
+    const entityType = payload.type || payload.event || 'custom';
+    const records = Array.isArray(payload.data) ? payload.data : [payload.data || payload];
+    
+    // Log received data for now (can be extended to store in external_orders, external_contacts, etc.)
+    console.log(`[Webhook] Processed ${records.length} records of type: ${entityType}`);
+    
+    res.json({ 
+      success: true, 
+      message: "Webhook received",
+      processed: records.length 
+    });
+  } catch (error) {
+    console.error("Error processing webhook:", error);
+    res.status(500).json({ error: "Error processing webhook" });
+  }
 });
 
 export default router;

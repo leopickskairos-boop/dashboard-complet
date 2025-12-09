@@ -32,7 +32,10 @@ import {
   ArrowLeft,
   ArrowRight,
   Shield,
-  Loader2
+  Loader2,
+  Copy,
+  Webhook,
+  RotateCcw
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
@@ -185,6 +188,10 @@ export default function IntegrationConnections() {
   
   const [testResult, setTestResult] = useState<TestResult | null>(null);
   const [isTesting, setIsTesting] = useState(false);
+  
+  const [webhookUrl, setWebhookUrl] = useState("");
+  const [webhookSecret, setWebhookSecret] = useState("");
+  const [selectedEntities, setSelectedEntities] = useState<string[]>(["contacts", "orders"]);
 
   const { data: providers, isLoading: loadingProviders } = useQuery<Provider[]>({
     queryKey: ["/api/integrations/providers"],
@@ -210,6 +217,34 @@ export default function IntegrationConnections() {
       toast({ 
         title: "Connexion créée avec succès!", 
         description: `${selectedProvider?.displayName} est maintenant connecté à SpeedAI.`
+      });
+      resetWizard();
+    },
+    onError: (error: Error) => {
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+    }
+  });
+
+  const [createdWebhookData, setCreatedWebhookData] = useState<{
+    webhookUrl: string;
+    webhookSecret: string;
+  } | null>(null);
+
+  const createWebhookMutation = useMutation({
+    mutationFn: async (data: { name: string; pendingToken: string }) => {
+      const response = await apiRequest("POST", "/api/integrations/connections/create-webhook", data);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/integrations/connections"] });
+      // Store the credentials for the user to copy
+      setCreatedWebhookData({
+        webhookUrl: data.webhookEndpoint,
+        webhookSecret: data.webhookSecret
+      });
+      toast({ 
+        title: "Webhook configuré avec succès!", 
+        description: "Important: Copiez le secret maintenant, il ne sera plus affiché."
       });
       resetWizard();
     },
@@ -273,16 +308,51 @@ export default function IntegrationConnections() {
     setApiSecret("");
     setTestResult(null);
     setIsTesting(false);
+    setWebhookUrl("");
+    setWebhookSecret("");
+    setWebhookPendingToken("");
+    setSelectedEntities(["contacts", "orders"]);
   };
 
-  const handleProviderSelect = (provider: Provider) => {
+  const [webhookPendingToken, setWebhookPendingToken] = useState("");
+  const [isGeneratingWebhook, setIsGeneratingWebhook] = useState(false);
+
+  const generateWebhookCredentials = async () => {
+    setIsGeneratingWebhook(true);
+    try {
+      const response = await apiRequest("POST", "/api/integrations/connections/generate-webhook-credentials");
+      const data = await response.json();
+      setWebhookPendingToken(data.pendingToken);
+      setWebhookUrl(data.webhookUrl);
+      setWebhookSecret(data.webhookSecret);
+    } catch (error) {
+      console.error("Error generating webhook credentials:", error);
+      toast({ 
+        title: "Erreur", 
+        description: "Impossible de générer les identifiants webhook", 
+        variant: "destructive" 
+      });
+    } finally {
+      setIsGeneratingWebhook(false);
+    }
+  };
+
+  const handleProviderSelect = async (provider: Provider) => {
     setSelectedProvider(provider);
     setConnectionName(`Mon ${provider.displayName}`);
     setApiKey("");
     setApiSecret("");
     setTestResult(null);
     setIsTesting(false);
+    setWebhookUrl("");
+    setWebhookSecret("");
+    setWebhookPendingToken("");
+    
     setWizardStep(2);
+    
+    if (provider.authType === "webhook_secret") {
+      await generateWebhookCredentials();
+    }
   };
 
   const handleTestConnection = async () => {
@@ -420,7 +490,209 @@ export default function IntegrationConnections() {
     </div>
   );
 
-  const renderStep2 = () => {
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    toast({ title: "Copié!", description: `${label} copié dans le presse-papier` });
+  };
+
+  const handleWebhookConfirm = () => {
+    createWebhookMutation.mutate({
+      name: connectionName,
+      pendingToken: webhookPendingToken
+    });
+  };
+
+  const renderStep2Webhook = () => {
+    if (!selectedProvider) return null;
+
+    const entityOptions = [
+      { id: "contacts", label: "Contacts", description: "Nouveaux clients et mises à jour" },
+      { id: "orders", label: "Commandes", description: "Nouvelles commandes et modifications" },
+      { id: "reservations", label: "Réservations", description: "Réservations et annulations" },
+      { id: "payments", label: "Paiements", description: "Transactions financières" },
+      { id: "calls", label: "Appels", description: "Logs d'appels téléphoniques" },
+    ];
+
+    return (
+      <div className="space-y-6">
+        <div className="text-center mb-4">
+          <h3 className="font-semibold">Étape 2 : Configurez le Webhook</h3>
+          <p className="text-sm text-muted-foreground">Copiez l'URL ci-dessous et configurez-la dans votre système externe</p>
+        </div>
+
+        <div className="flex items-center gap-4 p-4 rounded-lg bg-muted">
+          <div className="h-12 w-12 rounded-lg bg-[#C8B88A] flex items-center justify-center">
+            <Webhook className="h-6 w-6 text-white" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h3 className="font-semibold">{selectedProvider.displayName}</h3>
+            <p className="text-sm text-muted-foreground">{selectedProvider.description}</p>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="connection-name">Nom de la connexion</Label>
+            <Input
+              id="connection-name"
+              placeholder="Mon Webhook"
+              value={connectionName}
+              onChange={(e) => setConnectionName(e.target.value)}
+              data-testid="input-webhook-name"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <Link2 className="h-4 w-4" />
+              URL du Webhook
+            </Label>
+            <div className="flex gap-2">
+              {isGeneratingWebhook ? (
+                <div className="flex-1 h-9 flex items-center gap-2 px-3 rounded-md bg-muted">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="text-sm text-muted-foreground">Génération en cours...</span>
+                </div>
+              ) : (
+                <>
+                  <Input
+                    value={webhookUrl}
+                    readOnly
+                    className="font-mono text-xs bg-muted"
+                    data-testid="input-webhook-url"
+                  />
+                  <Button 
+                    size="icon" 
+                    variant="outline"
+                    onClick={() => copyToClipboard(webhookUrl, "URL du webhook")}
+                    disabled={!webhookUrl}
+                    data-testid="button-copy-webhook-url"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Copiez cette URL et configurez-la comme destination webhook dans votre système
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <Shield className="h-4 w-4" />
+              Secret de signature
+            </Label>
+            <div className="flex gap-2">
+              <Input
+                value={webhookSecret}
+                readOnly
+                type="password"
+                className="font-mono text-xs bg-muted"
+                data-testid="input-webhook-secret"
+              />
+              <Button 
+                size="icon" 
+                variant="outline"
+                onClick={() => copyToClipboard(webhookSecret, "Secret de signature")}
+                data-testid="button-copy-webhook-secret"
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+              <Button 
+                size="icon" 
+                variant="outline"
+                onClick={generateWebhookCredentials}
+                title="Régénérer les identifiants"
+                data-testid="button-regenerate-webhook"
+              >
+                <RotateCcw className="h-4 w-4" />
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Utilisez ce secret pour valider les signatures des webhooks entrants
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <Label>Types de données à recevoir</Label>
+            <div className="grid gap-2">
+              {entityOptions.map((entity) => (
+                <div 
+                  key={entity.id}
+                  className="flex items-center gap-3 p-3 rounded-lg border hover-elevate cursor-pointer"
+                  onClick={() => {
+                    setSelectedEntities(prev => 
+                      prev.includes(entity.id) 
+                        ? prev.filter(e => e !== entity.id)
+                        : [...prev, entity.id]
+                    );
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedEntities.includes(entity.id)}
+                    onChange={() => {}}
+                    className="h-4 w-4 rounded border-gray-300"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">{entity.label}</p>
+                    <p className="text-xs text-muted-foreground">{entity.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
+            <div className="flex items-start gap-2 text-sm">
+              <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+              <div className="space-y-1">
+                <p className="font-medium text-amber-700 dark:text-amber-400">Instructions de configuration</p>
+                <ol className="list-decimal list-inside text-muted-foreground space-y-1 text-xs">
+                  <li>Copiez l'URL du webhook ci-dessus</li>
+                  <li>Allez dans les paramètres de votre système externe</li>
+                  <li>Configurez l'URL comme destination pour les webhooks</li>
+                  <li>Ajoutez le secret de signature si disponible</li>
+                  <li>Envoyez un événement test pour vérifier</li>
+                </ol>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter className="gap-2">
+          <Button variant="outline" onClick={() => {
+            setWebhookUrl("");
+            setWebhookSecret("");
+            setWizardStep(1);
+          }}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Retour
+          </Button>
+          <Button 
+            onClick={handleWebhookConfirm}
+            disabled={!connectionName || selectedEntities.length === 0 || createWebhookMutation.isPending}
+            data-testid="button-confirm-webhook"
+          >
+            {createWebhookMutation.isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Création...
+              </>
+            ) : (
+              <>
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Activer le Webhook
+              </>
+            )}
+          </Button>
+        </DialogFooter>
+      </div>
+    );
+  };
+
+  const renderStep2ApiKey = () => {
     if (!selectedProvider) return null;
 
     return (
@@ -450,62 +722,59 @@ export default function IntegrationConnections() {
             />
           </div>
 
-          {/* API Key input - show for api_key auth OR for providers that support both */}
-          <>
-            <div className="space-y-2">
-              <Label htmlFor="api-key" className="flex items-center gap-2">
-                <Key className="h-4 w-4" />
-                Clé API {selectedProvider.authType === "oauth2" && "(optionnel)"}
-              </Label>
-              <Input
-                id="api-key"
-                type="password"
-                placeholder={`Entrez votre clé API ${selectedProvider.displayName}`}
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                data-testid="input-api-key"
-              />
-              <p className="text-xs text-muted-foreground">
-                {selectedProvider.provider === "hubspot" 
-                  ? "Trouvez votre clé API dans HubSpot → Paramètres → Intégrations → Clé API privée"
-                  : `Trouvez votre clé API dans les paramètres de votre compte ${selectedProvider.displayName}`
-                }
-              </p>
+          <div className="space-y-2">
+            <Label htmlFor="api-key" className="flex items-center gap-2">
+              <Key className="h-4 w-4" />
+              Clé API {selectedProvider.authType === "oauth2" && "(optionnel)"}
+            </Label>
+            <Input
+              id="api-key"
+              type="password"
+              placeholder={`Entrez votre clé API ${selectedProvider.displayName}`}
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              data-testid="input-api-key"
+            />
+            <p className="text-xs text-muted-foreground">
+              {selectedProvider.provider === "hubspot" 
+                ? "Trouvez votre clé API dans HubSpot → Paramètres → Intégrations → Clé API privée"
+                : `Trouvez votre clé API dans les paramètres de votre compte ${selectedProvider.displayName}`
+              }
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="api-secret">Secret API (optionnel)</Label>
+            <Input
+              id="api-secret"
+              type="password"
+              placeholder="Entrez votre secret API si requis"
+              value={apiSecret}
+              onChange={(e) => setApiSecret(e.target.value)}
+              data-testid="input-api-secret"
+            />
+          </div>
+
+          {testResult && !testResult.success && (
+            <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+              <span>{testResult.message}</span>
             </div>
+          )}
 
-            <div className="space-y-2">
-              <Label htmlFor="api-secret">Secret API (optionnel)</Label>
-              <Input
-                id="api-secret"
-                type="password"
-                placeholder="Entrez votre secret API si requis"
-                value={apiSecret}
-                onChange={(e) => setApiSecret(e.target.value)}
-                data-testid="input-api-secret"
-              />
+          {/* OAuth option for providers that support it */}
+          {selectedProvider.authType === "oauth2" && (
+            <div className="p-4 rounded-lg border border-dashed space-y-3">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Shield className="h-4 w-4" />
+                <span>Ou connectez-vous via OAuth (recommandé)</span>
+              </div>
+              <Button onClick={handleOAuthConnect} variant="outline" className="w-full">
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Autoriser {selectedProvider.displayName}
+              </Button>
             </div>
-
-            {testResult && !testResult.success && (
-              <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm flex items-start gap-2">
-                <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
-                <span>{testResult.message}</span>
-              </div>
-            )}
-
-            {/* OAuth option for providers that support it */}
-            {selectedProvider.authType === "oauth2" && (
-              <div className="p-4 rounded-lg border border-dashed space-y-3">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Shield className="h-4 w-4" />
-                  <span>Ou connectez-vous via OAuth (recommandé)</span>
-                </div>
-                <Button onClick={handleOAuthConnect} variant="outline" className="w-full">
-                  <ExternalLink className="h-4 w-4 mr-2" />
-                  Autoriser {selectedProvider.displayName}
-                </Button>
-              </div>
-            )}
-          </>
+          )}
         </div>
 
         <DialogFooter className="gap-2">
@@ -538,6 +807,16 @@ export default function IntegrationConnections() {
         </DialogFooter>
       </div>
     );
+  };
+
+  const renderStep2 = () => {
+    if (!selectedProvider) return null;
+    
+    if (selectedProvider.authType === "webhook_secret") {
+      return renderStep2Webhook();
+    }
+    
+    return renderStep2ApiKey();
   };
 
   const renderStep3 = () => {
