@@ -18,7 +18,16 @@ type NotificationType =
   | 'subscription_renewed'
   | 'subscription_created'
   | 'subscription_expired'
-  | 'subscription_expiring_soon';
+  | 'subscription_expiring_soon'
+  | 'monthly_report_ready'
+  | 'review_received'
+  | 'review_negative'
+  | 'campaign_sent'
+  | 'automation_triggered'
+  | 'guarantee_noshow_charged'
+  | 'guarantee_card_validated'
+  | 'integration_sync_complete'
+  | 'integration_error';
 
 type Notification = {
   id: string;
@@ -41,6 +50,15 @@ const notificationTypeLabels: Record<NotificationType, string> = {
   subscription_created: "Abonnement créé",
   subscription_expired: "Abonnement expiré",
   subscription_expiring_soon: "Abonnement bientôt expiré",
+  monthly_report_ready: "Rapport mensuel",
+  review_received: "Nouvel avis",
+  review_negative: "Avis négatif",
+  campaign_sent: "Campagne envoyée",
+  automation_triggered: "Automatisation déclenchée",
+  guarantee_noshow_charged: "No-show facturé",
+  guarantee_card_validated: "Carte validée",
+  integration_sync_complete: "Synchronisation terminée",
+  integration_error: "Erreur d'intégration",
 };
 
 const notificationTypeVariants: Record<NotificationType, "default" | "secondary" | "destructive"> = {
@@ -53,6 +71,15 @@ const notificationTypeVariants: Record<NotificationType, "default" | "secondary"
   subscription_created: "default",
   subscription_expired: "destructive",
   subscription_expiring_soon: "destructive",
+  monthly_report_ready: "default",
+  review_received: "default",
+  review_negative: "destructive",
+  campaign_sent: "default",
+  automation_triggered: "secondary",
+  guarantee_noshow_charged: "destructive",
+  guarantee_card_validated: "default",
+  integration_sync_complete: "default",
+  integration_error: "destructive",
 };
 
 export default function Notifications() {
@@ -209,6 +236,15 @@ export default function Notifications() {
                   <SelectItem value="subscription_created">Nouveaux abonnements</SelectItem>
                   <SelectItem value="subscription_expired">Abonnements expirés</SelectItem>
                   <SelectItem value="subscription_expiring_soon">Expirations proches</SelectItem>
+                  <SelectItem value="monthly_report_ready">Rapports mensuels</SelectItem>
+                  <SelectItem value="review_received">Avis reçus</SelectItem>
+                  <SelectItem value="review_negative">Avis négatifs</SelectItem>
+                  <SelectItem value="campaign_sent">Campagnes envoyées</SelectItem>
+                  <SelectItem value="automation_triggered">Automatisations</SelectItem>
+                  <SelectItem value="guarantee_noshow_charged">No-shows facturés</SelectItem>
+                  <SelectItem value="guarantee_card_validated">Cartes validées</SelectItem>
+                  <SelectItem value="integration_sync_complete">Synchros terminées</SelectItem>
+                  <SelectItem value="integration_error">Erreurs intégration</SelectItem>
                 </SelectContent>
               </Select>
             </div>

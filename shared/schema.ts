@@ -14,7 +14,19 @@ export const notificationTypeEnum = pgEnum('notification_type', [
   'subscription_created',
   'subscription_expired',
   'subscription_expiring_soon',
-  'monthly_report_ready'
+  'monthly_report_ready',
+  // Reviews & Reputation
+  'review_received',
+  'review_negative',
+  // Marketing
+  'campaign_sent',
+  'automation_triggered',
+  // CB Guarantee
+  'guarantee_noshow_charged',
+  'guarantee_card_validated',
+  // Integrations
+  'integration_sync_complete',
+  'integration_error'
 ]);
 
 // Push notification type enum for PWA notifications
@@ -377,6 +389,15 @@ export const notificationPreferences = pgTable("notification_preferences", {
   failedCallsEnabled: boolean("failed_calls_enabled").notNull().default(true),
   activeCallEnabled: boolean("active_call_enabled").notNull().default(true),
   subscriptionAlertsEnabled: boolean("subscription_alerts_enabled").notNull().default(true),
+  // Reviews & Reputation
+  reviewsEnabled: boolean("reviews_enabled").notNull().default(true),
+  negativeReviewsEnabled: boolean("negative_reviews_enabled").notNull().default(true),
+  // Marketing
+  marketingEnabled: boolean("marketing_enabled").notNull().default(true),
+  // CB Guarantee
+  guaranteeEnabled: boolean("guarantee_enabled").notNull().default(true),
+  // Integrations
+  integrationsEnabled: boolean("integrations_enabled").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
