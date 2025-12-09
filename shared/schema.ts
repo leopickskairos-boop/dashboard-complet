@@ -755,9 +755,22 @@ export const clientGuaranteeConfig = pgTable("client_guarantee_config", {
   logoUrl: text("logo_url"),
   brandColor: text("brand_color").default("#C8B88A"), // SpeedAI gold
   
-  // Email expéditeur
+  // Email expéditeur (SMTP Gmail du client)
   gmailSenderEmail: text("gmail_sender_email"),
   gmailSenderName: text("gmail_sender_name"),
+  gmailAppPassword: text("gmail_app_password"), // App Password pour Gmail SMTP
+  
+  // SMS (optionnel - utilise Twilio du client ou notre propre config)
+  smsEnabled: boolean("sms_enabled").notNull().default(false),
+  twilioAccountSid: text("twilio_account_sid"),
+  twilioAuthToken: text("twilio_auth_token"),
+  twilioFromNumber: text("twilio_from_number"),
+  
+  // Automatisation
+  autoSendEmailOnCreate: boolean("auto_send_email_on_create").notNull().default(true), // Email demande CB
+  autoSendSmsOnCreate: boolean("auto_send_sms_on_create").notNull().default(false), // SMS demande CB
+  autoSendEmailOnValidation: boolean("auto_send_email_on_validation").notNull().default(true), // Email confirmation
+  autoSendSmsOnValidation: boolean("auto_send_sms_on_validation").notNull().default(false), // SMS confirmation
   
   // CGV
   termsUrl: text("terms_url"),
