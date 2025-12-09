@@ -748,7 +748,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
               
               console.log('✅ [Stripe Webhook] Session validated:', guaranteeSession.id);
               
-              // Call N8N webhook to trigger Calendar + confirmation workflow
+              // Get config for sending confirmation notifications
+              const config = await storage.getGuaranteeConfig(guaranteeSession.userId);
+              
+              // Send confirmation email if enabled
+              if (config && config.autoSendEmailOnValidation !== false && guaranteeSession.customerEmail && isEmailConfigured(config)) {
+                try {
+                  const emailResult = await sendConfirmationEmail({
+                    config,
+                    session: updatedSession,
+                  });
+                  console.log(`📧 [Stripe Webhook] Confirmation email ${emailResult.success ? 'sent' : 'failed'} for ${guaranteeSession.customerEmail}`);
+                } catch (emailError) {
+                  console.error('[Stripe Webhook] Error sending confirmation email:', emailError);
+                }
+              }
+              
+              // Send confirmation SMS if enabled
+              if (config && config.autoSendSmsOnValidation && guaranteeSession.customerPhone && isSmsConfigured(config)) {
+                try {
+                  const smsResult = await sendGuaranteeConfirmationSms(
+                    guaranteeSession.customerPhone,
+                    guaranteeSession.customerName,
+                    config.companyName || 'Établissement',
+                    new Date(guaranteeSession.reservationDate),
+                    guaranteeSession.reservationTime,
+                    guaranteeSession.nbPersons,
+                    config
+                  );
+                  console.log(`📱 [Stripe Webhook] Confirmation SMS ${smsResult.success ? 'sent' : 'failed'} for ${guaranteeSession.customerPhone}`);
+                } catch (smsError) {
+                  console.error('[Stripe Webhook] Error sending confirmation SMS:', smsError);
+                }
+              }
+              
+              // Call N8N webhook to trigger Calendar booking (now that card is validated)
               const N8N_WEBHOOK_CB_VALIDEE = process.env.N8N_WEBHOOK_CB_VALIDEE;
               
               if (N8N_WEBHOOK_CB_VALIDEE) {
@@ -763,11 +797,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
                       customerEmail: guaranteeSession.customerEmail,
                       customerPhone: guaranteeSession.customerPhone,
                       nbPersons: guaranteeSession.nbPersons,
+                      reservationDate: guaranteeSession.reservationDate,
+                      reservationTime: guaranteeSession.reservationTime,
                       event: 'cb_validated',
+                      action: 'book_calendar', // Signal to N8N to book the calendar entry
                     }),
                   });
                   
-                  console.log('✅ [N8N] Webhook called for CB validation:', guaranteeSession.id, 'Response:', n8nResponse.status);
+                  console.log('✅ [N8N] Webhook called for CB validation + calendar booking:', guaranteeSession.id, 'Response:', n8nResponse.status);
                 } catch (n8nError) {
                   console.error('❌ [N8N] Error calling webhook:', n8nError);
                   // Don't fail the Stripe webhook - N8N call is non-blocking
