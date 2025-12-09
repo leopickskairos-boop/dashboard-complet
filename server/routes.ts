@@ -42,6 +42,7 @@ import {
 } from "./notifications";
 import { pushNotificationService } from "./push-notification.service";
 import { registerMarketingRoutes } from "./marketing-routes";
+import integrationRoutes from "./integration-routes";
 
 // Extend Express Request type to include user property
 declare global {
@@ -5888,6 +5889,9 @@ Format: Utilise des bullet points et reste concis (max 200 mots).`;
 
   // ===== MARKETING MODULE ROUTES =====
   registerMarketingRoutes(app);
+  
+  // Register integration routes
+  app.use("/api/integrations", integrationRoutes);
 
   const httpServer = createServer(app);
 

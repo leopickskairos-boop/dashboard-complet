@@ -1,12 +1,24 @@
-import { Router, Request, Response } from "express";
+import { Router, Request, Response, NextFunction } from "express";
 import { storage } from "./storage";
 import { createConnectionSchema } from "@shared/schema";
 import { z } from "zod";
+import "express-session";
+
+declare module "express-session" {
+  interface SessionData {
+    userId: string;
+  }
+}
 
 const router = Router();
 
+// Helper to get authenticated user ID
+const getUserId = (req: Request): string => {
+  return req.session!.userId as string;
+};
+
 // Middleware to check authentication
-const requireAuth = (req: Request, res: Response, next: Function) => {
+const requireAuth = (req: Request, res: Response, next: NextFunction) => {
   if (!req.session?.userId) {
     return res.status(401).json({ error: "Non authentifié" });
   }
@@ -56,7 +68,7 @@ router.get("/providers/category/:category", requireAuth, async (req: Request, re
 // Get all connections for user
 router.get("/connections", requireAuth, async (req: Request, res: Response) => {
   try {
-    const userId = req.session!.userId;
+    const userId = getUserId(req);
     const connections = await storage.getExternalConnections(userId);
     
     // Mask sensitive data
@@ -80,22 +92,22 @@ router.get("/connections", requireAuth, async (req: Request, res: Response) => {
 // Get single connection
 router.get("/connections/:id", requireAuth, async (req: Request, res: Response) => {
   try {
-    const userId = req.session!.userId;
+    const userId = getUserId(req);
     const connection = await storage.getExternalConnectionById(req.params.id, userId);
     
     if (!connection) {
       return res.status(404).json({ error: "Connexion non trouvée" });
     }
     
-    // Mask sensitive data
+    // ALWAYS mask sensitive credentials - never expose raw values
     res.json({
       ...connection,
-      accessToken: connection.accessToken ? "***" : null,
-      refreshToken: connection.refreshToken ? "***" : null,
-      apiKey: connection.apiKey ? "***" : null,
-      apiSecret: connection.apiSecret ? "***" : null,
-      dbPassword: connection.dbPassword ? "***" : null,
-      webhookSecret: connection.webhookSecret ? "***" : null
+      accessToken: connection.accessToken ? "[REDACTED]" : null,
+      refreshToken: connection.refreshToken ? "[REDACTED]" : null,
+      apiKey: connection.apiKey ? "[REDACTED]" : null,
+      apiSecret: connection.apiSecret ? "[REDACTED]" : null,
+      dbPassword: connection.dbPassword ? "[REDACTED]" : null,
+      webhookSecret: connection.webhookSecret ? "[REDACTED]" : null
     });
   } catch (error) {
     console.error("Error fetching connection:", error);
@@ -106,7 +118,7 @@ router.get("/connections/:id", requireAuth, async (req: Request, res: Response) 
 // Create new connection
 router.post("/connections", requireAuth, async (req: Request, res: Response) => {
   try {
-    const userId = req.session!.userId;
+    const userId = getUserId(req);
     const data = createConnectionSchema.parse(req.body);
     
     // Check if connection already exists for this provider
@@ -121,7 +133,16 @@ router.post("/connections", requireAuth, async (req: Request, res: Response) => 
       status: "pending"
     });
     
-    res.status(201).json(connection);
+    // SECURITY: Mask all credentials in response
+    res.status(201).json({
+      ...connection,
+      accessToken: connection.accessToken ? "[SECURED]" : null,
+      refreshToken: connection.refreshToken ? "[SECURED]" : null,
+      apiKey: connection.apiKey ? "[SECURED]" : null,
+      apiSecret: connection.apiSecret ? "[SECURED]" : null,
+      dbPassword: connection.dbPassword ? "[SECURED]" : null,
+      webhookSecret: connection.webhookSecret ? "[SECURED]" : null,
+    });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: "Données invalides", details: error.errors });
@@ -134,7 +155,7 @@ router.post("/connections", requireAuth, async (req: Request, res: Response) => 
 // Update connection
 router.patch("/connections/:id", requireAuth, async (req: Request, res: Response) => {
   try {
-    const userId = req.session!.userId;
+    const userId = getUserId(req);
     const { id } = req.params;
     
     const connection = await storage.updateExternalConnection(id, userId, req.body);
@@ -153,7 +174,7 @@ router.patch("/connections/:id", requireAuth, async (req: Request, res: Response
 // Delete connection
 router.delete("/connections/:id", requireAuth, async (req: Request, res: Response) => {
   try {
-    const userId = req.session!.userId;
+    const userId = getUserId(req);
     const { id } = req.params;
     
     const connection = await storage.getExternalConnectionById(id, userId);
@@ -172,7 +193,7 @@ router.delete("/connections/:id", requireAuth, async (req: Request, res: Respons
 // Connect with API Key
 router.post("/connections/:id/connect-apikey", requireAuth, async (req: Request, res: Response) => {
   try {
-    const userId = req.session!.userId;
+    const userId = getUserId(req);
     const { id } = req.params;
     const { apiKey, apiSecret, instanceUrl } = req.body;
     
@@ -181,7 +202,7 @@ router.post("/connections/:id/connect-apikey", requireAuth, async (req: Request,
       return res.status(404).json({ error: "Connexion non trouvée" });
     }
     
-    // Update connection with API key
+    // Storage layer handles encryption automatically
     const updated = await storage.updateExternalConnection(id, userId, {
       apiKey,
       apiSecret,
@@ -190,7 +211,12 @@ router.post("/connections/:id/connect-apikey", requireAuth, async (req: Request,
       connectedAt: new Date()
     });
     
-    res.json(updated);
+    // Return masked response (never expose credentials)
+    res.json({
+      ...updated,
+      apiKey: updated?.apiKey ? "[SECURED]" : null,
+      apiSecret: updated?.apiSecret ? "[SECURED]" : null,
+    });
   } catch (error) {
     console.error("Error connecting with API key:", error);
     res.status(500).json({ error: "Erreur lors de la connexion" });
@@ -202,7 +228,7 @@ router.post("/connections/:id/connect-apikey", requireAuth, async (req: Request,
 // Get sync history for a connection
 router.get("/connections/:id/sync-history", requireAuth, async (req: Request, res: Response) => {
   try {
-    const userId = req.session!.userId;
+    const userId = getUserId(req);
     const { id } = req.params;
     const limit = parseInt(req.query.limit as string) || 10;
     
@@ -222,7 +248,7 @@ router.get("/connections/:id/sync-history", requireAuth, async (req: Request, re
 // Trigger manual sync
 router.post("/connections/:id/sync", requireAuth, async (req: Request, res: Response) => {
   try {
-    const userId = req.session!.userId;
+    const userId = getUserId(req);
     const { id } = req.params;
     const { jobType = "full", entityTypes } = req.body;
     
@@ -258,7 +284,7 @@ router.post("/connections/:id/sync", requireAuth, async (req: Request, res: Resp
 // Get field mappings for a connection
 router.get("/connections/:id/mappings", requireAuth, async (req: Request, res: Response) => {
   try {
-    const userId = req.session!.userId;
+    const userId = getUserId(req);
     const { id } = req.params;
     
     const connection = await storage.getExternalConnectionById(id, userId);
@@ -277,7 +303,7 @@ router.get("/connections/:id/mappings", requireAuth, async (req: Request, res: R
 // Update field mapping
 router.put("/connections/:id/mappings/:entityType", requireAuth, async (req: Request, res: Response) => {
   try {
-    const userId = req.session!.userId;
+    const userId = getUserId(req);
     const { id, entityType } = req.params;
     const { mappings, customFields } = req.body;
     
@@ -299,7 +325,7 @@ router.put("/connections/:id/mappings/:entityType", requireAuth, async (req: Req
 // Get external customers
 router.get("/customers", requireAuth, async (req: Request, res: Response) => {
   try {
-    const userId = req.session!.userId;
+    const userId = getUserId(req);
     const { search, source, segment, minSpent, maxSpent, limit, offset } = req.query;
     
     const customers = await storage.getExternalCustomers(userId, {
@@ -322,7 +348,7 @@ router.get("/customers", requireAuth, async (req: Request, res: Response) => {
 // Get customer by ID
 router.get("/customers/:id", requireAuth, async (req: Request, res: Response) => {
   try {
-    const userId = req.session!.userId;
+    const userId = getUserId(req);
     const customer = await storage.getExternalCustomerById(req.params.id, userId);
     
     if (!customer) {
@@ -345,7 +371,7 @@ router.get("/customers/:id", requireAuth, async (req: Request, res: Response) =>
 // Get top customers
 router.get("/customers/top", requireAuth, async (req: Request, res: Response) => {
   try {
-    const userId = req.session!.userId;
+    const userId = getUserId(req);
     const limit = parseInt(req.query.limit as string) || 10;
     
     const customers = await storage.getTopCustomers(userId, limit);
@@ -361,7 +387,7 @@ router.get("/customers/top", requireAuth, async (req: Request, res: Response) =>
 // Get external orders
 router.get("/orders", requireAuth, async (req: Request, res: Response) => {
   try {
-    const userId = req.session!.userId;
+    const userId = getUserId(req);
     const { customerId, source, status, dateFrom, dateTo, minAmount, maxAmount, limit, offset } = req.query;
     
     const orders = await storage.getExternalOrders(userId, {
@@ -386,7 +412,7 @@ router.get("/orders", requireAuth, async (req: Request, res: Response) => {
 // Get order by ID
 router.get("/orders/:id", requireAuth, async (req: Request, res: Response) => {
   try {
-    const userId = req.session!.userId;
+    const userId = getUserId(req);
     const order = await storage.getExternalOrderById(req.params.id, userId);
     
     if (!order) {
@@ -403,7 +429,7 @@ router.get("/orders/:id", requireAuth, async (req: Request, res: Response) => {
 // Get order stats
 router.get("/orders/stats", requireAuth, async (req: Request, res: Response) => {
   try {
-    const userId = req.session!.userId;
+    const userId = getUserId(req);
     const period = (req.query.period as 'week' | 'month' | 'year' | 'all') || 'month';
     
     const stats = await storage.getOrderStats(userId, period);
@@ -419,7 +445,7 @@ router.get("/orders/stats", requireAuth, async (req: Request, res: Response) => 
 // Get external products
 router.get("/products", requireAuth, async (req: Request, res: Response) => {
   try {
-    const userId = req.session!.userId;
+    const userId = getUserId(req);
     const { search, category, source, isActive, limit, offset } = req.query;
     
     const products = await storage.getExternalProducts(userId, {
@@ -441,7 +467,7 @@ router.get("/products", requireAuth, async (req: Request, res: Response) => {
 // Get top products
 router.get("/products/top", requireAuth, async (req: Request, res: Response) => {
   try {
-    const userId = req.session!.userId;
+    const userId = getUserId(req);
     const limit = parseInt(req.query.limit as string) || 10;
     
     const products = await storage.getTopProducts(userId, limit);
@@ -457,7 +483,7 @@ router.get("/products/top", requireAuth, async (req: Request, res: Response) => 
 // Get integration overview stats
 router.get("/stats", requireAuth, async (req: Request, res: Response) => {
   try {
-    const userId = req.session!.userId;
+    const userId = getUserId(req);
     const stats = await storage.getIntegrationStats(userId);
     res.json(stats);
   } catch (error) {

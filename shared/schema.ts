@@ -2279,6 +2279,53 @@ export const externalProducts = pgTable("external_products", {
 // Types for external products
 export type ExternalProduct = typeof externalProducts.$inferSelect;
 
+// External transactions table - individual payment transactions for detailed financial tracking
+export const externalTransactions = pgTable("external_transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  connectionId: varchar("connection_id").references(() => externalConnections.id, { onDelete: 'set null' }),
+  customerId: varchar("customer_id").references(() => externalCustomers.id, { onDelete: 'set null' }),
+  orderId: varchar("order_id").references(() => externalOrders.id, { onDelete: 'set null' }),
+  
+  // External references
+  externalId: text("external_id").notNull(),
+  externalSource: text("external_source").notNull(),
+  
+  // Transaction info
+  transactionType: text("transaction_type").notNull(), // 'payment', 'refund', 'chargeback', 'payout', 'adjustment'
+  status: text("status").notNull(), // 'pending', 'completed', 'failed', 'cancelled', 'disputed'
+  
+  // Financial
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  currency: text("currency").default("EUR"),
+  fee: decimal("fee", { precision: 10, scale: 2 }),
+  netAmount: decimal("net_amount", { precision: 12, scale: 2 }),
+  
+  // Payment details
+  paymentMethod: text("payment_method"), // 'card', 'bank_transfer', 'cash', 'paypal', etc.
+  paymentProvider: text("payment_provider"), // 'stripe', 'paypal', 'square', etc.
+  paymentReference: text("payment_reference"), // Payment provider reference ID
+  cardLast4: text("card_last4"),
+  cardBrand: text("card_brand"),
+  
+  // Timing
+  transactionDate: timestamp("transaction_date").notNull(),
+  processedAt: timestamp("processed_at"),
+  
+  // Additional context
+  description: text("description"),
+  failureReason: text("failure_reason"),
+  metadata: jsonb("metadata"),
+  
+  // Timestamps
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Types for external transactions
+export type ExternalTransaction = typeof externalTransactions.$inferSelect;
+export type InsertExternalTransaction = typeof externalTransactions.$inferInsert;
+
 // External activities table - all customer interactions from CRM
 export const externalActivities = pgTable("external_activities", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

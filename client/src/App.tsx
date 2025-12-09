@@ -53,6 +53,12 @@ import MarketingAutomations from "@/pages/marketing/MarketingAutomations";
 import MarketingAnalytics from "@/pages/marketing/MarketingAnalytics";
 import UnsubscribePage from "@/pages/marketing/UnsubscribePage";
 
+// Integration Hub Pages
+import IntegrationHub from "@/pages/integrations/IntegrationHub";
+import IntegrationConnections from "@/pages/integrations/IntegrationConnections";
+import IntegrationCustomers from "@/pages/integrations/IntegrationCustomers";
+import IntegrationOrders from "@/pages/integrations/IntegrationOrders";
+
 function Router() {
   return (
     <Switch>
@@ -249,6 +255,39 @@ function Router() {
 
       {/* Marketing - Public pages */}
       <Route path="/unsubscribe/:trackingId" component={UnsubscribePage} />
+
+      {/* Integration Hub - Protected dashboard pages */}
+      <Route path="/integrations">
+        <ProtectedRoute requireVerified={true} requireSubscription={true}>
+          <DashboardLayout>
+            <IntegrationHub />
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/integrations/connections">
+        <ProtectedRoute requireVerified={true} requireSubscription={true}>
+          <DashboardLayout>
+            <IntegrationConnections />
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/integrations/customers">
+        <ProtectedRoute requireVerified={true} requireSubscription={true}>
+          <DashboardLayout>
+            <IntegrationCustomers />
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/integrations/orders">
+        <ProtectedRoute requireVerified={true} requireSubscription={true}>
+          <DashboardLayout>
+            <IntegrationOrders />
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
 
       <Route component={NotFound} />
     </Switch>

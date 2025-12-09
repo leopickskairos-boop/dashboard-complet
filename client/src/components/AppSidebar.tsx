@@ -1,4 +1,4 @@
-import { LayoutDashboard, Bell, User, Shield, CreditCard, Calendar, History, Settings, Star, MessageSquare, BarChart3, Send, QrCode, Megaphone, Users, Mail, Filter, Workflow, TrendingUp } from "lucide-react";
+import { LayoutDashboard, Bell, User, Shield, CreditCard, Calendar, History, Settings, Star, MessageSquare, BarChart3, Send, QrCode, Megaphone, Users, Mail, Filter, Workflow, TrendingUp, Database, Plug, ShoppingCart } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -117,6 +117,29 @@ const marketingItems = [
   },
 ];
 
+const integrationItems = [
+  {
+    title: "Vue d'ensemble",
+    url: "/integrations",
+    icon: Database,
+  },
+  {
+    title: "Connexions",
+    url: "/integrations/connections",
+    icon: Plug,
+  },
+  {
+    title: "Clients",
+    url: "/integrations/customers",
+    icon: Users,
+  },
+  {
+    title: "Commandes",
+    url: "/integrations/orders",
+    icon: ShoppingCart,
+  },
+];
+
 export function AppSidebar() {
   const [location] = useLocation();
   const { user } = useUser();
@@ -219,6 +242,27 @@ export function AppSidebar() {
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild isActive={location === item.url || (item.url === "/marketing" && location.startsWith("/marketing/") && !marketingItems.some(i => i.url !== "/marketing" && location === i.url))}>
                     <Link href={item.url} data-testid={`link-marketing-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                      <item.icon />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel className="flex items-center gap-2 text-[#C8B88A]">
+            <Database className="h-4 w-4" />
+            Intégrations
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {integrationItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild isActive={location === item.url || (item.url === "/integrations" && location.startsWith("/integrations/") && !integrationItems.some(i => i.url !== "/integrations" && location === i.url))}>
+                    <Link href={item.url} data-testid={`link-integration-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
                       <item.icon />
                       <span>{item.title}</span>
                     </Link>

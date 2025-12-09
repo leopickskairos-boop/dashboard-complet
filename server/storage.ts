@@ -1,4 +1,5 @@
 // Reference: javascript_database blueprint - DatabaseStorage implementation
+import { encryptCredentials, decryptCredentials } from "./utils/credential-encryption";
 import { 
   users, 
   calls, 
@@ -31,6 +32,7 @@ import {
   externalFieldMappings,
   externalCustomers,
   externalOrders,
+  externalTransactions,
   externalProducts,
   externalActivities,
   integrationWebhooks,
@@ -90,6 +92,8 @@ import {
   type ExternalFieldMapping,
   type ExternalCustomer,
   type ExternalOrder,
+  type ExternalTransaction,
+  type InsertExternalTransaction,
   type ExternalProduct,
   type ExternalActivity,
   type IntegrationWebhook,
@@ -464,6 +468,7 @@ export interface IStorage {
   getExternalConnections(userId: string): Promise<ExternalConnection[]>;
   getExternalConnectionById(id: string, userId: string): Promise<ExternalConnection | undefined>;
   getExternalConnectionByProvider(userId: string, provider: string): Promise<ExternalConnection | undefined>;
+  getExternalConnectionWithCredentials(id: string, userId: string): Promise<ExternalConnection | undefined>;
   createExternalConnection(connection: Partial<ExternalConnection> & { userId: string; provider: string; name: string; authType: string }): Promise<ExternalConnection>;
   updateExternalConnection(id: string, userId: string, updates: Partial<ExternalConnection>): Promise<ExternalConnection | undefined>;
   deleteExternalConnection(id: string, userId: string): Promise<void>;
@@ -519,6 +524,31 @@ export interface IStorage {
   createExternalOrder(order: Partial<ExternalOrder> & { userId: string; externalId: string; externalSource: string; totalAmount: string; orderDate: Date }): Promise<ExternalOrder>;
   updateExternalOrder(id: string, userId: string, updates: Partial<ExternalOrder>): Promise<ExternalOrder | undefined>;
   upsertExternalOrder(userId: string, externalId: string, source: string, data: Partial<ExternalOrder>): Promise<ExternalOrder>;
+  
+  // External Transactions
+  getExternalTransactions(userId: string, filters?: {
+    customerId?: string;
+    orderId?: string;
+    source?: string;
+    transactionType?: string;
+    status?: string;
+    dateFrom?: Date;
+    dateTo?: Date;
+    limit?: number;
+    offset?: number;
+  }): Promise<ExternalTransaction[]>;
+  getExternalTransactionById(id: string, userId: string): Promise<ExternalTransaction | undefined>;
+  createExternalTransaction(transaction: InsertExternalTransaction): Promise<ExternalTransaction>;
+  updateExternalTransaction(id: string, userId: string, updates: Partial<ExternalTransaction>): Promise<ExternalTransaction | undefined>;
+  getTransactionStats(userId: string, period?: 'week' | 'month' | 'year' | 'all'): Promise<{
+    totalTransactions: number;
+    totalAmount: number;
+    totalFees: number;
+    netAmount: number;
+    byType: Record<string, number>;
+    byStatus: Record<string, number>;
+    byPaymentMethod: Record<string, number>;
+  }>;
   deleteExternalOrder(id: string, userId: string): Promise<void>;
   getOrderStats(userId: string, period?: 'week' | 'month' | 'year' | 'all'): Promise<{
     totalOrders: number;
@@ -1396,7 +1426,6 @@ export class DatabaseStorage implements IStorage {
         .update(pushSubscriptions)
         .set({
           ...subscription,
-          updatedAt: new Date(),
         })
         .where(eq(pushSubscriptions.endpoint, subscription.endpoint))
         .returning();
@@ -3114,16 +3143,72 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createExternalConnection(connection: Partial<ExternalConnection> & { userId: string; provider: string; name: string; authType: string }): Promise<ExternalConnection> {
-    const [created] = await db.insert(externalConnections).values(connection).returning();
+    // SECURITY: Encrypt all credential fields before storing
+    const encryptedCreds = encryptCredentials({
+      accessToken: connection.accessToken,
+      refreshToken: connection.refreshToken,
+      apiKey: connection.apiKey,
+      apiSecret: connection.apiSecret,
+      dbPassword: connection.dbPassword,
+      webhookSecret: connection.webhookSecret,
+    });
+    
+    const [created] = await db.insert(externalConnections).values({
+      ...connection,
+      ...encryptedCreds,
+    }).returning();
     return created;
   }
 
   async updateExternalConnection(id: string, userId: string, updates: Partial<ExternalConnection>): Promise<ExternalConnection | undefined> {
+    // SECURITY: Encrypt credential fields if present in updates
+    const encryptedCreds = encryptCredentials({
+      accessToken: updates.accessToken,
+      refreshToken: updates.refreshToken,
+      apiKey: updates.apiKey,
+      apiSecret: updates.apiSecret,
+      dbPassword: updates.dbPassword,
+      webhookSecret: updates.webhookSecret,
+    });
+    
+    // Only include encrypted values for fields that were actually updated
+    const secureUpdates: Partial<ExternalConnection> = { ...updates };
+    if (updates.accessToken !== undefined) secureUpdates.accessToken = encryptedCreds.accessToken;
+    if (updates.refreshToken !== undefined) secureUpdates.refreshToken = encryptedCreds.refreshToken;
+    if (updates.apiKey !== undefined) secureUpdates.apiKey = encryptedCreds.apiKey;
+    if (updates.apiSecret !== undefined) secureUpdates.apiSecret = encryptedCreds.apiSecret;
+    if (updates.dbPassword !== undefined) secureUpdates.dbPassword = encryptedCreds.dbPassword;
+    if (updates.webhookSecret !== undefined) secureUpdates.webhookSecret = encryptedCreds.webhookSecret;
+    
     const [updated] = await db.update(externalConnections)
-      .set({ ...updates, updatedAt: new Date() })
+      .set({ ...secureUpdates, updatedAt: new Date() })
       .where(and(eq(externalConnections.id, id), eq(externalConnections.userId, userId)))
       .returning();
     return updated || undefined;
+  }
+  
+  // Get decrypted connection credentials for sync jobs (internal use only)
+  async getExternalConnectionWithCredentials(id: string, userId: string): Promise<ExternalConnection | undefined> {
+    const connections = await db.select().from(externalConnections)
+      .where(and(eq(externalConnections.id, id), eq(externalConnections.userId, userId)))
+      .limit(1);
+    
+    if (connections.length === 0) return undefined;
+    
+    const connection = connections[0];
+    const decryptedCreds = decryptCredentials({
+      accessToken: connection.accessToken,
+      refreshToken: connection.refreshToken,
+      apiKey: connection.apiKey,
+      apiSecret: connection.apiSecret,
+      dbPassword: connection.dbPassword,
+      webhookSecret: connection.webhookSecret,
+    });
+    
+    return {
+      ...connection,
+      ...decryptedCreds,
+    };
   }
 
   async deleteExternalConnection(id: string, userId: string): Promise<void> {
@@ -3518,6 +3603,127 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(externalOrders)
       .where(eq(externalOrders.customerId, customerId))
       .orderBy(desc(externalOrders.orderDate));
+  }
+
+  // External Transactions
+  async getExternalTransactions(userId: string, filters?: {
+    customerId?: string;
+    orderId?: string;
+    source?: string;
+    transactionType?: string;
+    status?: string;
+    dateFrom?: Date;
+    dateTo?: Date;
+    limit?: number;
+    offset?: number;
+  }): Promise<ExternalTransaction[]> {
+    const conditions = [eq(externalTransactions.userId, userId)];
+    
+    if (filters?.customerId) {
+      conditions.push(eq(externalTransactions.customerId, filters.customerId));
+    }
+    if (filters?.orderId) {
+      conditions.push(eq(externalTransactions.orderId, filters.orderId));
+    }
+    if (filters?.source) {
+      conditions.push(eq(externalTransactions.externalSource, filters.source));
+    }
+    if (filters?.transactionType) {
+      conditions.push(eq(externalTransactions.transactionType, filters.transactionType));
+    }
+    if (filters?.status) {
+      conditions.push(eq(externalTransactions.status, filters.status));
+    }
+    if (filters?.dateFrom) {
+      conditions.push(gte(externalTransactions.transactionDate, filters.dateFrom));
+    }
+    if (filters?.dateTo) {
+      conditions.push(lte(externalTransactions.transactionDate, filters.dateTo));
+    }
+    
+    let query = db.select().from(externalTransactions)
+      .where(and(...conditions))
+      .orderBy(desc(externalTransactions.transactionDate));
+    
+    if (filters?.limit) {
+      query = query.limit(filters.limit) as typeof query;
+    }
+    if (filters?.offset) {
+      query = query.offset(filters.offset) as typeof query;
+    }
+    
+    return await query;
+  }
+
+  async getExternalTransactionById(id: string, userId: string): Promise<ExternalTransaction | undefined> {
+    const [transaction] = await db.select().from(externalTransactions)
+      .where(and(eq(externalTransactions.id, id), eq(externalTransactions.userId, userId)));
+    return transaction || undefined;
+  }
+
+  async createExternalTransaction(transaction: InsertExternalTransaction): Promise<ExternalTransaction> {
+    const [created] = await db.insert(externalTransactions).values(transaction).returning();
+    return created;
+  }
+
+  async updateExternalTransaction(id: string, userId: string, updates: Partial<ExternalTransaction>): Promise<ExternalTransaction | undefined> {
+    const [updated] = await db.update(externalTransactions)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(eq(externalTransactions.id, id), eq(externalTransactions.userId, userId)))
+      .returning();
+    return updated || undefined;
+  }
+
+  async getTransactionStats(userId: string, period?: 'week' | 'month' | 'year' | 'all'): Promise<{
+    totalTransactions: number;
+    totalAmount: number;
+    totalFees: number;
+    netAmount: number;
+    byType: Record<string, number>;
+    byStatus: Record<string, number>;
+    byPaymentMethod: Record<string, number>;
+  }> {
+    const conditions = [eq(externalTransactions.userId, userId)];
+    
+    if (period && period !== 'all') {
+      const now = new Date();
+      let dateFilter: Date;
+      switch (period) {
+        case 'week':
+          dateFilter = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case 'month':
+          dateFilter = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          break;
+        case 'year':
+          dateFilter = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+          break;
+      }
+      conditions.push(gte(externalTransactions.transactionDate, dateFilter!));
+    }
+    
+    const transactions = await db.select().from(externalTransactions).where(and(...conditions));
+    
+    const totalTransactions = transactions.length;
+    const totalAmount = transactions.reduce((sum, t) => sum + parseFloat(t.amount || '0'), 0);
+    const totalFees = transactions.reduce((sum, t) => sum + parseFloat(t.fee || '0'), 0);
+    const netAmount = transactions.reduce((sum, t) => sum + parseFloat(t.netAmount || '0'), 0);
+    
+    const byType: Record<string, number> = {};
+    const byStatus: Record<string, number> = {};
+    const byPaymentMethod: Record<string, number> = {};
+    
+    for (const transaction of transactions) {
+      const type = transaction.transactionType || 'unknown';
+      const status = transaction.status || 'unknown';
+      const method = transaction.paymentMethod || 'unknown';
+      
+      byType[type] = (byType[type] || 0) + 1;
+      byStatus[status] = (byStatus[status] || 0) + 1;
+      byPaymentMethod[method] = (byPaymentMethod[method] || 0) + 1;
+    }
+    
+    return { totalTransactions, totalAmount, totalFees, netAmount, byType, byStatus, byPaymentMethod };
   }
 
   // External Products
