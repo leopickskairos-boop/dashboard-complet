@@ -19,7 +19,10 @@ import {
   Phone,
   MapPin,
   Eye,
-  AlertTriangle
+  AlertTriangle,
+  MessageSquare,
+  Bell,
+  Key
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -40,11 +43,20 @@ interface GuaranteeConfig {
   brandColor: string;
   gmailSenderEmail: string | null;
   gmailSenderName: string | null;
+  gmailAppPassword: string | null;
   termsUrl: string | null;
   companyName: string | null;
   companyAddress: string | null;
   companyPhone: string | null;
   stripeAccountId?: string | null;
+  smsEnabled: boolean;
+  twilioAccountSid: string | null;
+  twilioAuthToken: string | null;
+  twilioFromNumber: string | null;
+  autoSendEmailOnCreate: boolean;
+  autoSendSmsOnCreate: boolean;
+  autoSendEmailOnValidation: boolean;
+  autoSendSmsOnValidation: boolean;
 }
 
 interface ConfigResponse {
@@ -62,7 +74,7 @@ interface StripeStatus {
   payoutsEnabled: boolean;
 }
 
-type SectionKey = 'stripe' | 'penalty' | 'delay' | 'conditions' | 'branding' | 'company' | 'email' | null;
+type SectionKey = 'stripe' | 'penalty' | 'delay' | 'conditions' | 'branding' | 'company' | 'email' | 'sms' | 'notifications' | null;
 
 export default function GuaranteeSettings() {
   const { toast } = useToast();
@@ -523,12 +535,24 @@ export default function GuaranteeSettings() {
       key: 'email' as SectionKey,
       icon: Mail,
       iconColor: 'text-green-400',
-      title: 'Email expéditeur',
-      description: localConfig.gmailSenderEmail || 'Email par défaut',
+      title: 'Configuration Email (Gmail)',
+      description: localConfig.gmailSenderEmail ? `${localConfig.gmailSenderEmail}${localConfig.gmailAppPassword ? ' ✓' : ' (non configuré)'}` : 'Non configuré',
       content: (
         <div className="space-y-4">
+          <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 mb-4">
+            <h4 className="text-blue-300 font-medium flex items-center gap-2">
+              <Key className="h-4 w-4" />
+              Configuration SMTP Gmail
+            </h4>
+            <p className="text-sm text-gray-400 mt-1">
+              Pour envoyer des emails depuis votre adresse, créez un "Mot de passe d'application" dans votre compte Google :
+              <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline ml-1">
+                Créer un mot de passe d'application
+              </a>
+            </p>
+          </div>
           <div>
-            <Label className="text-gray-300">Email expéditeur</Label>
+            <Label className="text-gray-300">Email Gmail</Label>
             <Input
               type="email"
               value={localConfig.gmailSenderEmail || ''}
@@ -537,6 +561,18 @@ export default function GuaranteeSettings() {
               className="mt-2 bg-white/5 border-white/10"
               data-testid="input-sender-email"
             />
+          </div>
+          <div>
+            <Label className="text-gray-300">Mot de passe d'application Gmail</Label>
+            <Input
+              type="password"
+              value={localConfig.gmailAppPassword || ''}
+              onChange={(e) => handleConfigChange('gmailAppPassword', e.target.value || null)}
+              placeholder="xxxx xxxx xxxx xxxx"
+              className="mt-2 bg-white/5 border-white/10"
+              data-testid="input-gmail-app-password"
+            />
+            <p className="text-xs text-gray-500 mt-1">Format : 16 caractères sans espaces</p>
           </div>
           <div>
             <Label className="text-gray-300">Nom affiché</Label>
@@ -557,6 +593,143 @@ export default function GuaranteeSettings() {
               className="mt-2 bg-white/5 border-white/10"
               data-testid="input-terms-url"
             />
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: 'sms' as SectionKey,
+      icon: MessageSquare,
+      iconColor: 'text-purple-400',
+      title: 'Configuration SMS (Twilio)',
+      description: localConfig.smsEnabled ? 'Activé' : 'Désactivé',
+      content: (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <Label className="text-gray-300">Activer les SMS</Label>
+              <p className="text-xs text-gray-500 mt-1">Envoyer des SMS de confirmation aux clients</p>
+            </div>
+            <Switch
+              checked={localConfig.smsEnabled}
+              onCheckedChange={(checked) => handleConfigChange('smsEnabled', checked)}
+              data-testid="switch-sms-enabled"
+            />
+          </div>
+          
+          {localConfig.smsEnabled && (
+            <>
+              <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4">
+                <h4 className="text-purple-300 font-medium">Configuration Twilio</h4>
+                <p className="text-sm text-gray-400 mt-1">
+                  Créez un compte sur <a href="https://www.twilio.com" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline">Twilio</a> pour obtenir vos identifiants.
+                </p>
+              </div>
+              <div>
+                <Label className="text-gray-300">Account SID</Label>
+                <Input
+                  value={localConfig.twilioAccountSid || ''}
+                  onChange={(e) => handleConfigChange('twilioAccountSid', e.target.value || null)}
+                  placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                  className="mt-2 bg-white/5 border-white/10"
+                  data-testid="input-twilio-sid"
+                />
+              </div>
+              <div>
+                <Label className="text-gray-300">Auth Token</Label>
+                <Input
+                  type="password"
+                  value={localConfig.twilioAuthToken || ''}
+                  onChange={(e) => handleConfigChange('twilioAuthToken', e.target.value || null)}
+                  placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                  className="mt-2 bg-white/5 border-white/10"
+                  data-testid="input-twilio-token"
+                />
+              </div>
+              <div>
+                <Label className="text-gray-300">Numéro d'envoi (From)</Label>
+                <Input
+                  value={localConfig.twilioFromNumber || ''}
+                  onChange={(e) => handleConfigChange('twilioFromNumber', e.target.value || null)}
+                  placeholder="+33612345678"
+                  className="mt-2 bg-white/5 border-white/10"
+                  data-testid="input-twilio-from"
+                />
+              </div>
+            </>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'notifications' as SectionKey,
+      icon: Bell,
+      iconColor: 'text-orange-400',
+      title: 'Notifications automatiques',
+      description: 'Emails et SMS automatiques',
+      content: (
+        <div className="space-y-6">
+          <div className="bg-gradient-to-r from-[#C8B88A]/20 to-transparent border border-[#C8B88A]/30 rounded-lg p-4">
+            <h4 className="text-[#C8B88A] font-medium">Flux automatisé</h4>
+            <p className="text-sm text-gray-400 mt-1">
+              SpeedAI envoie automatiquement les notifications aux clients à chaque étape.
+            </p>
+          </div>
+          
+          <div className="space-y-4">
+            <h5 className="text-white font-medium">Demande de carte bancaire</h5>
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-gray-300">Email automatique</Label>
+                <p className="text-xs text-gray-500">Envoyer un email avec le lien de validation CB</p>
+              </div>
+              <Switch
+                checked={localConfig.autoSendEmailOnCreate}
+                onCheckedChange={(checked) => handleConfigChange('autoSendEmailOnCreate', checked)}
+                data-testid="switch-auto-email-create"
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-gray-300">SMS automatique</Label>
+                <p className="text-xs text-gray-500">Envoyer un SMS avec le lien de validation CB</p>
+              </div>
+              <Switch
+                checked={localConfig.autoSendSmsOnCreate}
+                onCheckedChange={(checked) => handleConfigChange('autoSendSmsOnCreate', checked)}
+                disabled={!localConfig.smsEnabled}
+                data-testid="switch-auto-sms-create"
+              />
+            </div>
+          </div>
+          
+          <hr className="border-white/10" />
+          
+          <div className="space-y-4">
+            <h5 className="text-white font-medium">Confirmation de réservation</h5>
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-gray-300">Email de confirmation</Label>
+                <p className="text-xs text-gray-500">Après validation de la carte bancaire</p>
+              </div>
+              <Switch
+                checked={localConfig.autoSendEmailOnValidation}
+                onCheckedChange={(checked) => handleConfigChange('autoSendEmailOnValidation', checked)}
+                data-testid="switch-auto-email-validation"
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-gray-300">SMS de confirmation</Label>
+                <p className="text-xs text-gray-500">Après validation de la carte bancaire</p>
+              </div>
+              <Switch
+                checked={localConfig.autoSendSmsOnValidation}
+                onCheckedChange={(checked) => handleConfigChange('autoSendSmsOnValidation', checked)}
+                disabled={!localConfig.smsEnabled}
+                data-testid="switch-auto-sms-validation"
+              />
+            </div>
           </div>
         </div>
       ),
