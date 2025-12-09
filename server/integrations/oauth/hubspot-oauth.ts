@@ -33,6 +33,32 @@ export function getHubSpotAuthUrl(connectionId: string, userId: string): string 
   return `https://app.hubspot.com/oauth/authorize?${params.toString()}`;
 }
 
+router.get("/start", async (req: Request, res: Response) => {
+  try {
+    if (!HUBSPOT_CLIENT_ID || !HUBSPOT_CLIENT_SECRET) {
+      return res.redirect('/integrations/connections?error=oauth_not_configured');
+    }
+    
+    const state = Buffer.from(JSON.stringify({ 
+      connectionId: 'pending', 
+      userId: 'pending',
+      timestamp: Date.now()
+    })).toString('base64');
+    
+    const params = new URLSearchParams({
+      client_id: HUBSPOT_CLIENT_ID,
+      redirect_uri: HUBSPOT_REDIRECT_URI,
+      scope: HUBSPOT_SCOPES,
+      state: state
+    });
+    
+    res.redirect(`https://app.hubspot.com/oauth/authorize?${params.toString()}`);
+  } catch (error) {
+    console.error("HubSpot OAuth start error:", error);
+    res.redirect('/integrations/connections?error=oauth_start_failed');
+  }
+});
+
 router.get("/callback", async (req: Request, res: Response) => {
   try {
     const { code, state, error } = req.query;
