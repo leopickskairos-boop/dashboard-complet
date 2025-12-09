@@ -96,10 +96,7 @@ export default function IntegrationConnections() {
 
   const createConnectionMutation = useMutation({
     mutationFn: async (data: { provider: string; name: string; authType: string }) => {
-      return apiRequest("/api/integrations/connections", {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
+      return apiRequest("POST", "/api/integrations/connections", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/integrations/connections"] });
@@ -115,27 +112,30 @@ export default function IntegrationConnections() {
 
   const connectApiKeyMutation = useMutation({
     mutationFn: async ({ id, apiKey, apiSecret }: { id: string; apiKey: string; apiSecret?: string }) => {
-      return apiRequest(`/api/integrations/connections/${id}/connect-apikey`, {
-        method: "POST",
-        body: JSON.stringify({ apiKey, apiSecret }),
-      });
+      const response = await apiRequest("POST", `/api/integrations/connections/${id}/connect-apikey`, { apiKey, apiSecret });
+      return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data: { success: boolean; message: string; accountInfo?: { name?: string } }) => {
       queryClient.invalidateQueries({ queryKey: ["/api/integrations/connections"] });
-      toast({ title: "Connexion établie", description: "La synchronisation peut maintenant commencer." });
+      if (data.success) {
+        toast({ 
+          title: "Connexion réussie!", 
+          description: data.accountInfo?.name 
+            ? `Connecté à ${data.accountInfo.name}. La synchronisation peut maintenant commencer.`
+            : data.message
+        });
+      }
       setApiKeyInput("");
       setApiSecretInput("");
     },
     onError: (error: Error) => {
-      toast({ title: "Erreur de connexion", description: error.message, variant: "destructive" });
+      toast({ title: "Échec de connexion", description: error.message, variant: "destructive" });
     }
   });
 
   const deleteConnectionMutation = useMutation({
     mutationFn: async (id: string) => {
-      return apiRequest(`/api/integrations/connections/${id}`, {
-        method: "DELETE",
-      });
+      return apiRequest("DELETE", `/api/integrations/connections/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/integrations/connections"] });
@@ -148,17 +148,26 @@ export default function IntegrationConnections() {
 
   const triggerSyncMutation = useMutation({
     mutationFn: async (id: string) => {
-      return apiRequest(`/api/integrations/connections/${id}/sync`, {
-        method: "POST",
-        body: JSON.stringify({ jobType: "full" }),
-      });
+      const response = await apiRequest("POST", `/api/integrations/connections/${id}/sync`, { fullSync: true });
+      return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data: { success: boolean; message: string; details?: { customersImported: number; ordersImported: number; transactionsImported: number } }) => {
       queryClient.invalidateQueries({ queryKey: ["/api/integrations/connections"] });
-      toast({ title: "Synchronisation lancée", description: "La synchronisation est en cours..." });
+      if (data.success) {
+        toast({ 
+          title: "Synchronisation réussie!", 
+          description: data.message
+        });
+      } else {
+        toast({ 
+          title: "Synchronisation partielle", 
+          description: data.message,
+          variant: "destructive"
+        });
+      }
     },
     onError: (error: Error) => {
-      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+      toast({ title: "Erreur de synchronisation", description: error.message, variant: "destructive" });
     }
   });
 

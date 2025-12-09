@@ -473,6 +473,7 @@ export interface IStorage {
   updateExternalConnection(id: string, userId: string, updates: Partial<ExternalConnection>): Promise<ExternalConnection | undefined>;
   deleteExternalConnection(id: string, userId: string): Promise<void>;
   getActiveConnections(userId: string): Promise<ExternalConnection[]>;
+  getAllActiveConnections(): Promise<ExternalConnection[]>;
   
   // External Sync Jobs
   createSyncJob(job: Partial<ExternalSyncJob> & { connectionId: string; userId: string; jobType: string }): Promise<ExternalSyncJob>;
@@ -3220,6 +3221,15 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(externalConnections)
       .where(and(
         eq(externalConnections.userId, userId),
+        eq(externalConnections.status, 'active'),
+        eq(externalConnections.syncEnabled, true)
+      ))
+      .orderBy(desc(externalConnections.lastSyncAt));
+  }
+  
+  async getAllActiveConnections(): Promise<ExternalConnection[]> {
+    return db.select().from(externalConnections)
+      .where(and(
         eq(externalConnections.status, 'active'),
         eq(externalConnections.syncEnabled, true)
       ))

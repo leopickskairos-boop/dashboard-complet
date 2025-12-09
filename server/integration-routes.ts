@@ -3,6 +3,9 @@ import { storage } from "./storage";
 import { createConnectionSchema } from "@shared/schema";
 import { z } from "zod";
 import "express-session";
+import { integrationService } from "./integrations/integration-service";
+import { isProviderSupported, getSupportedProviders } from "./integrations/adapter-factory";
+import { hubspotOAuthRouter, getHubSpotAuthUrl, isHubSpotConfigured } from "./integrations/oauth/hubspot-oauth";
 
 declare module "express-session" {
   interface SessionData {
@@ -190,7 +193,7 @@ router.delete("/connections/:id", requireAuth, async (req: Request, res: Respons
   }
 });
 
-// Connect with API Key
+// Connect with API Key and TEST the connection
 router.post("/connections/:id/connect-apikey", requireAuth, async (req: Request, res: Response) => {
   try {
     const userId = getUserId(req);
@@ -202,24 +205,94 @@ router.post("/connections/:id/connect-apikey", requireAuth, async (req: Request,
       return res.status(404).json({ error: "Connexion non trouvée" });
     }
     
-    // Storage layer handles encryption automatically
-    const updated = await storage.updateExternalConnection(id, userId, {
+    // First save the credentials (storage layer handles encryption automatically)
+    await storage.updateExternalConnection(id, userId, {
       apiKey,
       apiSecret,
       instanceUrl,
-      status: "active",
-      connectedAt: new Date()
+      status: "pending"
     });
     
-    // Return masked response (never expose credentials)
-    res.json({
-      ...updated,
-      apiKey: updated?.apiKey ? "[SECURED]" : null,
-      apiSecret: updated?.apiSecret ? "[SECURED]" : null,
-    });
+    // Now TEST the connection with real API call
+    const testResult = await integrationService.testConnection(id, userId);
+    
+    if (testResult.success) {
+      // Update status to active
+      const updated = await storage.updateExternalConnection(id, userId, {
+        status: "active",
+        connectedAt: new Date(),
+        accountId: testResult.accountInfo?.id,
+        lastError: null
+      });
+      
+      res.json({
+        success: true,
+        message: testResult.message,
+        accountInfo: testResult.accountInfo,
+        connection: {
+          ...updated,
+          apiKey: updated?.apiKey ? "[SECURED]" : null,
+          apiSecret: updated?.apiSecret ? "[SECURED]" : null,
+        }
+      });
+    } else {
+      // Update status to error
+      await storage.updateExternalConnection(id, userId, {
+        status: "error",
+        lastError: testResult.message
+      });
+      
+      res.status(400).json({
+        success: false,
+        message: testResult.message
+      });
+    }
   } catch (error) {
     console.error("Error connecting with API key:", error);
     res.status(500).json({ error: "Erreur lors de la connexion" });
+  }
+});
+
+// Test an existing connection
+router.post("/connections/:id/test", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const userId = getUserId(req);
+    const { id } = req.params;
+    
+    const connection = await storage.getExternalConnectionById(id, userId);
+    if (!connection) {
+      return res.status(404).json({ error: "Connexion non trouvée" });
+    }
+    
+    const result = await integrationService.testConnection(id, userId);
+    
+    if (result.success) {
+      await storage.updateExternalConnection(id, userId, {
+        status: "active",
+        lastError: null
+      });
+    } else {
+      await storage.updateExternalConnection(id, userId, {
+        status: "error",
+        lastError: result.message
+      });
+    }
+    
+    res.json(result);
+  } catch (error) {
+    console.error("Error testing connection:", error);
+    res.status(500).json({ error: "Erreur lors du test de connexion" });
+  }
+});
+
+// Get supported providers with real status
+router.get("/supported-providers", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const providers = getSupportedProviders();
+    res.json(providers);
+  } catch (error) {
+    console.error("Error fetching supported providers:", error);
+    res.status(500).json({ error: "Erreur" });
   }
 });
 
@@ -245,12 +318,12 @@ router.get("/connections/:id/sync-history", requireAuth, async (req: Request, re
   }
 });
 
-// Trigger manual sync
+// Trigger manual sync - REAL synchronization
 router.post("/connections/:id/sync", requireAuth, async (req: Request, res: Response) => {
   try {
     const userId = getUserId(req);
     const { id } = req.params;
-    const { jobType = "full", entityTypes } = req.body;
+    const { fullSync = false } = req.body;
     
     const connection = await storage.getExternalConnectionById(id, userId);
     if (!connection) {
@@ -261,21 +334,48 @@ router.post("/connections/:id/sync", requireAuth, async (req: Request, res: Resp
       return res.status(400).json({ error: "La connexion n'est pas active" });
     }
     
-    // Create sync job
-    const job = await storage.createSyncJob({
-      connectionId: id,
-      userId,
-      jobType,
-      entityTypes: entityTypes || connection.enabledEntities,
-      status: "pending"
+    // Check if provider is supported for real sync
+    if (!isProviderSupported(connection.provider)) {
+      return res.status(400).json({ 
+        error: `Le provider ${connection.provider} n'est pas encore supporté pour la synchronisation automatique`
+      });
+    }
+    
+    // Run real synchronization
+    const result = await integrationService.syncConnection(id, userId, fullSync);
+    
+    res.json({
+      success: result.success,
+      message: result.success 
+        ? `Synchronisation réussie: ${result.customersImported} clients, ${result.ordersImported} commandes, ${result.transactionsImported} transactions`
+        : `Synchronisation avec erreurs: ${result.errors.join(', ')}`,
+      details: {
+        customersImported: result.customersImported,
+        ordersImported: result.ordersImported,
+        transactionsImported: result.transactionsImported,
+        errors: result.errors
+      }
     });
-    
-    // TODO: Trigger background sync worker
-    
-    res.status(201).json(job);
   } catch (error) {
     console.error("Error triggering sync:", error);
-    res.status(500).json({ error: "Erreur lors du déclenchement de la synchronisation" });
+    res.status(500).json({ error: "Erreur lors de la synchronisation" });
+  }
+});
+
+// Sync all connections
+router.post("/sync-all", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const userId = getUserId(req);
+    const result = await integrationService.syncAllConnections(userId);
+    
+    res.json({
+      success: result.errors.length === 0,
+      synced: result.synced,
+      errors: result.errors
+    });
+  } catch (error) {
+    console.error("Error syncing all:", error);
+    res.status(500).json({ error: "Erreur lors de la synchronisation" });
   }
 });
 
@@ -869,5 +969,52 @@ function getDefaultProviders() {
     }
   ];
 }
+
+// ===== OAUTH ROUTES =====
+
+// Mount OAuth callback routers
+router.use("/oauth/hubspot", hubspotOAuthRouter);
+
+// Initiate OAuth flow
+router.post("/connections/:id/oauth-start", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const userId = getUserId(req);
+    const { id } = req.params;
+    
+    const connection = await storage.getExternalConnectionById(id, userId);
+    if (!connection) {
+      return res.status(404).json({ error: "Connexion non trouvée" });
+    }
+    
+    switch (connection.provider.toLowerCase()) {
+      case 'hubspot':
+        if (!isHubSpotConfigured()) {
+          return res.status(400).json({ 
+            error: "OAuth HubSpot non configuré",
+            message: "Veuillez configurer HUBSPOT_CLIENT_ID et HUBSPOT_CLIENT_SECRET dans les variables d'environnement"
+          });
+        }
+        const authUrl = getHubSpotAuthUrl(id, userId);
+        res.json({ authUrl, provider: 'hubspot' });
+        break;
+        
+      default:
+        res.status(400).json({ error: `OAuth non supporté pour ${connection.provider}` });
+    }
+  } catch (error) {
+    console.error("Error initiating OAuth:", error);
+    res.status(500).json({ error: "Erreur lors de l'initialisation OAuth" });
+  }
+});
+
+// Check OAuth configuration status
+router.get("/oauth-status", requireAuth, async (req: Request, res: Response) => {
+  res.json({
+    hubspot: isHubSpotConfigured(),
+    salesforce: false,
+    zoho: false,
+    google: false
+  });
+});
 
 export default router;

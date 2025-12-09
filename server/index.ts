@@ -6,6 +6,7 @@ import { monthlyReportCron } from "./monthly-report.cron";
 import { trialExpirationCron } from "./trial-expiration.cron";
 import { initPushNotificationCrons } from "./push-notification.cron";
 import { startReviewSyncCron } from "./crons/review-sync.cron";
+import { startIntegrationSyncCron } from "./crons/integration-sync.cron";
 
 const app = express();
 
@@ -75,6 +76,10 @@ app.use((req, res, next) => {
   // Start review sync cron job
   startReviewSyncCron();
   console.log('[Server] Review sync cron job initialized');
+
+  // Start integration sync cron job
+  startIntegrationSyncCron();
+  console.log('[Server] Integration sync cron job initialized');
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
