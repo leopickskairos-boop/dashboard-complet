@@ -227,42 +227,53 @@ export default function IntegrationConnections() {
 
             {!selectedProvider ? (
               <div className="space-y-6">
-                {Object.entries(groupedProviders).map(([category, categoryProviders]) => (
-                  <div key={category}>
-                    <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                      <span>{categoryIcons[category] || "📦"}</span>
-                      {categoryLabels[category] || category}
-                    </h3>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                      {categoryProviders.map((provider) => (
-                        <button
-                          key={provider.provider}
-                          onClick={() => setSelectedProvider(provider)}
-                          className="p-4 rounded-lg border text-left hover-elevate transition-all"
-                          data-testid={`button-provider-${provider.provider}`}
-                        >
-                          <div className="flex items-center gap-3 mb-2">
-                            <div 
-                              className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold"
-                              style={{ backgroundColor: provider.color }}
-                            >
-                              {provider.displayName.charAt(0)}
-                            </div>
-                            <div>
-                              <div className="font-medium">{provider.displayName}</div>
-                              {provider.isPremium && (
-                                <Badge variant="secondary" className="text-xs">Premium</Badge>
-                              )}
-                            </div>
-                          </div>
-                          <p className="text-xs text-muted-foreground line-clamp-2">
-                            {provider.description}
-                          </p>
-                        </button>
-                      ))}
-                    </div>
+                {loadingProviders ? (
+                  <div className="flex items-center justify-center py-12">
+                    <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
+                    <span className="ml-2 text-muted-foreground">Chargement des intégrations...</span>
                   </div>
-                ))}
+                ) : Object.keys(groupedProviders).length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    Aucune intégration disponible
+                  </div>
+                ) : (
+                  Object.entries(groupedProviders).map(([category, categoryProviders]) => (
+                    <div key={category}>
+                      <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                        <span>{categoryIcons[category] || "📦"}</span>
+                        {categoryLabels[category] || category}
+                      </h3>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        {categoryProviders.map((provider) => (
+                          <button
+                            key={provider.provider}
+                            onClick={() => setSelectedProvider(provider)}
+                            className="p-4 rounded-lg border text-left hover-elevate transition-all"
+                            data-testid={`button-provider-${provider.provider}`}
+                          >
+                            <div className="flex items-center gap-3 mb-2">
+                              <div 
+                                className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold"
+                                style={{ backgroundColor: provider.color }}
+                              >
+                                {provider.displayName.charAt(0)}
+                              </div>
+                              <div>
+                                <div className="font-medium">{provider.displayName}</div>
+                                {provider.isPremium && (
+                                  <Badge variant="secondary" className="text-xs">Premium</Badge>
+                                )}
+                              </div>
+                            </div>
+                            <p className="text-xs text-muted-foreground line-clamp-2">
+                              {provider.description}
+                            </p>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             ) : (
               <div className="space-y-4">
