@@ -23,9 +23,28 @@ import {
   Clock,
   ExternalLink,
   Key,
-  Link2
+  Link2,
+  Building2,
+  Utensils,
+  Hotel,
+  Stethoscope,
+  ShoppingCart,
+  HardDrive,
+  Cog
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { 
+  SiHubspot, 
+  SiSalesforce, 
+  SiZoho, 
+  SiStripe, 
+  SiShopify, 
+  SiWoocommerce,
+  SiMongodb,
+  SiMysql,
+  SiPostgresql,
+  SiAirtable
+} from "react-icons/si";
 
 interface Provider {
   provider: string;
@@ -68,14 +87,75 @@ const categoryLabels: Record<string, string> = {
   custom: "Personnalisé"
 };
 
-const categoryIcons: Record<string, string> = {
-  crm: "💼",
-  restaurant: "🍽️",
-  hotel: "🏨",
-  medical: "⚕️",
-  ecommerce: "🛒",
-  database: "🗄️",
-  custom: "⚙️"
+const CategoryIcon = ({ category }: { category: string }) => {
+  const iconClass = "h-4 w-4";
+  switch (category) {
+    case "crm": return <Building2 className={iconClass} />;
+    case "restaurant": return <Utensils className={iconClass} />;
+    case "hotel": return <Hotel className={iconClass} />;
+    case "medical": return <Stethoscope className={iconClass} />;
+    case "ecommerce": return <ShoppingCart className={iconClass} />;
+    case "database": return <HardDrive className={iconClass} />;
+    default: return <Cog className={iconClass} />;
+  }
+};
+
+const ProviderLogo = ({ provider, color, size = "md" }: { provider: string; color: string; size?: "sm" | "md" | "lg" }) => {
+  const sizeClasses = {
+    sm: "w-8 h-8",
+    md: "w-10 h-10",
+    lg: "w-12 h-12"
+  };
+  const iconSizes = {
+    sm: "h-4 w-4",
+    md: "h-5 w-5",
+    lg: "h-6 w-6"
+  };
+  
+  const getIcon = () => {
+    switch (provider.toLowerCase()) {
+      case "hubspot": return <SiHubspot className={iconSizes[size]} />;
+      case "salesforce": return <SiSalesforce className={iconSizes[size]} />;
+      case "zoho": return <SiZoho className={iconSizes[size]} />;
+      case "stripe": return <SiStripe className={iconSizes[size]} />;
+      case "shopify": return <SiShopify className={iconSizes[size]} />;
+      case "woocommerce": return <SiWoocommerce className={iconSizes[size]} />;
+      case "mongodb": return <SiMongodb className={iconSizes[size]} />;
+      case "mysql": return <SiMysql className={iconSizes[size]} />;
+      case "postgresql": return <SiPostgresql className={iconSizes[size]} />;
+      case "airtable": return <SiAirtable className={iconSizes[size]} />;
+      case "pipedrive": return <span className="font-bold text-sm">P</span>;
+      case "monday": return <span className="font-bold text-sm">M</span>;
+      case "zenchef": return <span className="font-bold text-sm">Z</span>;
+      case "thefork": return <span className="font-bold text-sm">TF</span>;
+      case "resy": return <span className="font-bold text-sm">R</span>;
+      case "opentable": return <span className="font-bold text-sm">OT</span>;
+      case "sevenrooms": return <span className="font-bold text-sm">7R</span>;
+      case "guestline": return <span className="font-bold text-sm">GL</span>;
+      case "mews": return <span className="font-bold text-sm">MW</span>;
+      case "cloudbeds": return <span className="font-bold text-sm">CB</span>;
+      case "opera": return <span className="font-bold text-sm">OP</span>;
+      case "stayntouch": return <span className="font-bold text-sm">ST</span>;
+      case "doctolib": return <span className="font-bold text-sm">D</span>;
+      case "clicrdv": return <span className="font-bold text-sm">CR</span>;
+      case "maiia": return <span className="font-bold text-sm">MA</span>;
+      case "medicapp": return <span className="font-bold text-sm">MC</span>;
+      case "veasy": return <span className="font-bold text-sm">VE</span>;
+      case "prestashop": return <span className="font-bold text-sm">PS</span>;
+      case "magento": return <span className="font-bold text-sm">MG</span>;
+      case "bigcommerce": return <span className="font-bold text-sm">BC</span>;
+      default: return <Database className={iconSizes[size]} />;
+    }
+  };
+
+  return (
+    <div 
+      className={`${sizeClasses[size]} rounded-lg flex items-center justify-center text-white shrink-0`}
+      style={{ backgroundColor: color }}
+    >
+      {getIcon()}
+    </div>
+  );
 };
 
 export default function IntegrationConnections() {
@@ -239,8 +319,8 @@ export default function IntegrationConnections() {
                 ) : (
                   Object.entries(groupedProviders).map(([category, categoryProviders]) => (
                     <div key={category}>
-                      <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                        <span>{categoryIcons[category] || "📦"}</span>
+                      <h3 className="text-sm font-semibold mb-3 flex items-center gap-2 text-muted-foreground">
+                        <CategoryIcon category={category} />
                         {categoryLabels[category] || category}
                       </h3>
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -252,14 +332,9 @@ export default function IntegrationConnections() {
                             data-testid={`button-provider-${provider.provider}`}
                           >
                             <div className="flex items-center gap-3 mb-2">
-                              <div 
-                                className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold"
-                                style={{ backgroundColor: provider.color }}
-                              >
-                                {provider.displayName.charAt(0)}
-                              </div>
-                              <div>
-                                <div className="font-medium">{provider.displayName}</div>
+                              <ProviderLogo provider={provider.provider} color={provider.color} size="md" />
+                              <div className="min-w-0">
+                                <div className="font-medium truncate">{provider.displayName}</div>
                                 {provider.isPremium && (
                                   <Badge variant="secondary" className="text-xs">Premium</Badge>
                                 )}
@@ -278,13 +353,8 @@ export default function IntegrationConnections() {
             ) : (
               <div className="space-y-4">
                 <div className="flex items-center gap-4 p-4 rounded-lg bg-muted">
-                  <div 
-                    className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-xl"
-                    style={{ backgroundColor: selectedProvider.color }}
-                  >
-                    {selectedProvider.displayName.charAt(0)}
-                  </div>
-                  <div>
+                  <ProviderLogo provider={selectedProvider.provider} color={selectedProvider.color} size="lg" />
+                  <div className="min-w-0 flex-1">
                     <h3 className="font-semibold">{selectedProvider.displayName}</h3>
                     <p className="text-sm text-muted-foreground">{selectedProvider.description}</p>
                   </div>
@@ -377,17 +447,12 @@ export default function IntegrationConnections() {
             return (
               <Card key={connection.id} data-testid={`card-connection-${connection.id}`}>
                 <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div 
-                        className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold"
-                        style={{ backgroundColor: provider?.color || "#6c757d" }}
-                      >
-                        {provider?.displayName?.charAt(0) || connection.provider.charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <CardTitle className="text-lg">{connection.name}</CardTitle>
-                        <CardDescription>{provider?.displayName || connection.provider}</CardDescription>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <ProviderLogo provider={connection.provider} color={provider?.color || "#6c757d"} size="md" />
+                      <div className="min-w-0">
+                        <CardTitle className="text-lg truncate">{connection.name}</CardTitle>
+                        <CardDescription className="truncate">{provider?.displayName || connection.provider}</CardDescription>
                       </div>
                     </div>
                     {getStatusBadge(connection.status)}
