@@ -450,64 +450,62 @@ export default function IntegrationConnections() {
             />
           </div>
 
-          {selectedProvider.authType === "api_key" ? (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="api-key" className="flex items-center gap-2">
-                  <Key className="h-4 w-4" />
-                  Clé API
-                </Label>
-                <Input
-                  id="api-key"
-                  type="password"
-                  placeholder="Entrez votre clé API"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  data-testid="input-api-key"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Trouvez votre clé API dans les paramètres de votre compte {selectedProvider.displayName}
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="api-secret">Secret API (optionnel)</Label>
-                <Input
-                  id="api-secret"
-                  type="password"
-                  placeholder="Entrez votre secret API si requis"
-                  value={apiSecret}
-                  onChange={(e) => setApiSecret(e.target.value)}
-                  data-testid="input-api-secret"
-                />
-              </div>
-
-              {testResult && !testResult.success && (
-                <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm flex items-start gap-2">
-                  <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
-                  <span>{testResult.message}</span>
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="p-6 rounded-lg border border-dashed text-center space-y-4">
-              <div className="flex justify-center">
-                <div className="p-3 rounded-full bg-muted">
-                  <Shield className="h-8 w-8 text-muted-foreground" />
-                </div>
-              </div>
-              <div>
-                <h4 className="font-medium mb-1">Autorisation OAuth requise</h4>
-                <p className="text-sm text-muted-foreground">
-                  Vous serez redirigé vers {selectedProvider.displayName} pour autoriser l'accès sécurisé à vos données.
-                </p>
-              </div>
-              <Button onClick={handleOAuthConnect} className="w-full">
-                <ExternalLink className="h-4 w-4 mr-2" />
-                Autoriser {selectedProvider.displayName}
-              </Button>
+          {/* API Key input - show for api_key auth OR for providers that support both */}
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="api-key" className="flex items-center gap-2">
+                <Key className="h-4 w-4" />
+                Clé API {selectedProvider.authType === "oauth2" && "(optionnel)"}
+              </Label>
+              <Input
+                id="api-key"
+                type="password"
+                placeholder={`Entrez votre clé API ${selectedProvider.displayName}`}
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                data-testid="input-api-key"
+              />
+              <p className="text-xs text-muted-foreground">
+                {selectedProvider.provider === "hubspot" 
+                  ? "Trouvez votre clé API dans HubSpot → Paramètres → Intégrations → Clé API privée"
+                  : `Trouvez votre clé API dans les paramètres de votre compte ${selectedProvider.displayName}`
+                }
+              </p>
             </div>
-          )}
+
+            <div className="space-y-2">
+              <Label htmlFor="api-secret">Secret API (optionnel)</Label>
+              <Input
+                id="api-secret"
+                type="password"
+                placeholder="Entrez votre secret API si requis"
+                value={apiSecret}
+                onChange={(e) => setApiSecret(e.target.value)}
+                data-testid="input-api-secret"
+              />
+            </div>
+
+            {testResult && !testResult.success && (
+              <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                <span>{testResult.message}</span>
+              </div>
+            )}
+
+            {/* OAuth option for providers that support it */}
+            {selectedProvider.authType === "oauth2" && (
+              <div className="p-4 rounded-lg border border-dashed space-y-3">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Shield className="h-4 w-4" />
+                  <span>Ou connectez-vous via OAuth (recommandé)</span>
+                </div>
+                <Button onClick={handleOAuthConnect} variant="outline" className="w-full">
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Autoriser {selectedProvider.displayName}
+                </Button>
+              </div>
+            )}
+          </>
         </div>
 
         <DialogFooter className="gap-2">
@@ -520,25 +518,23 @@ export default function IntegrationConnections() {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Retour
           </Button>
-          {selectedProvider.authType === "api_key" && (
-            <Button 
-              onClick={handleTestConnection}
-              disabled={!apiKey || isTesting}
-              data-testid="button-test-connection"
-            >
-              {isTesting ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Test en cours...
-                </>
-              ) : (
-                <>
-                  <Link2 className="h-4 w-4 mr-2" />
-                  Tester la connexion
-                </>
-              )}
-            </Button>
-          )}
+          <Button 
+            onClick={handleTestConnection}
+            disabled={!apiKey || isTesting}
+            data-testid="button-test-connection"
+          >
+            {isTesting ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Test en cours...
+              </>
+            ) : (
+              <>
+                <Link2 className="h-4 w-4 mr-2" />
+                Tester la connexion
+              </>
+            )}
+          </Button>
         </DialogFooter>
       </div>
     );
