@@ -1,31 +1,18 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { storage } from "./storage";
-import { createConnectionSchema } from "@shared/schema";
+import { createConnectionSchema, User } from "@shared/schema";
 import { z } from "zod";
-import "express-session";
+import { requireAuth } from "./auth";
 import { integrationService } from "./integrations/integration-service";
 import { isProviderSupported, getSupportedProviders } from "./integrations/adapter-factory";
 import { hubspotOAuthRouter, getHubSpotAuthUrl, isHubSpotConfigured } from "./integrations/oauth/hubspot-oauth";
 
-declare module "express-session" {
-  interface SessionData {
-    userId: string;
-  }
-}
-
 const router = Router();
 
-// Helper to get authenticated user ID
+// Helper to get authenticated user ID from JWT token
 const getUserId = (req: Request): string => {
-  return req.session!.userId as string;
-};
-
-// Middleware to check authentication
-const requireAuth = (req: Request, res: Response, next: NextFunction) => {
-  if (!req.session?.userId) {
-    return res.status(401).json({ error: "Non authentifié" });
-  }
-  next();
+  const user = (req as any).user as User;
+  return user.id;
 };
 
 // ===== PROVIDER CONFIGS =====
