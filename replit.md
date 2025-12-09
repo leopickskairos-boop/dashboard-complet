@@ -95,3 +95,45 @@ The project utilizes a modern web stack for a responsive and professional user i
 -   **Drizzle ORM**: Object-Relational Mapper.
 -   **Nodemailer**: For sending transactional emails.
 -   **Retell.ai / VAPI / ElevenLabs**: Planned integrations for AI voice capabilities.
+
+## Universal CRM/Database Integration Hub
+
+Complete integration system for synchronizing customer data from external CRM and database systems:
+
+**Architecture:**
+-   **Adapter Pattern**: Extensible design with base adapter class and provider-specific implementations
+-   **Real API Connections**: Live connections to external APIs (not mock data)
+-   **AES-256-GCM Encryption**: All credentials encrypted at rest, decrypted only during sync operations
+-   **OAuth 2.0 Support**: Full OAuth flows for supported providers (HubSpot)
+
+**Implemented Adapters:**
+-   **HubSpot**: Contacts and deals synchronization
+    -   Supports both OAuth tokens (Bearer header) and legacy API keys (hapikey query parameter)
+    -   Incremental sync using POST /search endpoints with date filters
+    -   Full sync using standard GET endpoints
+-   **Stripe**: Customers, payments, charges, and refunds
+    -   Full Stripe SDK integration
+    -   Real-time payment data synchronization
+
+**Key Files:**
+-   `server/integrations/adapters/base-adapter.ts`: Base class with interface definitions
+-   `server/integrations/adapters/hubspot-adapter.ts`: HubSpot CRM adapter
+-   `server/integrations/adapters/stripe-adapter.ts`: Stripe payments adapter
+-   `server/integrations/adapter-factory.ts`: Factory for creating adapters by provider
+-   `server/integrations/integration-service.ts`: Orchestration service for sync operations
+-   `server/integrations/oauth/hubspot-oauth.ts`: HubSpot OAuth flow implementation
+-   `server/crons/integration-sync.cron.ts`: Automated sync cron job (runs at 3 AM Paris time)
+-   `server/integration-routes.ts`: API routes for integration management
+
+**API Endpoints:**
+-   `POST /api/integrations/connect-apikey`: Connect with API key (tests connection first)
+-   `POST /api/integrations/sync`: Trigger manual synchronization
+-   `POST /api/integrations/test`: Test existing connection
+-   `GET /api/integrations/oauth/hubspot/start`: Initiate HubSpot OAuth flow
+-   `GET /api/integrations/oauth/hubspot/callback`: OAuth callback handler
+
+**Frontend Pages:**
+-   Integration Hub overview with provider cards
+-   Connection configuration with credential forms
+-   Real-time connection testing
+-   Sync status and history display
