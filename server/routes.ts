@@ -786,24 +786,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
               
               if (N8N_WEBHOOK_CB_VALIDEE) {
                 try {
+                  // Send ALL stored info to N8N for calendar booking
+                  const n8nPayload = {
+                    // Status
+                    status: 'validated',
+                    event: 'cb_validated',
+                    action: 'book_calendar',
+                    
+                    // Session ID
+                    session_id: guaranteeSession.id,
+                    
+                    // Agent/Business info
+                    agent_id: guaranteeSession.agentId,
+                    business_type: guaranteeSession.businessType,
+                    
+                    // Customer info
+                    customer_name: guaranteeSession.customerName,
+                    customer_email: guaranteeSession.customerEmail,
+                    customer_phone: guaranteeSession.customerPhone,
+                    
+                    // Reservation info
+                    reservation_date: guaranteeSession.reservationDate,
+                    reservation_time: guaranteeSession.reservationTime,
+                    nb_persons: guaranteeSession.nbPersons,
+                    duration: guaranteeSession.duration,
+                    
+                    // Calendar/Company info for Google Calendar
+                    calendar_id: guaranteeSession.calendarId,
+                    company_name: guaranteeSession.companyName || config?.companyName,
+                    company_email: guaranteeSession.companyEmail,
+                    timezone: guaranteeSession.timezone || 'Europe/Paris',
+                    
+                    // Garage-specific fields
+                    vehicule: guaranteeSession.vehicule,
+                    type_service: guaranteeSession.typeService,
+                    
+                    // Timestamp
+                    validated_at: updatedSession.validatedAt?.toISOString(),
+                  };
+                  
                   const n8nResponse = await fetch(N8N_WEBHOOK_CB_VALIDEE, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      sessionId: guaranteeSession.id,
-                      reservationId: guaranteeSession.reservationId,
-                      customerName: guaranteeSession.customerName,
-                      customerEmail: guaranteeSession.customerEmail,
-                      customerPhone: guaranteeSession.customerPhone,
-                      nbPersons: guaranteeSession.nbPersons,
-                      reservationDate: guaranteeSession.reservationDate,
-                      reservationTime: guaranteeSession.reservationTime,
-                      event: 'cb_validated',
-                      action: 'book_calendar', // Signal to N8N to book the calendar entry
-                    }),
+                    body: JSON.stringify(n8nPayload),
                   });
                   
                   console.log('✅ [N8N] Webhook called for CB validation + calendar booking:', guaranteeSession.id, 'Response:', n8nResponse.status);
+                  console.log('📤 [N8N] Payload sent:', JSON.stringify(n8nPayload, null, 2));
                 } catch (n8nError) {
                   console.error('❌ [N8N] Error calling webhook:', n8nError);
                   // Don't fail the Stripe webhook - N8N call is non-blocking
@@ -3127,12 +3156,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
     customer_email: z.string().email().optional(),
     customer_phone: z.string().max(20).optional(),
     nb_persons: z.number().min(1).max(100).optional().default(1),
-    reservation_date: z.string().min(1),
-    reservation_time: z.string().optional(),
+    reservation_date: z.string().min(1), // ISO date string ou format texte "15 janvier 2025"
+    reservation_time: z.string().optional(), // HH:MM
+    
+    // Agent/Business info (pour N8N callback)
+    agent_id: z.string().optional(), // ID agent Retell
+    business_type: z.string().optional(), // restaurant, garage, etc.
+    
+    // Infos pour créer le RDV après validation (N8N callback)
+    calendar_id: z.string().optional(), // ID/email du calendrier Google
+    company_name: z.string().optional(),
+    company_email: z.string().email().optional(),
+    timezone: z.string().default("Europe/Paris"),
+    duration: z.number().int().optional(), // Durée en minutes
+    
+    // Champs spécifiques garage
+    vehicule: z.string().optional(),
+    type_service: z.string().optional(),
   });
 
   const guaranteeStatusUpdateSchema = z.object({
     status: z.enum(['attended', 'noshow']),
+  });
+
+  // ===== GUARANTEE PUBLIC ENDPOINTS (N8N) =====
+  
+  // Check if guarantee is enabled for an agent (called by N8N before creating session)
+  // GET /api/guarantee/status/:agent_id
+  app.get("/api/guarantee/status/:agent_id", async (req, res) => {
+    try {
+      const { agent_id } = req.params;
+      
+      if (!agent_id) {
+        return res.status(400).json({ 
+          guarantee_enabled: false,
+          error: "agent_id requis" 
+        });
+      }
+      
+      // Find user by agent_id (stored in users table or check calls table)
+      // First, try to find from calls table which has agentId
+      const userWithAgent = await storage.getUserByAgentId(agent_id);
+      
+      if (!userWithAgent) {
+        return res.json({ 
+          guarantee_enabled: false,
+          reason: "agent_not_found"
+        });
+      }
+      
+      // Get guarantee config for this user
+      const config = await storage.getGuaranteeConfig(userWithAgent.id);
+      
+      if (!config || !config.enabled) {
+        return res.json({ 
+          guarantee_enabled: false,
+          reason: "disabled"
+        });
+      }
+      
+      if (!config.stripeAccountId) {
+        return res.json({ 
+          guarantee_enabled: false,
+          reason: "stripe_not_connected"
+        });
+      }
+      
+      // Return enabled with config details
+      res.json({
+        guarantee_enabled: true,
+        config: {
+          penalty_amount: config.penaltyAmount,
+          cancellation_delay: config.cancellationDelay,
+          apply_to: config.applyTo,
+          min_persons: config.minPersons,
+          company_name: config.companyName,
+        }
+      });
+    } catch (error: any) {
+      console.error('[Guarantee] Error checking status:', error);
+      res.status(500).json({ 
+        guarantee_enabled: false,
+        error: "Erreur serveur" 
+      });
+    }
   });
   
   // Get guarantee config for current user
@@ -3586,7 +3693,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         stripeAccount: config.stripeAccountId,
       });
       
-      // Create guarantee session in DB
+      // Create guarantee session in DB with all N8N callback fields
       const session = await storage.createGuaranteeSession({
         userId,
         reservationId: data.reservation_id,
@@ -3599,6 +3706,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         checkoutSessionId: checkoutSession.id,
         penaltyAmount: config.penaltyAmount,
         status: 'pending',
+        // Agent/Business info for N8N callback
+        agentId: data.agent_id,
+        businessType: data.business_type,
+        // Calendar/Company info for N8N callback
+        calendarId: data.calendar_id,
+        companyName: data.company_name || config.companyName,
+        companyEmail: data.company_email,
+        timezone: data.timezone || 'Europe/Paris',
+        duration: data.duration,
+        // Garage-specific fields
+        vehicule: data.vehicule,
+        typeService: data.type_service,
       });
       
       // Track email/SMS sending results
