@@ -1,0 +1,376 @@
+# 🔐 SYSTÈME GARANTIE CB - DOCUMENTATION COMPLÈTE
+
+## Vue d'ensemble
+
+Le système de garantie CB permet de sécuriser les réservations en demandant au client d'enregistrer sa carte bancaire. Si le client ne vient pas (no-show), on peut débiter sa carte.
+
+---
+
+## 🔄 ARCHITECTURE GLOBALE
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         WORKFLOW 1 : PRISE DE RDV                            │
+│                         (N8N - Projet Prise de RDV)                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  1. Client appelle → IA Retell collecte les infos                           │
+│  2. N8N vérifie si garantie activée (GET /api/guarantee/status)             │
+│  3. SI OUI → N8N appelle SpeedAI (POST /api/n8n/guarantee/create-session)   │
+│  4. N8N répond à l'IA : "Vous allez recevoir un lien pour valider"          │
+│  5. FIN du workflow (pas de Wait)                                           │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              SPEEDAI                                         │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  1. SpeedAI reçoit la demande et stocke TOUTES les infos                    │
+│  2. SpeedAI crée une session Stripe Checkout (mode setup)                   │
+│  3. SpeedAI envoie EMAIL au client (lien validation CB)                     │
+│  4. SpeedAI envoie SMS au client (lien validation CB)                       │
+│  5. Client clique → Page de validation CB                                   │
+│  6. Client entre sa CB → Stripe valide                                      │
+│  7. SpeedAI reçoit webhook Stripe "checkout.session.completed"              │
+│  8. SpeedAI envoie EMAIL de confirmation                                    │
+│  9. SpeedAI envoie SMS de confirmation                                      │
+│  10. SpeedAI appelle N8N webhook CB Validée avec TOUTES les infos           │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    WORKFLOW 2 : CB VALIDÉE                                   │
+│                    (N8N - Projet Retell)                                     │
+│                                                                              │
+│  URL WEBHOOK : https://djeydejy.app.n8n.cloud/webhook/garantie-nouvelle-resa│
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  1. N8N reçoit les données de SpeedAI                                       │
+│  2. N8N crée le RDV dans Google Calendar                                    │
+│  3. N8N envoie confirmation finale (si nécessaire)                          │
+│  4. FIN                                                                      │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+```
+
+---
+
+## 📡 ENDPOINT 1 : Vérifier si garantie activée
+
+### Requête
+
+```
+GET /api/guarantee/status/:agent_id
+```
+
+### Exemple
+
+```
+GET /api/guarantee/status/agent_24572fd2ed314b65ce45b3240f
+```
+
+### Réponse
+
+```json
+{
+  "guarantee_enabled": true
+}
+```
+
+### Usage
+
+N8N appelle cet endpoint AVANT de décider s'il faut créer une session de garantie ou créer le RDV directement.
+
+---
+
+## 📡 ENDPOINT 2 : Créer une session de garantie
+
+### Requête
+
+```
+POST /api/n8n/guarantee/create-session
+Authorization: Bearer {dashboard_api_key}
+Content-Type: application/json
+```
+
+### Body envoyé par N8N
+
+```json
+{
+  "agent_id": "agent_24572fd2ed314b65ce45b3240f",
+  "customer_name": "Jean Dupont",
+  "customer_email": "jean.dupont@email.com",
+  "customer_phone": "+33612345678",
+  "reservation_date": "15 janvier 2025",
+  "reservation_time": "19:30",
+  "nb_persons": 4,
+  "calendar_id": "restaurant@gmail.com",
+  "company_name": "Restaurant Chez Marcel",
+  "company_email": "contact@chezmarcel.fr",
+  "timezone": "Europe/Paris",
+  "business_type": "restaurant",
+  "vehicule": "",
+  "type_service": "",
+  "duration": 90
+}
+```
+
+### Ce que SpeedAI doit faire
+
+1. **Stocker TOUTES ces infos** dans la table `guarantee_sessions`
+2. **Créer une session Stripe Checkout** (mode setup pour enregistrer la CB)
+3. **Envoyer un EMAIL** au client avec le lien de validation
+4. **Envoyer un SMS** au client avec le lien de validation
+5. **Retourner** une réponse à N8N
+
+### Réponse à N8N
+
+```json
+{
+  "success": true,
+  "session_id": "cs_xxx",
+  "validation_url": "https://vocal-dash-xxx.replit.app/validate/cs_xxx",
+  "message": "Session créée, email et SMS envoyés"
+}
+```
+
+### Structure table guarantee_sessions
+
+```sql
+guarantee_sessions (
+  id UUID PRIMARY KEY,
+  stripe_session_id VARCHAR,
+  stripe_payment_method_id VARCHAR,
+  
+  -- Infos agent/business
+  agent_id VARCHAR NOT NULL,
+  business_type VARCHAR,
+  
+  -- Infos client
+  customer_name VARCHAR NOT NULL,
+  customer_email VARCHAR NOT NULL,
+  customer_phone VARCHAR NOT NULL,
+  
+  -- Infos réservation
+  reservation_date VARCHAR NOT NULL,
+  reservation_time VARCHAR NOT NULL,
+  nb_persons INTEGER,
+  duration INTEGER,
+  
+  -- Infos pour créer le RDV après validation
+  calendar_id VARCHAR NOT NULL,
+  company_name VARCHAR NOT NULL,
+  company_email VARCHAR NOT NULL,
+  timezone VARCHAR DEFAULT 'Europe/Paris',
+  
+  -- Garage spécifique
+  vehicule VARCHAR,
+  type_service VARCHAR,
+  
+  -- Status
+  status VARCHAR DEFAULT 'pending',  -- pending, validated, expired, cancelled
+  
+  -- Timestamps
+  created_at TIMESTAMP DEFAULT NOW(),
+  validated_at TIMESTAMP,
+  expires_at TIMESTAMP
+)
+```
+
+---
+
+## 📡 WEBHOOK STRIPE : CB Validée
+
+### Quand Stripe envoie `checkout.session.completed`
+
+SpeedAI doit :
+
+1. **Récupérer la session** depuis la base de données
+2. **Mettre à jour le status** → `validated`
+3. **Envoyer EMAIL de confirmation** au client
+4. **Envoyer SMS de confirmation** au client
+5. **Appeler le webhook N8N** avec TOUTES les infos stockées
+
+---
+
+## 📡 CALLBACK VERS N8N : Après validation CB
+
+### URL à appeler
+
+```
+POST https://djeydejy.app.n8n.cloud/webhook/garantie-nouvelle-resa
+```
+
+### Body à envoyer
+
+```json
+{
+  "status": "validated",
+  "session_id": "cs_xxx",
+  
+  "agent_id": "agent_24572fd2ed314b65ce45b3240f",
+  "business_type": "restaurant",
+  
+  "customer_name": "Jean Dupont",
+  "customer_email": "jean.dupont@email.com",
+  "customer_phone": "+33612345678",
+  
+  "reservation_date": "15 janvier 2025",
+  "reservation_time": "19:30",
+  "nb_persons": 4,
+  "duration": 90,
+  
+  "calendar_id": "restaurant@gmail.com",
+  "company_name": "Restaurant Chez Marcel",
+  "company_email": "contact@chezmarcel.fr",
+  "timezone": "Europe/Paris",
+  
+  "vehicule": "",
+  "type_service": "",
+  
+  "validated_at": "2025-01-14T15:30:00Z"
+}
+```
+
+### Important
+
+N8N a besoin de TOUTES ces infos pour créer le RDV dans Google Calendar. SpeedAI doit donc :
+- **Stocker** toutes les infos reçues lors de la création de session
+- **Renvoyer** toutes ces infos lors du callback
+
+---
+
+## 📧 EMAILS À ENVOYER
+
+### Email 1 : Demande de validation CB
+
+**Quand :** Après création de la session (POST /api/n8n/guarantee/create-session)
+
+**Sujet :** Confirmez votre réservation chez {company_name}
+
+**Contenu :**
+```
+Bonjour {customer_name},
+
+Votre demande de réservation a bien été enregistrée :
+
+📅 Date : {reservation_date}
+⏰ Heure : {reservation_time}
+👥 Personnes : {nb_persons}
+
+Pour confirmer votre réservation, veuillez enregistrer votre carte bancaire 
+en cliquant sur le lien ci-dessous :
+
+[CONFIRMER MA RÉSERVATION]
+
+⚠️ Votre carte ne sera débitée qu'en cas de non-présentation (no-show).
+
+À bientôt !
+L'équipe {company_name}
+```
+
+### Email 2 : Confirmation après validation CB
+
+**Quand :** Après que le client a validé sa CB (webhook Stripe)
+
+**Sujet :** ✅ Réservation confirmée chez {company_name}
+
+**Contenu :**
+```
+Bonjour {customer_name},
+
+Votre réservation est confirmée ! 🎉
+
+📅 Date : {reservation_date}
+⏰ Heure : {reservation_time}
+👥 Personnes : {nb_persons}
+📍 Adresse : {company_address}
+
+Nous avons hâte de vous accueillir !
+
+À bientôt,
+L'équipe {company_name}
+```
+
+---
+
+## 📱 SMS À ENVOYER
+
+### SMS 1 : Demande de validation CB
+
+**Quand :** Après création de la session
+
+**Contenu :**
+```
+{company_name} : Confirmez votre réservation du {reservation_date} à {reservation_time} en enregistrant votre CB : {validation_url}
+```
+
+### SMS 2 : Confirmation après validation CB
+
+**Quand :** Après validation CB
+
+**Contenu :**
+```
+✅ {company_name} : Réservation confirmée pour le {reservation_date} à {reservation_time}. À bientôt !
+```
+
+---
+
+## 🔧 VARIABLE D'ENVIRONNEMENT À CONFIGURER
+
+```
+N8N_WEBHOOK_CB_VALIDEE=https://djeydejy.app.n8n.cloud/webhook/garantie-nouvelle-resa
+```
+
+---
+
+## 📋 RÉSUMÉ DES ENDPOINTS SPEEDAI
+
+| Endpoint | Méthode | Usage |
+|----------|---------|-------|
+| `/api/guarantee/status/:agent_id` | GET | Vérifier si garantie activée |
+| `/api/n8n/guarantee/create-session` | POST | Créer session + envoyer liens |
+| `/validate/:session_id` | GET | Page de validation CB (client) |
+| Webhook Stripe | POST | Recevoir confirmation Stripe |
+
+---
+
+## 📋 RÉSUMÉ DES ACTIONS SPEEDAI
+
+| Étape | Action SpeedAI |
+|-------|----------------|
+| 1 | Recevoir demande de N8N |
+| 2 | Stocker TOUTES les infos dans guarantee_sessions |
+| 3 | Créer session Stripe Checkout |
+| 4 | Envoyer EMAIL demande validation |
+| 5 | Envoyer SMS demande validation |
+| 6 | Répondre à N8N (succès) |
+| 7 | Attendre validation client... |
+| 8 | Recevoir webhook Stripe |
+| 9 | Mettre à jour status → validated |
+| 10 | Envoyer EMAIL confirmation |
+| 11 | Envoyer SMS confirmation |
+| 12 | Appeler webhook N8N avec TOUTES les infos |
+
+---
+
+## ❓ QUESTIONS POUR REPLIT
+
+1. L'endpoint `/api/n8n/guarantee/create-session` existe-t-il déjà ? Si oui, est-ce qu'il stocke toutes les infos listées ci-dessus ?
+
+2. L'endpoint `/api/guarantee/status/:agent_id` existe-t-il ?
+
+3. Quand le webhook Stripe est reçu, est-ce que SpeedAI appelle déjà un webhook N8N ? Si oui, quelle URL et quelles données ?
+
+4. Les emails et SMS de demande de validation sont-ils déjà envoyés automatiquement ?
+
+5. La table `guarantee_sessions` a-t-elle tous les champs nécessaires pour stocker les infos de réservation ?
+
+Merci de confirmer ou de me dire ce qu'il faut ajouter/modifier ! 🚀

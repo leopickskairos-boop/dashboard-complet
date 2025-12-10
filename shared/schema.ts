@@ -802,6 +802,10 @@ export const guaranteeSessions = pgTable("guarantee_sessions", {
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
   reservationId: text("reservation_id").notNull().unique(), // ID unique de réservation (N8N)
   
+  // Agent/Business info (pour N8N callback)
+  agentId: text("agent_id"), // ID agent Retell
+  businessType: text("business_type"), // restaurant, garage, etc.
+  
   // Infos client final
   customerName: text("customer_name").notNull(),
   customerEmail: text("customer_email"),
@@ -809,6 +813,17 @@ export const guaranteeSessions = pgTable("guarantee_sessions", {
   nbPersons: integer("nb_persons").notNull().default(1),
   reservationDate: timestamp("reservation_date").notNull(),
   reservationTime: text("reservation_time"), // Heure au format HH:MM
+  duration: integer("duration"), // Durée en minutes
+  
+  // Infos pour créer le RDV après validation (N8N callback)
+  calendarId: text("calendar_id"), // ID/email du calendrier Google
+  companyName: text("company_name"),
+  companyEmail: text("company_email"),
+  timezone: text("timezone").default("Europe/Paris"),
+  
+  // Champs spécifiques garage
+  vehicule: text("vehicule"),
+  typeService: text("type_service"),
   
   // Stripe
   paymentProvider: text("payment_provider").default("stripe"),
@@ -888,8 +903,23 @@ export const createGuaranteeSessionSchema = z.object({
   customer_email: z.string().email("Email invalide").optional(),
   customer_phone: z.string().optional(),
   nb_persons: z.number().int().min(1).default(1),
-  reservation_date: z.string(), // ISO date string
+  reservation_date: z.string(), // ISO date string ou format texte "15 janvier 2025"
   reservation_time: z.string().optional(), // HH:MM
+  
+  // Agent/Business info
+  agent_id: z.string().optional(), // ID agent Retell
+  business_type: z.string().optional(), // restaurant, garage, etc.
+  
+  // Infos pour créer le RDV après validation (N8N callback)
+  calendar_id: z.string().optional(), // ID/email du calendrier Google
+  company_name: z.string().optional(),
+  company_email: z.string().email().optional(),
+  timezone: z.string().default("Europe/Paris"),
+  duration: z.number().int().optional(), // Durée en minutes
+  
+  // Champs spécifiques garage
+  vehicule: z.string().optional(),
+  type_service: z.string().optional(),
 });
 
 // Schema for updating guarantee config
