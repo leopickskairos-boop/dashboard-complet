@@ -120,3 +120,19 @@ export function startIntegrationSyncCron() {
 
 // Export for manual trigger from API
 export { syncAllActiveConnections };
+
+// Alias for cron API routes
+export async function runIntegrationSync() {
+  if (isRunning) {
+    console.log('[IntegrationSyncCron] Sync already running, skipping...');
+    return { skipped: true };
+  }
+
+  isRunning = true;
+  try {
+    const result = await syncAllActiveConnections();
+    return result;
+  } finally {
+    isRunning = false;
+  }
+}

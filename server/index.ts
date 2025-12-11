@@ -1,12 +1,15 @@
 import express, { type Request, Response, NextFunction } from "express";
 import cookieParser from "cookie-parser";
 import { registerRoutes } from "./routes";
+import { registerCronApiRoutes } from "./cron-api-routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { monthlyReportCron } from "./monthly-report.cron";
 import { trialExpirationCron } from "./trial-expiration.cron";
 import { initPushNotificationCrons } from "./push-notification.cron";
 import { startReviewSyncCron } from "./crons/review-sync.cron";
 import { startIntegrationSyncCron } from "./crons/integration-sync.cron";
+
+const DISABLE_INTERNAL_CRONS = process.env.DISABLE_INTERNAL_CRONS === 'true';
 
 const app = express();
 
@@ -60,26 +63,35 @@ app.use((req, res, next) => {
 
 (async () => {
   const server = await registerRoutes(app);
+  
+  // Register cron API routes for external triggering (always available)
+  registerCronApiRoutes(app);
 
-  // Start monthly report cron job
-  monthlyReportCron.start();
-  console.log('[Server] Monthly report cron job initialized');
+  // Start internal cron jobs only if not disabled
+  // In production with Autoscale, set DISABLE_INTERNAL_CRONS=true and use external triggers (N8N/cron-job.org)
+  if (DISABLE_INTERNAL_CRONS) {
+    console.log('[Server] Internal cron jobs DISABLED - use external API triggers');
+  } else {
+    // Start monthly report cron job
+    monthlyReportCron.start();
+    console.log('[Server] Monthly report cron job initialized');
 
-  // Start trial expiration cron job
-  trialExpirationCron.start();
-  console.log('[Server] Trial expiration cron job initialized');
+    // Start trial expiration cron job
+    trialExpirationCron.start();
+    console.log('[Server] Trial expiration cron job initialized');
 
-  // Start push notification cron jobs
-  initPushNotificationCrons();
-  console.log('[Server] Push notification cron jobs initialized');
+    // Start push notification cron jobs
+    initPushNotificationCrons();
+    console.log('[Server] Push notification cron jobs initialized');
 
-  // Start review sync cron job
-  startReviewSyncCron();
-  console.log('[Server] Review sync cron job initialized');
+    // Start review sync cron job
+    startReviewSyncCron();
+    console.log('[Server] Review sync cron job initialized');
 
-  // Start integration sync cron job
-  startIntegrationSyncCron();
-  console.log('[Server] Integration sync cron job initialized');
+    // Start integration sync cron job
+    startIntegrationSyncCron();
+    console.log('[Server] Integration sync cron job initialized');
+  }
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

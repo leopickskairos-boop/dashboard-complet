@@ -146,3 +146,41 @@ Complete integration system for synchronizing customer data from external CRM an
 -   Connection configuration with credential forms
 -   Real-time connection testing
 -   Sync status and history display
+
+## Autoscale Optimization
+
+The application supports Replit Autoscale optimization to reduce hosting costs:
+
+**Problem Solved:**
+-   6 internal cron jobs (node-cron) kept the app running 24/7, preventing sleep mode
+
+**Solution:**
+-   External API endpoints for all cron tasks (authenticated with N8N_MASTER_API_KEY)
+-   Set `DISABLE_INTERNAL_CRONS=true` in production to disable internal cron jobs
+-   Use N8N or cron-job.org to trigger tasks externally
+
+**Cron API Endpoints:**
+-   `POST /api/cron/monthly-reports` - Daily at 2h
+-   `POST /api/cron/trial-expirations` - Daily at 3h  
+-   `POST /api/cron/daily-summary` - Daily at 9h
+-   `POST /api/cron/trial-expiring-notifications` - Daily at 10h
+-   `POST /api/cron/review-sync` - Daily at 4h
+-   `POST /api/cron/integration-sync` - Hourly
+-   `GET /api/cron/health` - Health check
+
+**Recommended Autoscale Config:**
+```
+minInstances: 0
+maxInstances: 1
+idleTimeout: 300
+```
+
+**Documentation:** See `docs/AUTOSCALE_OPTIMIZATION.md` for full setup guide.
+
+## Email Infrastructure
+
+**Resend Integration:**
+-   Centralized email sending via Resend API (SpeedAI manages costs)
+-   Professional HTML email templates with client branding
+-   Automatic fallback handling
+-   Domain verification required for production (currently using onboarding@resend.dev for dev)
