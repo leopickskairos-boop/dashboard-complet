@@ -3142,7 +3142,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     minPersons: z.number().min(1).max(20).optional(),
     logoUrl: z.string().url().nullable().optional(),
     brandColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
-    gmailSenderEmail: z.string().email().nullable().optional(),
+    senderEmail: z.string().email().nullable().optional(), // Adresse email Resend
+    gmailSenderEmail: z.string().email().nullable().optional(), // Deprecated
     gmailSenderName: z.string().max(100).nullable().optional(),
     termsUrl: z.string().url().nullable().optional(),
     companyName: z.string().max(200).nullable().optional(),

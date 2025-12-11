@@ -41,6 +41,7 @@ interface GuaranteeConfig {
   minPersons: number;
   logoUrl: string | null;
   brandColor: string;
+  senderEmail: string | null;
   gmailSenderEmail: string | null;
   gmailSenderName: string | null;
   gmailAppPassword: string | null;
@@ -532,47 +533,21 @@ export default function GuaranteeSettings() {
       key: 'email' as SectionKey,
       icon: Mail,
       iconColor: 'text-green-400',
-      title: 'Configuration Email (Gmail)',
-      description: localConfig.gmailSenderEmail ? `${localConfig.gmailSenderEmail}${localConfig.gmailAppPassword ? ' ✓' : ' (non configuré)'}` : 'Non configuré',
+      title: 'Configuration Email',
+      description: localConfig.senderEmail || localConfig.gmailSenderName || 'Géré par SpeedAI',
       content: (
         <div className="space-y-4">
-          <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 mb-4">
-            <h4 className="text-blue-300 font-medium flex items-center gap-2">
-              <Key className="h-4 w-4" />
-              Configuration SMTP Gmail
+          <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4 mb-4">
+            <h4 className="text-green-300 font-medium flex items-center gap-2">
+              <Mail className="h-4 w-4" />
+              Email géré par SpeedAI
             </h4>
             <p className="text-sm text-gray-400 mt-1">
-              Pour envoyer des emails depuis votre adresse, créez un "Mot de passe d'application" dans votre compte Google :
-              <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline ml-1">
-                Créer un mot de passe d'application
-              </a>
+              Les emails sont envoyés via l'infrastructure SpeedAI. Vous pouvez personnaliser le nom d'expéditeur qui apparaîtra dans les emails.
             </p>
           </div>
           <div>
-            <Label className="text-gray-300">Email Gmail</Label>
-            <Input
-              type="email"
-              value={localConfig.gmailSenderEmail || ''}
-              onChange={(e) => handleConfigChange('gmailSenderEmail', e.target.value || null)}
-              placeholder="contact@monrestaurant.fr"
-              className="mt-2 bg-white/5 border-white/10"
-              data-testid="input-sender-email"
-            />
-          </div>
-          <div>
-            <Label className="text-gray-300">Mot de passe d'application Gmail</Label>
-            <Input
-              type="password"
-              value={localConfig.gmailAppPassword || ''}
-              onChange={(e) => handleConfigChange('gmailAppPassword', e.target.value || null)}
-              placeholder="xxxx xxxx xxxx xxxx"
-              className="mt-2 bg-white/5 border-white/10"
-              data-testid="input-gmail-app-password"
-            />
-            <p className="text-xs text-gray-500 mt-1">Format : 16 caractères sans espaces</p>
-          </div>
-          <div>
-            <Label className="text-gray-300">Nom affiché</Label>
+            <Label className="text-gray-300">Nom affiché dans les emails</Label>
             <Input
               value={localConfig.gmailSenderName || ''}
               onChange={(e) => handleConfigChange('gmailSenderName', e.target.value || null)}
@@ -580,6 +555,7 @@ export default function GuaranteeSettings() {
               className="mt-2 bg-white/5 border-white/10"
               data-testid="input-sender-name"
             />
+            <p className="text-xs text-gray-500 mt-1">Ce nom apparaîtra comme expéditeur des emails</p>
           </div>
           <div>
             <Label className="text-gray-300">URL des CGV (optionnel)</Label>

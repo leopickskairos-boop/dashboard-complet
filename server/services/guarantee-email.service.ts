@@ -1,4 +1,4 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import type { ClientGuaranteeConfig, GuaranteeSession } from '@shared/schema';
 
 interface EmailResult {
@@ -12,6 +12,8 @@ interface GuaranteeEmailOptions {
   session: GuaranteeSession;
   checkoutUrl?: string;
 }
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 function getFrontendUrl(): string {
   if (process.env.FRONTEND_URL) {
@@ -37,34 +39,14 @@ function formatDate(date: Date): string {
   }).format(date);
 }
 
-function createTransporter(config: ClientGuaranteeConfig) {
-  if (config.gmailSenderEmail && config.gmailAppPassword) {
-    return nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: config.gmailSenderEmail,
-        pass: config.gmailAppPassword,
-      },
-    });
-  }
-  
-  if (process.env.SMTP_USER && process.env.SMTP_PASSWORD) {
-    return nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASSWORD,
-      },
-    });
-  }
-  
-  return null;
+function getFromAddress(config: ClientGuaranteeConfig): string {
+  const senderName = config.gmailSenderName || config.companyName || 'SpeedAI Garantie';
+  const senderEmail = config.senderEmail || 'garantie@speedai.fr';
+  return `${senderName} <${senderEmail}>`;
 }
 
-function getFromAddress(config: ClientGuaranteeConfig): string {
-  const name = config.gmailSenderName || config.companyName || 'SpeedAI';
-  const email = config.gmailSenderEmail || process.env.SMTP_USER;
-  return `"${name}" <${email}>`;
+function getDefaultFromAddress(): string {
+  return 'SpeedAI Garantie <onboarding@resend.dev>';
 }
 
 export async function sendCardRequestEmail(options: GuaranteeEmailOptions): Promise<EmailResult> {
@@ -77,10 +59,9 @@ export async function sendCardRequestEmail(options: GuaranteeEmailOptions): Prom
   if (!checkoutUrl) {
     return { success: false, error: 'URL de validation manquante' };
   }
-  
-  const transporter = createTransporter(config);
-  if (!transporter) {
-    return { success: false, error: 'SMTP non configuré' };
+
+  if (!process.env.RESEND_API_KEY) {
+    return { success: false, error: 'Resend non configuré' };
   }
   
   const brandColor = config.brandColor || '#C8B88A';
@@ -199,16 +180,23 @@ export async function sendCardRequestEmail(options: GuaranteeEmailOptions): Prom
 `;
 
   try {
-    const info = await transporter.sendMail({
-      from: getFromAddress(config),
+    const fromAddress = config.senderEmail ? getFromAddress(config) : getDefaultFromAddress();
+    
+    const { data, error } = await resend.emails.send({
+      from: fromAddress,
       to: session.customerEmail,
       subject: `${companyName} - Confirmez votre réservation du ${reservationDate}`,
       html,
       text: `Bonjour ${session.customerName},\n\nPour confirmer votre réservation du ${reservationDate} pour ${session.nbPersons} personne(s), veuillez enregistrer votre carte bancaire en cliquant sur ce lien : ${checkoutUrl}\n\nVotre carte ne sera pas débitée. Elle servira uniquement de garantie en cas de non-présentation.\n\n${companyName}`,
     });
     
-    console.log(`✅ [GuaranteeEmail] Card request email sent to ${session.customerEmail}, ID: ${info.messageId}`);
-    return { success: true, messageId: info.messageId };
+    if (error) {
+      console.error('[GuaranteeEmail] Resend error:', error);
+      return { success: false, error: error.message };
+    }
+    
+    console.log(`✅ [GuaranteeEmail] Card request email sent via Resend to ${session.customerEmail}, ID: ${data?.id}`);
+    return { success: true, messageId: data?.id };
   } catch (error: any) {
     console.error('[GuaranteeEmail] Error sending card request email:', error);
     return { success: false, error: error.message };
@@ -221,10 +209,9 @@ export async function sendConfirmationEmail(options: GuaranteeEmailOptions): Pro
   if (!session.customerEmail) {
     return { success: false, error: 'Pas d\'email client' };
   }
-  
-  const transporter = createTransporter(config);
-  if (!transporter) {
-    return { success: false, error: 'SMTP non configuré' };
+
+  if (!process.env.RESEND_API_KEY) {
+    return { success: false, error: 'Resend non configuré' };
   }
   
   const brandColor = config.brandColor || '#C8B88A';
@@ -326,25 +313,29 @@ export async function sendConfirmationEmail(options: GuaranteeEmailOptions): Pro
 `;
 
   try {
-    const info = await transporter.sendMail({
-      from: getFromAddress(config),
+    const fromAddress = config.senderEmail ? getFromAddress(config) : getDefaultFromAddress();
+    
+    const { data, error } = await resend.emails.send({
+      from: fromAddress,
       to: session.customerEmail,
       subject: `✓ Réservation confirmée - ${companyName} - ${reservationDate}`,
       html,
       text: `Bonjour ${session.customerName},\n\nVotre réservation est confirmée !\n\nDate : ${reservationDate}\n${session.reservationTime ? `Heure : ${session.reservationTime}\n` : ''}Personnes : ${session.nbPersons}\nRéférence : ${session.reservationId}\n\nNous avons hâte de vous accueillir !\n\n${companyName}`,
     });
     
-    console.log(`✅ [GuaranteeEmail] Confirmation email sent to ${session.customerEmail}, ID: ${info.messageId}`);
-    return { success: true, messageId: info.messageId };
+    if (error) {
+      console.error('[GuaranteeEmail] Resend error:', error);
+      return { success: false, error: error.message };
+    }
+    
+    console.log(`✅ [GuaranteeEmail] Confirmation email sent via Resend to ${session.customerEmail}, ID: ${data?.id}`);
+    return { success: true, messageId: data?.id };
   } catch (error: any) {
     console.error('[GuaranteeEmail] Error sending confirmation email:', error);
     return { success: false, error: error.message };
   }
 }
 
-export function isEmailConfigured(config: ClientGuaranteeConfig): boolean {
-  return !!(
-    (config.gmailSenderEmail && config.gmailAppPassword) ||
-    (process.env.SMTP_USER && process.env.SMTP_PASSWORD)
-  );
+export function isEmailConfigured(): boolean {
+  return !!process.env.RESEND_API_KEY;
 }

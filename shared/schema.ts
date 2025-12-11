@@ -755,10 +755,11 @@ export const clientGuaranteeConfig = pgTable("client_guarantee_config", {
   logoUrl: text("logo_url"),
   brandColor: text("brand_color").default("#C8B88A"), // SpeedAI gold
   
-  // Email expéditeur (SMTP Gmail du client)
-  gmailSenderEmail: text("gmail_sender_email"),
+  // Email expéditeur via Resend (centralisé SpeedAI)
+  senderEmail: text("sender_email"), // Adresse email expéditeur (doit être vérifiée sur Resend)
+  gmailSenderEmail: text("gmail_sender_email"), // Deprecated - anciennement Gmail SMTP
   gmailSenderName: text("gmail_sender_name"),
-  gmailAppPassword: text("gmail_app_password"), // App Password pour Gmail SMTP
+  gmailAppPassword: text("gmail_app_password"), // Deprecated - anciennement Gmail SMTP
   
   // SMS (optionnel - utilise Twilio du client ou notre propre config)
   smsEnabled: boolean("sms_enabled").notNull().default(false),
