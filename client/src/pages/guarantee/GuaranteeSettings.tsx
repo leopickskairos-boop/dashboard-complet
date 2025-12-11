@@ -567,6 +567,36 @@ export default function GuaranteeSettings() {
               data-testid="input-terms-url"
             />
           </div>
+          <div className="pt-4 border-t border-white/10">
+            <Button
+              variant="outline"
+              onClick={async () => {
+                try {
+                  const response = await apiRequest('/api/guarantee/test-email', { method: 'POST' });
+                  const result = await response.json();
+                  toast({
+                    title: result.success ? "Email envoyé !" : "Erreur",
+                    description: result.message,
+                    variant: result.success ? "default" : "destructive",
+                  });
+                } catch (error: any) {
+                  toast({
+                    title: "Erreur",
+                    description: "Impossible d'envoyer l'email de test",
+                    variant: "destructive",
+                  });
+                }
+              }}
+              className="w-full"
+              data-testid="button-test-email"
+            >
+              <Mail className="h-4 w-4 mr-2" />
+              Envoyer un email de test
+            </Button>
+            <p className="text-xs text-gray-500 mt-2 text-center">
+              Un email de test sera envoyé à votre adresse email
+            </p>
+          </div>
         </div>
       ),
     },

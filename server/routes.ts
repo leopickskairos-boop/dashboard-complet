@@ -3324,6 +3324,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Send test email for guarantee configuration
+  app.post("/api/guarantee/test-email", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "Utilisateur non trouvé" });
+      }
+      
+      const config = await storage.getGuaranteeConfig(userId);
+      if (!config) {
+        return res.status(400).json({ message: "Configuration de garantie non trouvée" });
+      }
+      
+      // Create a fake session for test
+      const testSession = {
+        id: 'test-' + Date.now(),
+        userId,
+        reservationId: 'TEST-' + Date.now(),
+        customerName: user.email?.split('@')[0] || 'Client Test',
+        customerEmail: user.email,
+        customerPhone: null,
+        nbPersons: 2,
+        reservationDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Dans 7 jours
+        reservationTime: '19:30',
+        status: 'pending' as const,
+        stripeSetupIntentId: null,
+        stripePaymentMethodId: null,
+        cardLast4: null,
+        cardBrand: null,
+        penaltyAmount: config.penaltyAmount,
+        chargeAttempts: 0,
+        chargedAt: null,
+        chargeAmount: null,
+        chargeError: null,
+        emailSentAt: null,
+        smsSentAt: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        agentId: null,
+        businessType: null,
+        calendarId: null,
+        companyName: config.companyName,
+        companyEmail: null,
+        timezone: 'Europe/Paris',
+        duration: null,
+        vehicule: null,
+        typeService: null,
+      };
+      
+      const { sendCardRequestEmail } = await import('./services/guarantee-email.service');
+      const testUrl = `${getFrontendUrl()}/guarantee/validate/test-session`;
+      
+      const result = await sendCardRequestEmail({
+        config,
+        session: testSession,
+        checkoutUrl: testUrl
+      });
+      
+      if (result.success) {
+        res.json({ 
+          success: true, 
+          message: `Email de test envoyé à ${user.email}`,
+          messageId: result.messageId
+        });
+      } else {
+        res.status(400).json({ 
+          success: false, 
+          message: result.error || "Erreur lors de l'envoi"
+        });
+      }
+    } catch (error: any) {
+      console.error('[Guarantee] Error sending test email:', error);
+      res.status(500).json({ message: "Erreur lors de l'envoi de l'email de test" });
+    }
+  });
+
   // Create Stripe Connect Express account and generate onboarding link
   app.post("/api/guarantee/connect-stripe", requireAuth, async (req, res) => {
     try {
