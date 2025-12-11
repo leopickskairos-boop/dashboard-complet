@@ -572,7 +572,7 @@ export default function GuaranteeSettings() {
               variant="outline"
               onClick={async () => {
                 try {
-                  const response = await apiRequest('/api/guarantee/test-email', { method: 'POST' });
+                  const response = await apiRequest("POST", "/api/guarantee/test-email", {});
                   const result = await response.json();
                   toast({
                     title: result.success ? "Email envoyé !" : "Erreur",
