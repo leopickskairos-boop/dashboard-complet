@@ -41,12 +41,12 @@ function formatDate(date: Date): string {
 
 function getFromAddress(config: ClientGuaranteeConfig): string {
   const senderName = config.gmailSenderName || config.companyName || 'SpeedAI Garantie';
-  const senderEmail = config.senderEmail || 'garantie@speedai.fr';
+  const senderEmail = config.senderEmail || 'garantie@rdv-notif.tech';
   return `${senderName} <${senderEmail}>`;
 }
 
 function getDefaultFromAddress(): string {
-  return 'SpeedAI Garantie <onboarding@resend.dev>';
+  return 'SpeedAI Garantie <garantie@rdv-notif.tech>';
 }
 
 export async function sendCardRequestEmail(options: GuaranteeEmailOptions): Promise<EmailResult> {

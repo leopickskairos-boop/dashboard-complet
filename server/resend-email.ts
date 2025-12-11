@@ -6,7 +6,7 @@ if (!process.env.RESEND_API_KEY) {
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-const FROM_EMAIL = 'SpeedAI <onboarding@resend.dev>';
+const FROM_EMAIL = 'SpeedAI <notifications@rdv-notif.tech>';
 
 // Environment variable priority for frontend URL:
 // 1. FRONTEND_URL (explicit configuration)
