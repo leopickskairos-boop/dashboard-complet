@@ -71,110 +71,109 @@ export async function sendCardRequestEmail(options: GuaranteeEmailOptions): Prom
   
   const html = `
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #1a1a1a; margin: 0; padding: 0; background-color: #f5f5f5; }
-    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .card { background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.1); }
-    .header { background: linear-gradient(135deg, ${brandColor} 0%, #0a0a0a 100%); color: white; padding: 40px 30px; text-align: center; }
-    .header h1 { margin: 0; font-size: 24px; font-weight: 600; }
-    .header p { margin: 10px 0 0; opacity: 0.9; font-size: 14px; }
-    .content { padding: 30px; }
-    .reservation-box { background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%); border-radius: 12px; padding: 24px; margin: 20px 0; color: white; }
-    .reservation-box h3 { margin: 0 0 16px; color: ${brandColor}; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; }
-    .reservation-detail { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.1); }
-    .reservation-detail:last-child { border-bottom: none; }
-    .reservation-detail .label { color: #888; font-size: 14px; }
-    .reservation-detail .value { color: white; font-weight: 500; }
-    .guarantee-info { background: #fffbeb; border-left: 4px solid ${brandColor}; padding: 16px; margin: 20px 0; border-radius: 0 8px 8px 0; }
-    .guarantee-info p { margin: 0; color: #92400e; font-size: 14px; }
-    .cta-button { display: block; background: ${brandColor}; color: #0a0a0a !important; text-decoration: none; padding: 16px 32px; text-align: center; border-radius: 8px; font-weight: 600; font-size: 16px; margin: 24px 0; transition: transform 0.2s; }
-    .cta-button:hover { transform: scale(1.02); }
-    .footer { text-align: center; padding: 24px; color: #666; font-size: 13px; background: #fafafa; }
-    .footer a { color: ${brandColor}; text-decoration: none; }
-    .steps { margin: 24px 0; }
-    .step { display: flex; align-items: flex-start; margin-bottom: 16px; }
-    .step-number { background: ${brandColor}; color: #0a0a0a; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; margin-right: 12px; flex-shrink: 0; }
-    .step-text { font-size: 14px; color: #444; padding-top: 4px; }
-    @media (max-width: 600px) { .container { padding: 10px; } .header { padding: 30px 20px; } .content { padding: 20px; } }
-  </style>
+  <title>Confirmez votre réservation</title>
+  <!--[if mso]>
+  <noscript>
+    <xml>
+      <o:OfficeDocumentSettings>
+        <o:PixelsPerInch>96</o:PixelsPerInch>
+      </o:OfficeDocumentSettings>
+    </xml>
+  </noscript>
+  <![endif]-->
 </head>
-<body>
-  <div class="container">
-    <div class="card">
-      <div class="header">
-        ${config.logoUrl ? `<img src="${config.logoUrl}" alt="${companyName}" style="max-height: 60px; margin-bottom: 16px;">` : ''}
-        <h1>Confirmez votre réservation</h1>
-        <p>Une garantie par carte bancaire est requise</p>
-      </div>
-      
-      <div class="content">
-        <p>Bonjour <strong>${session.customerName}</strong>,</p>
-        
-        <p>Nous avons bien reçu votre demande de réservation. Pour la confirmer définitivement, nous vous demandons d'enregistrer une carte bancaire comme garantie.</p>
-        
-        <div class="reservation-box">
-          <h3>Détails de votre réservation</h3>
-          <div class="reservation-detail">
-            <span class="label">Date</span>
-            <span class="value">${reservationDate}</span>
-          </div>
-          ${session.reservationTime ? `
-          <div class="reservation-detail">
-            <span class="label">Heure</span>
-            <span class="value">${session.reservationTime}</span>
-          </div>
-          ` : ''}
-          <div class="reservation-detail">
-            <span class="label">Nombre de personnes</span>
-            <span class="value">${session.nbPersons} personne${session.nbPersons > 1 ? 's' : ''}</span>
-          </div>
-        </div>
-        
-        <div class="guarantee-info">
-          <p><strong>💳 Comment ça marche ?</strong></p>
-          <p style="margin-top: 8px;">Votre carte ne sera <strong>pas débitée</strong> lors de l'enregistrement. Elle servira uniquement de garantie en cas de non-présentation (${totalPenalty}€).</p>
-        </div>
-        
-        <div class="steps">
-          <div class="step">
-            <div class="step-number">1</div>
-            <div class="step-text">Cliquez sur le bouton ci-dessous</div>
-          </div>
-          <div class="step">
-            <div class="step-number">2</div>
-            <div class="step-text">Entrez les informations de votre carte (sécurisé par Stripe)</div>
-          </div>
-          <div class="step">
-            <div class="step-number">3</div>
-            <div class="step-text">Recevez votre confirmation par email</div>
-          </div>
-        </div>
-        
-        <a href="${checkoutUrl}" class="cta-button">Enregistrer ma carte bancaire</a>
-        
-        <p style="text-align: center; color: #666; font-size: 13px;">
-          🔒 Paiement 100% sécurisé par <strong>Stripe</strong>
-        </p>
-        
-        ${config.cancellationDelay ? `
-        <p style="color: #666; font-size: 13px; margin-top: 24px;">
-          <strong>Annulation gratuite</strong> jusqu'à ${config.cancellationDelay}h avant votre réservation.
-        </p>
-        ` : ''}
-      </div>
-      
-      <div class="footer">
-        <p>${companyName}</p>
-        ${config.companyAddress ? `<p>${config.companyAddress}</p>` : ''}
-        ${config.companyPhone ? `<p>📞 ${config.companyPhone}</p>` : ''}
-        ${config.termsUrl ? `<p><a href="${config.termsUrl}">Conditions générales</a></p>` : ''}
-      </div>
-    </div>
-  </div>
+<body style="margin: 0; padding: 0; background-color: #f4f4f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; -webkit-font-smoothing: antialiased;">
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f4f4f5;">
+    <tr>
+      <td style="padding: 40px 20px;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 560px; margin: 0 auto;">
+          
+          <!-- Header -->
+          <tr>
+            <td style="background: ${brandColor}; border-radius: 12px 12px 0 0; padding: 32px 40px; text-align: center;">
+              ${config.logoUrl ? `<img src="${config.logoUrl}" alt="${companyName}" style="max-height: 50px; max-width: 180px; margin-bottom: 16px; display: block; margin-left: auto; margin-right: auto;">` : `<div style="font-size: 22px; font-weight: 700; color: #ffffff; letter-spacing: -0.5px;">${companyName}</div>`}
+            </td>
+          </tr>
+          
+          <!-- Main Content -->
+          <tr>
+            <td style="background: #ffffff; padding: 40px;">
+              <h1 style="margin: 0 0 8px; font-size: 24px; font-weight: 700; color: #18181b; line-height: 1.3;">Confirmez votre réservation</h1>
+              <p style="margin: 0 0 28px; font-size: 15px; color: #71717a; line-height: 1.5;">Une garantie par carte bancaire est requise pour finaliser votre demande.</p>
+              
+              <p style="margin: 0 0 24px; font-size: 15px; color: #3f3f46; line-height: 1.6;">Bonjour <strong style="color: #18181b;">${session.customerName}</strong>,</p>
+              
+              <p style="margin: 0 0 28px; font-size: 15px; color: #3f3f46; line-height: 1.6;">Merci pour votre demande de réservation. Afin de la confirmer, nous vous invitons à enregistrer une carte bancaire.</p>
+              
+              <!-- Reservation Details Box -->
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #fafafa; border: 1px solid #e4e4e7; border-radius: 8px; margin-bottom: 24px;">
+                <tr>
+                  <td style="padding: 20px 24px; border-bottom: 1px solid #e4e4e7;">
+                    <div style="font-size: 11px; font-weight: 600; color: #71717a; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Date</div>
+                    <div style="font-size: 15px; font-weight: 600; color: #18181b;">${reservationDate}</div>
+                  </td>
+                </tr>
+                ${session.reservationTime ? `
+                <tr>
+                  <td style="padding: 20px 24px; border-bottom: 1px solid #e4e4e7;">
+                    <div style="font-size: 11px; font-weight: 600; color: #71717a; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Heure</div>
+                    <div style="font-size: 15px; font-weight: 600; color: #18181b;">${session.reservationTime}</div>
+                  </td>
+                </tr>
+                ` : ''}
+                <tr>
+                  <td style="padding: 20px 24px;">
+                    <div style="font-size: 11px; font-weight: 600; color: #71717a; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Nombre de personnes</div>
+                    <div style="font-size: 15px; font-weight: 600; color: #18181b;">${session.nbPersons} personne${session.nbPersons > 1 ? 's' : ''}</div>
+                  </td>
+                </tr>
+              </table>
+              
+              <!-- Info Box -->
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #fffbeb; border-left: 3px solid ${brandColor}; margin-bottom: 28px;">
+                <tr>
+                  <td style="padding: 16px 20px;">
+                    <div style="font-size: 14px; font-weight: 600; color: #92400e; margin-bottom: 6px;">Garantie sans engagement</div>
+                    <div style="font-size: 14px; color: #a16207; line-height: 1.5;">Votre carte ne sera pas debitee. Elle sert uniquement de garantie en cas de non-presentation sans annulation prealable (${totalPenalty} EUR).</div>
+                  </td>
+                </tr>
+              </table>
+              
+              <!-- CTA Button -->
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                <tr>
+                  <td style="text-align: center; padding-bottom: 24px;">
+                    <a href="${checkoutUrl}" style="display: inline-block; background: ${brandColor}; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-size: 15px; font-weight: 600; letter-spacing: -0.2px;">Enregistrer ma carte</a>
+                  </td>
+                </tr>
+              </table>
+              
+              <p style="margin: 0 0 4px; font-size: 12px; color: #a1a1aa; text-align: center;">Paiement securise par Stripe</p>
+              
+              ${config.cancellationDelay ? `
+              <p style="margin: 24px 0 0; font-size: 13px; color: #71717a; line-height: 1.5; text-align: center;">Annulation gratuite jusqu'a ${config.cancellationDelay}h avant votre reservation.</p>
+              ` : ''}
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="background: #fafafa; border-radius: 0 0 12px 12px; padding: 24px 40px; text-align: center; border-top: 1px solid #e4e4e7;">
+              <div style="font-size: 14px; font-weight: 600; color: #3f3f46; margin-bottom: 4px;">${companyName}</div>
+              ${config.companyAddress ? `<div style="font-size: 13px; color: #71717a; margin-bottom: 2px;">${config.companyAddress}</div>` : ''}
+              ${config.companyPhone ? `<div style="font-size: 13px; color: #71717a;">${config.companyPhone}</div>` : ''}
+              ${config.termsUrl ? `<div style="margin-top: 12px;"><a href="${config.termsUrl}" style="font-size: 12px; color: #a1a1aa; text-decoration: underline;">Conditions generales</a></div>` : ''}
+            </td>
+          </tr>
+          
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>
 `;
@@ -185,9 +184,17 @@ export async function sendCardRequestEmail(options: GuaranteeEmailOptions): Prom
     const { data, error } = await resend.emails.send({
       from: fromAddress,
       to: session.customerEmail,
-      subject: `${companyName} - Confirmez votre réservation du ${reservationDate}`,
+      subject: `${companyName} - Confirmez votre reservation du ${reservationDate}`,
       html,
-      text: `Bonjour ${session.customerName},\n\nPour confirmer votre réservation du ${reservationDate} pour ${session.nbPersons} personne(s), veuillez enregistrer votre carte bancaire en cliquant sur ce lien : ${checkoutUrl}\n\nVotre carte ne sera pas débitée. Elle servira uniquement de garantie en cas de non-présentation.\n\n${companyName}`,
+      text: `Bonjour ${session.customerName},
+
+Pour confirmer votre reservation du ${reservationDate} pour ${session.nbPersons} personne(s), veuillez enregistrer votre carte bancaire en cliquant sur ce lien :
+
+${checkoutUrl}
+
+Votre carte ne sera pas debitee. Elle servira uniquement de garantie en cas de non-presentation.
+
+${companyName}`,
     });
     
     if (error) {
@@ -195,7 +202,7 @@ export async function sendCardRequestEmail(options: GuaranteeEmailOptions): Prom
       return { success: false, error: error.message };
     }
     
-    console.log(`✅ [GuaranteeEmail] Card request email sent via Resend to ${session.customerEmail}, ID: ${data?.id}`);
+    console.log(`[GuaranteeEmail] Card request email sent via Resend to ${session.customerEmail}, ID: ${data?.id}`);
     return { success: true, messageId: data?.id };
   } catch (error: any) {
     console.error('[GuaranteeEmail] Error sending card request email:', error);
@@ -220,94 +227,127 @@ export async function sendConfirmationEmail(options: GuaranteeEmailOptions): Pro
   
   const html = `
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #1a1a1a; margin: 0; padding: 0; background-color: #f5f5f5; }
-    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .card { background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.1); }
-    .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 40px 30px; text-align: center; }
-    .header h1 { margin: 0; font-size: 24px; font-weight: 600; }
-    .header .checkmark { font-size: 48px; margin-bottom: 16px; }
-    .content { padding: 30px; }
-    .reservation-box { background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%); border-radius: 12px; padding: 24px; margin: 20px 0; color: white; }
-    .reservation-box h3 { margin: 0 0 16px; color: ${brandColor}; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; }
-    .reservation-detail { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.1); }
-    .reservation-detail:last-child { border-bottom: none; }
-    .reservation-detail .label { color: #888; font-size: 14px; }
-    .reservation-detail .value { color: white; font-weight: 500; }
-    .success-badge { background: #d1fae5; color: #065f46; padding: 12px 20px; border-radius: 8px; text-align: center; margin: 20px 0; font-weight: 500; }
-    .footer { text-align: center; padding: 24px; color: #666; font-size: 13px; background: #fafafa; }
-    .footer a { color: ${brandColor}; text-decoration: none; }
-    .tips { background: #f0f9ff; border-radius: 12px; padding: 20px; margin: 20px 0; }
-    .tips h4 { margin: 0 0 12px; color: #0369a1; font-size: 14px; }
-    .tips ul { margin: 0; padding-left: 20px; color: #0c4a6e; font-size: 14px; }
-    .tips li { margin-bottom: 6px; }
-    @media (max-width: 600px) { .container { padding: 10px; } .header { padding: 30px 20px; } .content { padding: 20px; } }
-  </style>
+  <title>Reservation confirmee</title>
+  <!--[if mso]>
+  <noscript>
+    <xml>
+      <o:OfficeDocumentSettings>
+        <o:PixelsPerInch>96</o:PixelsPerInch>
+      </o:OfficeDocumentSettings>
+    </xml>
+  </noscript>
+  <![endif]-->
 </head>
-<body>
-  <div class="container">
-    <div class="card">
-      <div class="header">
-        <div class="checkmark">✓</div>
-        <h1>Réservation confirmée !</h1>
-      </div>
-      
-      <div class="content">
-        <p>Bonjour <strong>${session.customerName}</strong>,</p>
-        
-        <div class="success-badge">
-          🎉 Votre réservation est maintenant confirmée
-        </div>
-        
-        <p>Nous avons bien enregistré votre carte bancaire comme garantie. Votre réservation est désormais définitivement confirmée.</p>
-        
-        <div class="reservation-box">
-          <h3>Récapitulatif de votre réservation</h3>
-          <div class="reservation-detail">
-            <span class="label">Date</span>
-            <span class="value">${reservationDate}</span>
-          </div>
-          ${session.reservationTime ? `
-          <div class="reservation-detail">
-            <span class="label">Heure</span>
-            <span class="value">${session.reservationTime}</span>
-          </div>
-          ` : ''}
-          <div class="reservation-detail">
-            <span class="label">Nombre de personnes</span>
-            <span class="value">${session.nbPersons} personne${session.nbPersons > 1 ? 's' : ''}</span>
-          </div>
-          <div class="reservation-detail">
-            <span class="label">Référence</span>
-            <span class="value">${session.reservationId}</span>
-          </div>
-        </div>
-        
-        <div class="tips">
-          <h4>📋 Bon à savoir</h4>
-          <ul>
-            <li>Votre carte <strong>ne sera pas débitée</strong> si vous honorez votre réservation</li>
-            ${config.cancellationDelay ? `<li>Annulation gratuite jusqu'à <strong>${config.cancellationDelay}h</strong> avant votre réservation</li>` : ''}
-            <li>En cas de retard, prévenez-nous pour conserver votre table</li>
-          </ul>
-        </div>
-        
-        <p style="text-align: center; margin-top: 24px;">
-          Nous avons hâte de vous accueillir !
-        </p>
-      </div>
-      
-      <div class="footer">
-        <p><strong>${companyName}</strong></p>
-        ${config.companyAddress ? `<p>📍 ${config.companyAddress}</p>` : ''}
-        ${config.companyPhone ? `<p>📞 ${config.companyPhone}</p>` : ''}
-      </div>
-    </div>
-  </div>
+<body style="margin: 0; padding: 0; background-color: #f4f4f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; -webkit-font-smoothing: antialiased;">
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f4f4f5;">
+    <tr>
+      <td style="padding: 40px 20px;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 560px; margin: 0 auto;">
+          
+          <!-- Header - Success Green -->
+          <tr>
+            <td style="background: #059669; border-radius: 12px 12px 0 0; padding: 32px 40px; text-align: center;">
+              <div style="width: 48px; height: 48px; background: rgba(255,255,255,0.2); border-radius: 50%; margin: 0 auto 16px; line-height: 48px;">
+                <span style="color: #ffffff; font-size: 24px; font-weight: bold;">&#10003;</span>
+              </div>
+              <div style="font-size: 22px; font-weight: 700; color: #ffffff; letter-spacing: -0.5px;">Reservation confirmee</div>
+            </td>
+          </tr>
+          
+          <!-- Main Content -->
+          <tr>
+            <td style="background: #ffffff; padding: 40px;">
+              <p style="margin: 0 0 24px; font-size: 15px; color: #3f3f46; line-height: 1.6;">Bonjour <strong style="color: #18181b;">${session.customerName}</strong>,</p>
+              
+              <!-- Success Badge -->
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #d1fae5; border-radius: 8px; margin-bottom: 24px;">
+                <tr>
+                  <td style="padding: 14px 20px; text-align: center;">
+                    <span style="font-size: 14px; font-weight: 600; color: #065f46;">Votre reservation est maintenant confirmee</span>
+                  </td>
+                </tr>
+              </table>
+              
+              <p style="margin: 0 0 28px; font-size: 15px; color: #3f3f46; line-height: 1.6;">Nous avons bien enregistre votre carte bancaire. Votre reservation est desormais garantie.</p>
+              
+              <!-- Reservation Details Box -->
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #fafafa; border: 1px solid #e4e4e7; border-radius: 8px; margin-bottom: 24px;">
+                <tr>
+                  <td style="padding: 16px 24px;" colspan="2">
+                    <div style="font-size: 11px; font-weight: 600; color: ${brandColor}; text-transform: uppercase; letter-spacing: 0.5px;">Recapitulatif</div>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 24px; border-top: 1px solid #e4e4e7;">
+                    <div style="font-size: 13px; color: #71717a;">Date</div>
+                  </td>
+                  <td style="padding: 12px 24px; border-top: 1px solid #e4e4e7; text-align: right;">
+                    <div style="font-size: 14px; font-weight: 600; color: #18181b;">${reservationDate}</div>
+                  </td>
+                </tr>
+                ${session.reservationTime ? `
+                <tr>
+                  <td style="padding: 12px 24px; border-top: 1px solid #e4e4e7;">
+                    <div style="font-size: 13px; color: #71717a;">Heure</div>
+                  </td>
+                  <td style="padding: 12px 24px; border-top: 1px solid #e4e4e7; text-align: right;">
+                    <div style="font-size: 14px; font-weight: 600; color: #18181b;">${session.reservationTime}</div>
+                  </td>
+                </tr>
+                ` : ''}
+                <tr>
+                  <td style="padding: 12px 24px; border-top: 1px solid #e4e4e7;">
+                    <div style="font-size: 13px; color: #71717a;">Personnes</div>
+                  </td>
+                  <td style="padding: 12px 24px; border-top: 1px solid #e4e4e7; text-align: right;">
+                    <div style="font-size: 14px; font-weight: 600; color: #18181b;">${session.nbPersons}</div>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 24px; border-top: 1px solid #e4e4e7;">
+                    <div style="font-size: 13px; color: #71717a;">Reference</div>
+                  </td>
+                  <td style="padding: 12px 24px; border-top: 1px solid #e4e4e7; text-align: right;">
+                    <div style="font-size: 14px; font-weight: 500; color: #18181b; font-family: monospace;">${session.reservationId}</div>
+                  </td>
+                </tr>
+              </table>
+              
+              <!-- Info Box -->
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #f0f9ff; border-radius: 8px; margin-bottom: 24px;">
+                <tr>
+                  <td style="padding: 20px 24px;">
+                    <div style="font-size: 13px; font-weight: 600; color: #0369a1; margin-bottom: 12px;">A retenir</div>
+                    <div style="font-size: 13px; color: #0c4a6e; line-height: 1.7;">
+                      <div style="margin-bottom: 6px;">- Votre carte ne sera pas debitee si vous honorez votre reservation</div>
+                      ${config.cancellationDelay ? `<div style="margin-bottom: 6px;">- Annulation gratuite jusqu'a ${config.cancellationDelay}h avant</div>` : ''}
+                      <div>- En cas de retard, prevenez-nous pour conserver votre table</div>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+              
+              <p style="margin: 0; font-size: 15px; color: #3f3f46; text-align: center; line-height: 1.6;">Nous avons hate de vous accueillir.</p>
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="background: #fafafa; border-radius: 0 0 12px 12px; padding: 24px 40px; text-align: center; border-top: 1px solid #e4e4e7;">
+              <div style="font-size: 14px; font-weight: 600; color: #3f3f46; margin-bottom: 4px;">${companyName}</div>
+              ${config.companyAddress ? `<div style="font-size: 13px; color: #71717a; margin-bottom: 2px;">${config.companyAddress}</div>` : ''}
+              ${config.companyPhone ? `<div style="font-size: 13px; color: #71717a;">${config.companyPhone}</div>` : ''}
+            </td>
+          </tr>
+          
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>
 `;
@@ -318,9 +358,20 @@ export async function sendConfirmationEmail(options: GuaranteeEmailOptions): Pro
     const { data, error } = await resend.emails.send({
       from: fromAddress,
       to: session.customerEmail,
-      subject: `✓ Réservation confirmée - ${companyName} - ${reservationDate}`,
+      subject: `Reservation confirmee - ${companyName} - ${reservationDate}`,
       html,
-      text: `Bonjour ${session.customerName},\n\nVotre réservation est confirmée !\n\nDate : ${reservationDate}\n${session.reservationTime ? `Heure : ${session.reservationTime}\n` : ''}Personnes : ${session.nbPersons}\nRéférence : ${session.reservationId}\n\nNous avons hâte de vous accueillir !\n\n${companyName}`,
+      text: `Bonjour ${session.customerName},
+
+Votre reservation est confirmee !
+
+Date : ${reservationDate}
+${session.reservationTime ? `Heure : ${session.reservationTime}` : ''}
+Personnes : ${session.nbPersons}
+Reference : ${session.reservationId}
+
+Nous avons hate de vous accueillir !
+
+${companyName}`,
     });
     
     if (error) {
@@ -328,7 +379,7 @@ export async function sendConfirmationEmail(options: GuaranteeEmailOptions): Pro
       return { success: false, error: error.message };
     }
     
-    console.log(`✅ [GuaranteeEmail] Confirmation email sent via Resend to ${session.customerEmail}, ID: ${data?.id}`);
+    console.log(`[GuaranteeEmail] Confirmation email sent via Resend to ${session.customerEmail}, ID: ${data?.id}`);
     return { success: true, messageId: data?.id };
   } catch (error: any) {
     console.error('[GuaranteeEmail] Error sending confirmation email:', error);
