@@ -3133,6 +3133,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ===== CB GUARANTEE (ANTI NO-SHOW) ROUTES =====
   
+  // Helper function to parse French date formats like "20 décembre 2025" or "2025-12-20"
+  function parseFrenchDate(dateString: string): Date {
+    // If it's already an ISO format, parse directly
+    if (/^\d{4}-\d{2}-\d{2}/.test(dateString)) {
+      return new Date(dateString);
+    }
+    
+    // French month names mapping
+    const frenchMonths: { [key: string]: number } = {
+      'janvier': 0, 'février': 1, 'fevrier': 1, 'mars': 2, 'avril': 3,
+      'mai': 4, 'juin': 5, 'juillet': 6, 'août': 7, 'aout': 7,
+      'septembre': 8, 'octobre': 9, 'novembre': 10, 'décembre': 11, 'decembre': 11
+    };
+    
+    // Try to parse "20 décembre 2025" format
+    const frenchDateRegex = /(\d{1,2})\s+(\w+)\s+(\d{4})/i;
+    const match = dateString.match(frenchDateRegex);
+    
+    if (match) {
+      const day = parseInt(match[1], 10);
+      const monthName = match[2].toLowerCase();
+      const year = parseInt(match[3], 10);
+      const month = frenchMonths[monthName];
+      
+      if (month !== undefined) {
+        return new Date(year, month, day, 12, 0, 0); // Noon to avoid timezone issues
+      }
+    }
+    
+    // Fallback: try standard Date parsing
+    const parsed = new Date(dateString);
+    if (!isNaN(parsed.getTime())) {
+      return parsed;
+    }
+    
+    // If all else fails, return today's date
+    console.warn(`[Guarantee] Could not parse date: "${dateString}", using today's date`);
+    return new Date();
+  }
+  
   // Validation schemas for guarantee APIs
   const guaranteeConfigUpdateSchema = z.object({
     enabled: z.boolean().optional(),
@@ -3749,7 +3789,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Check applyTo conditions
-      const reservationDate = new Date(data.reservation_date);
+      const reservationDate = parseFrenchDate(data.reservation_date);
       const dayOfWeek = reservationDate.getDay(); // 0 = Sunday, 6 = Saturday
       const isWeekend = dayOfWeek === 0 || dayOfWeek === 5 || dayOfWeek === 6; // Fri, Sat, Sun
       
@@ -3870,7 +3910,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         customerEmail: data.customer_email,
         customerPhone: data.customer_phone,
         nbPersons: nbPersons,
-        reservationDate: new Date(data.reservation_date),
+        reservationDate: parseFrenchDate(data.reservation_date),
         reservationTime: data.reservation_time,
         checkoutSessionId: checkoutSession.id,
         penaltyAmount: config.penaltyAmount,
@@ -3924,7 +3964,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             data.customer_name,
             config.companyName || 'Établissement',
             checkoutSession.url!,
-            new Date(data.reservation_date),
+            parseFrenchDate(data.reservation_date),
             nbPersons
           );
           notificationResults.smsSent = smsResult.success;
