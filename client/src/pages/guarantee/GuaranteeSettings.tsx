@@ -634,13 +634,13 @@ export default function GuaranteeSettings() {
             <Label className="text-gray-300">Tester les SMS</Label>
             <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 mb-2">
               <p className="text-xs text-amber-300">
-                <strong>Note :</strong> Entrez votre numéro personnel (pas le numéro d'envoi Twilio). Avec un compte Twilio gratuit, seuls les numéros vérifiés peuvent recevoir des SMS.
+                <strong>Important :</strong> Le numéro d'envoi est +33939035391. Entrez un <strong>autre</strong> numéro (votre téléphone personnel vérifié dans Twilio → Verified Caller IDs).
               </p>
             </div>
             <div className="flex gap-2">
               <Input
                 type="tel"
-                placeholder="Numéro vérifié Twilio"
+                placeholder="Votre numéro personnel (ex: 06 12 34 56 78)"
                 value={testPhoneNumber}
                 onChange={(e) => setTestPhoneNumber(e.target.value)}
                 className="flex-1 bg-[#111315] border-white/10"
