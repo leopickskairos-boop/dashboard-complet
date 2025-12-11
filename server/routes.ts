@@ -793,6 +793,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     event: 'cb_validated',
                     action: 'book_calendar',
                     
+                    // API key for N8N to call back the dashboard
+                    api_key: process.env.N8N_MASTER_API_KEY,
+                    dashboard_url: process.env.REPLIT_DEV_DOMAIN 
+                      ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
+                      : 'https://speedai-b2b-platform-v2.replit.app',
+                    
                     // Session ID
                     session_id: guaranteeSession.id,
                     
