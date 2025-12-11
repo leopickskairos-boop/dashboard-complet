@@ -80,6 +80,8 @@ export default function GuaranteeSettings() {
   const [expandedSection, setExpandedSection] = useState<SectionKey>(null);
   const [localConfig, setLocalConfig] = useState<GuaranteeConfig | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
+  const [testPhoneNumber, setTestPhoneNumber] = useState('');
+  const [isSendingTestSms, setIsSendingTestSms] = useState(false);
 
   // Handle OAuth callback parameters
   useEffect(() => {
@@ -624,6 +626,63 @@ export default function GuaranteeSettings() {
               onCheckedChange={(checked) => handleConfigChange('smsEnabled', checked)}
               data-testid="switch-sms-enabled"
             />
+          </div>
+          
+          <hr className="border-white/10" />
+          
+          <div className="space-y-3">
+            <Label className="text-gray-300">Tester les SMS</Label>
+            <div className="flex gap-2">
+              <Input
+                type="tel"
+                placeholder="06 12 34 56 78"
+                value={testPhoneNumber}
+                onChange={(e) => setTestPhoneNumber(e.target.value)}
+                className="flex-1 bg-[#111315] border-white/10"
+                data-testid="input-test-phone"
+              />
+              <Button
+                variant="outline"
+                disabled={!testPhoneNumber || isSendingTestSms || !localConfig.smsEnabled}
+                onClick={async () => {
+                  setIsSendingTestSms(true);
+                  try {
+                    const response = await apiRequest("POST", "/api/guarantee/test-sms", {
+                      phoneNumber: testPhoneNumber
+                    });
+                    const result = await response.json();
+                    toast({
+                      title: result.success ? "SMS envoyé !" : "Erreur",
+                      description: result.message,
+                      variant: result.success ? "default" : "destructive",
+                    });
+                  } catch (error: any) {
+                    toast({
+                      title: "Erreur",
+                      description: "Impossible d'envoyer le SMS de test",
+                      variant: "destructive",
+                    });
+                  } finally {
+                    setIsSendingTestSms(false);
+                  }
+                }}
+                data-testid="button-test-sms"
+              >
+                {isSendingTestSms ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <>
+                    <MessageSquare className="h-4 w-4 mr-2" />
+                    Tester
+                  </>
+                )}
+              </Button>
+            </div>
+            <p className="text-xs text-gray-500">
+              {localConfig.smsEnabled 
+                ? "Entrez votre numéro pour recevoir un SMS de test"
+                : "Activez les SMS pour pouvoir envoyer un test"}
+            </p>
           </div>
         </div>
       ),

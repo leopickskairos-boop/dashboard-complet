@@ -3149,6 +3149,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     companyName: z.string().max(200).nullable().optional(),
     companyAddress: z.string().max(500).nullable().optional(),
     companyPhone: z.string().max(20).nullable().optional(),
+    smsEnabled: z.boolean().optional(), // Toggle SMS notifications
   });
 
   const guaranteeSessionCreateSchema = z.object({
@@ -3425,6 +3426,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('[Guarantee] Error sending test email:', error);
       res.status(500).json({ message: "Erreur lors de l'envoi de l'email de test" });
+    }
+  });
+
+  // Send test SMS for guarantee configuration
+  app.post("/api/guarantee/test-sms", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "Utilisateur non trouvé" });
+      }
+      
+      const config = await storage.getGuaranteeConfig(userId);
+      if (!config) {
+        return res.status(400).json({ message: "Configuration de garantie non trouvée" });
+      }
+
+      // Get phone number from request body
+      const { phoneNumber } = req.body;
+      if (!phoneNumber) {
+        return res.status(400).json({ message: "Numéro de téléphone requis" });
+      }
+
+      // Check if SMS is configured
+      const { isSmsConfigured, sendGuaranteeCardRequestSms } = await import('./services/twilio-sms.service');
+      
+      if (!isSmsConfigured()) {
+        return res.status(400).json({ 
+          success: false,
+          message: "Service SMS non configuré. Contactez l'administrateur SpeedAI."
+        });
+      }
+      
+      const customerName = user.email?.split('@')[0] || 'Client Test';
+      const companyName = config.companyName || 'Votre établissement';
+      const testUrl = `${getFrontendUrl()}/g/test-session`;
+      const testDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      
+      const result = await sendGuaranteeCardRequestSms(
+        phoneNumber,
+        customerName,
+        companyName,
+        testUrl,
+        testDate,
+        2 // nb persons
+      );
+      
+      if (result.success) {
+        res.json({ 
+          success: true, 
+          message: `SMS de test envoyé au ${phoneNumber}`,
+          messageId: result.messageId
+        });
+      } else {
+        res.status(400).json({ 
+          success: false, 
+          message: result.error || "Erreur lors de l'envoi du SMS"
+        });
+      }
+    } catch (error: any) {
+      console.error('[Guarantee] Error sending test SMS:', error);
+      res.status(500).json({ message: "Erreur lors de l'envoi du SMS de test" });
     }
   });
 
