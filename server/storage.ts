@@ -508,6 +508,7 @@ export interface IStorage {
   getExternalCustomersCount(userId: string): Promise<number>;
   recalculateCustomerStats(customerId: string): Promise<void>;
   getTopCustomers(userId: string, limit?: number): Promise<ExternalCustomer[]>;
+  findEmailByPhone(phone: string, userId?: string): Promise<{ email: string; source: string; name?: string } | null>;
   
   // External Orders
   getExternalOrders(userId: string, filters?: {
@@ -3417,6 +3418,54 @@ export class DatabaseStorage implements IStorage {
     const [result] = await db.select({ count: count() }).from(externalCustomers)
       .where(eq(externalCustomers.userId, userId));
     return result?.count || 0;
+  }
+
+  async findEmailByPhone(phone: string, userId?: string): Promise<{ email: string; source: string; name?: string } | null> {
+    const normalizedPhone = phone.replace(/\s+/g, '').replace(/^0/, '+33');
+    const phoneVariants = [
+      phone,
+      normalizedPhone,
+      phone.replace(/\s+/g, ''),
+      phone.replace(/^\+33/, '0'),
+    ];
+    
+    for (const phoneVariant of phoneVariants) {
+      const conditions = userId 
+        ? and(eq(externalCustomers.userId, userId), eq(externalCustomers.phone, phoneVariant))
+        : eq(externalCustomers.phone, phoneVariant);
+      
+      const [customer] = await db.select().from(externalCustomers)
+        .where(conditions)
+        .limit(1);
+      
+      if (customer?.email) {
+        return {
+          email: customer.email,
+          source: 'external_customers',
+          name: [customer.firstName, customer.lastName].filter(Boolean).join(' ') || undefined,
+        };
+      }
+    }
+    
+    for (const phoneVariant of phoneVariants) {
+      const conditions = userId 
+        ? and(eq(marketingContacts.userId, userId), eq(marketingContacts.phone, phoneVariant))
+        : eq(marketingContacts.phone, phoneVariant);
+      
+      const [contact] = await db.select().from(marketingContacts)
+        .where(conditions)
+        .limit(1);
+      
+      if (contact?.email) {
+        return {
+          email: contact.email,
+          source: 'marketing_contacts',
+          name: [contact.firstName, contact.lastName].filter(Boolean).join(' ') || undefined,
+        };
+      }
+    }
+    
+    return null;
   }
 
   async recalculateCustomerStats(customerId: string): Promise<void> {

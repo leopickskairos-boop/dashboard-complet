@@ -3221,6 +3221,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     status: z.enum(['attended', 'noshow']),
   });
 
+  // ===== EMAIL LOOKUP ENDPOINT (N8N) =====
+  // Cascading email search: external_customers → marketing_contacts
+  // GET /api/lookup-email?phone=+33612345678&agent_id=xxx
+  app.get("/api/lookup-email", async (req, res) => {
+    try {
+      const { phone, agent_id } = req.query;
+      
+      if (!phone || typeof phone !== 'string') {
+        return res.status(400).json({ 
+          success: false,
+          error: "phone parameter required" 
+        });
+      }
+      
+      let userId: string | undefined;
+      
+      if (agent_id && typeof agent_id === 'string') {
+        const userWithAgent = await storage.getUserByAgentId(agent_id);
+        if (userWithAgent) {
+          userId = userWithAgent.id;
+        }
+      }
+      
+      const result = await storage.findEmailByPhone(phone, userId);
+      
+      if (result) {
+        console.log(`[Lookup] Email found for ${phone}: ${result.email} (source: ${result.source})`);
+        return res.json({
+          success: true,
+          found: true,
+          email: result.email,
+          name: result.name || null,
+          source: result.source,
+        });
+      }
+      
+      console.log(`[Lookup] No email found for ${phone}`);
+      return res.json({
+        success: true,
+        found: false,
+        email: null,
+        skip_email: true,
+      });
+    } catch (error: any) {
+      console.error('[Lookup] Error:', error);
+      res.status(500).json({ 
+        success: false,
+        error: "Server error" 
+      });
+    }
+  });
+
   // ===== GUARANTEE PUBLIC ENDPOINTS (N8N) =====
   
   // Check if guarantee is enabled for an agent (called by N8N before creating session)
