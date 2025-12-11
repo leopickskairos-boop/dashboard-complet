@@ -632,10 +632,15 @@ export default function GuaranteeSettings() {
           
           <div className="space-y-3">
             <Label className="text-gray-300">Tester les SMS</Label>
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 mb-2">
+              <p className="text-xs text-amber-300">
+                <strong>Note Twilio :</strong> Seuls les numéros vérifiés dans votre compte Twilio peuvent recevoir des SMS de test.
+              </p>
+            </div>
             <div className="flex gap-2">
               <Input
                 type="tel"
-                placeholder="06 12 34 56 78"
+                placeholder="Numéro vérifié Twilio"
                 value={testPhoneNumber}
                 onChange={(e) => setTestPhoneNumber(e.target.value)}
                 className="flex-1 bg-[#111315] border-white/10"
@@ -680,7 +685,7 @@ export default function GuaranteeSettings() {
             </div>
             <p className="text-xs text-gray-500">
               {localConfig.smsEnabled 
-                ? "Entrez votre numéro pour recevoir un SMS de test"
+                ? "Entrez un numéro vérifié dans Twilio pour recevoir le SMS"
                 : "Activez les SMS pour pouvoir envoyer un test"}
             </p>
           </div>
