@@ -3362,12 +3362,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Create a fake session for test
+      // Note: En mode dev Resend, on envoie à l'email du propriétaire du compte Resend
+      const resendOwnerEmail = 'leopickskairos@gmail.com';
+      const targetEmail = process.env.NODE_ENV === 'production' ? user.email : resendOwnerEmail;
+      
       const testSession = {
         id: 'test-' + Date.now(),
         userId,
         reservationId: 'TEST-' + Date.now(),
         customerName: user.email?.split('@')[0] || 'Client Test',
-        customerEmail: user.email,
+        customerEmail: targetEmail,
         customerPhone: null,
         nbPersons: 2,
         reservationDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Dans 7 jours
