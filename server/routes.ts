@@ -4481,6 +4481,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== N8N CALENDAR BOOKING CONFIRMATION =====
+  // This endpoint is called by N8N after creating the Google Calendar event
+  // It allows N8N to confirm the booking and store the calendar event ID
+  app.post("/api/guarantee/confirm-booking", async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      
+      // Validate N8N Master Key
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ 
+          success: false, 
+          error: "Missing authorization header" 
+        });
+      }
+      
+      const apiKey = authHeader.split(' ')[1];
+      const N8N_MASTER_KEY = process.env.N8N_MASTER_API_KEY;
+      
+      if (!N8N_MASTER_KEY || apiKey !== N8N_MASTER_KEY) {
+        return res.status(401).json({ 
+          success: false, 
+          error: "Invalid API key" 
+        });
+      }
+      
+      const { 
+        session_id, 
+        calendar_event_id, 
+        calendar_event_link,
+        booking_status,
+        error_message
+      } = req.body;
+      
+      // Validate session_id
+      if (!session_id || typeof session_id !== 'string') {
+        return res.status(400).json({ 
+          success: false, 
+          error: "session_id is required" 
+        });
+      }
+      
+      // Get the session
+      const session = await storage.getGuaranteeSessionById(session_id);
+      
+      if (!session) {
+        return res.status(404).json({ 
+          success: false, 
+          error: "Session not found" 
+        });
+      }
+      
+      // Log the confirmation
+      console.log(`📅 [N8N] Calendar booking confirmation for session ${session_id}:`, {
+        calendar_event_id,
+        calendar_event_link,
+        booking_status,
+        error_message
+      });
+      
+      // If booking was successful, update status to 'completed' (meaning full flow done)
+      if (booking_status === 'success' || booking_status === 'booked') {
+        // Note: We keep status as 'validated' since the CB is validated
+        // The calendar_event_id could be stored if we add that field to schema later
+        console.log(`✅ [N8N] Calendar event created: ${calendar_event_id}`);
+      } else if (booking_status === 'failed') {
+        console.error(`❌ [N8N] Calendar booking failed for session ${session_id}:`, error_message);
+      }
+      
+      res.json({ 
+        success: true, 
+        message: "Booking confirmation received",
+        session_id,
+        received: {
+          calendar_event_id,
+          booking_status
+        }
+      });
+    } catch (error: any) {
+      console.error('[N8N] Error confirming booking:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: "Server error" 
+      });
+    }
+  });
+
   // ===== PUBLIC GUARANTEE PAGE =====
   
   // Get public session info (no auth required)
