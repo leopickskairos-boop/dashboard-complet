@@ -50,6 +50,3 @@ N8N_WEBHOOK_CB_VALIDEE = "https://djeydejy.app.n8n.cloud/webhook/garantie-cb-val
 TWILIO_ACCOUNT_SID = "AC668734744ce27846303d6cc3f58b754e"
 TWILIO_AUTH_TOKEN = "9488f2416855f08570dffbb78271e794"
 TWILIO_FROM_NUMBER = "+33939035391"
-
-[userenv.production]
-DISABLE_INTERNAL_CRONS = "true"
