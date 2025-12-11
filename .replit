@@ -46,7 +46,7 @@ integrations = ["javascript_stripe:1.0.0", "javascript_database:1.0.0", "javascr
 [userenv.shared]
 VAPID_PUBLIC_KEY = "BBm_Z2AMWybXAkTUpGGMdb4_hWLiNKNbozGmNBpY1PBEycJ9df2d-YppyjRkTRsO18IjhTsasstwVhATOpAHLdU"
 VITE_VAPID_PUBLIC_KEY = "BBm_Z2AMWybXAkTUpGGMdb4_hWLiNKNbozGmNBpY1PBEycJ9df2d-YppyjRkTRsO18IjhTsasstwVhATOpAHLdU"
-N8N_WEBHOOK_CB_VALIDEE = "https://djeydejy.app.n8n.cloud/webhook/garantie-cb-validee"
+N8N_WEBHOOK_CB_VALIDEE = "https://djeydejy.app.n8n.cloud/webhook/garantie-nouvelle-resa"
 TWILIO_ACCOUNT_SID = "AC668734744ce27846303d6cc3f58b754e"
 TWILIO_AUTH_TOKEN = "9488f2416855f08570dffbb78271e794"
 TWILIO_FROM_NUMBER = "+33939035391"
