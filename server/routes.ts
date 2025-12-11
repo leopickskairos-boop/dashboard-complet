@@ -821,6 +821,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     vehicule: guaranteeSession.vehicule,
                     type_service: guaranteeSession.typeService,
                     
+                    // Notification settings (for N8N to know if emails/SMS are enabled)
+                    email_enabled: config ? isEmailConfigured(config) && config.autoSendEmailOnValidation !== false : false,
+                    sms_enabled: config ? isSmsConfigured() && config.autoSendSmsOnValidation === true : false,
+                    
                     // Timestamp
                     validated_at: updatedSession.validatedAt?.toISOString(),
                   };
