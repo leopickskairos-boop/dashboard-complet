@@ -37,8 +37,10 @@ interface PublicSession {
 }
 
 export default function GuaranteePage() {
-  const [, params] = useRoute('/g/:sessionId');
-  const sessionId = params?.sessionId;
+  // Support both /g/:sessionId and /guarantee/validate/:sessionId routes
+  const [, shortParams] = useRoute('/g/:sessionId');
+  const [, longParams] = useRoute('/guarantee/validate/:sessionId');
+  const sessionId = shortParams?.sessionId || longParams?.sessionId;
 
   const { data: session, isLoading, error } = useQuery<PublicSession>({
     queryKey: ['/api/guarantee/public/session', sessionId],
