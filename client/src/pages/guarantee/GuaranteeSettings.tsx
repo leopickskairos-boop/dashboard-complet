@@ -634,7 +634,7 @@ export default function GuaranteeSettings() {
             <Label className="text-gray-300">Tester les SMS</Label>
             <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 mb-2">
               <p className="text-xs text-amber-300">
-                <strong>Note Twilio :</strong> Seuls les numéros vérifiés dans votre compte Twilio peuvent recevoir des SMS de test.
+                <strong>Note :</strong> Entrez votre numéro personnel (pas le numéro d'envoi Twilio). Avec un compte Twilio gratuit, seuls les numéros vérifiés peuvent recevoir des SMS.
               </p>
             </div>
             <div className="flex gap-2">
