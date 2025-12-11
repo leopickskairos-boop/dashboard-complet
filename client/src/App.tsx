@@ -147,6 +147,7 @@ function Router() {
 
       {/* Guarantee CB - Public pages (no auth required) */}
       <Route path="/g/:sessionId" component={GuaranteePage} />
+      <Route path="/guarantee/validate/:sessionId" component={GuaranteePage} />
       <Route path="/guarantee/confirmation" component={GuaranteeConfirmation} />
       <Route path="/guarantee/annulation" component={GuaranteeCancellation} />
 
