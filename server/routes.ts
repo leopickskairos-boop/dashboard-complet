@@ -3292,8 +3292,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (updates.enabled === true) {
         const existingConfig = await storage.getGuaranteeConfig(userId);
         if (!existingConfig?.stripeAccountId) {
-          return res.status(400).json({ 
-            message: "Connectez d'abord votre compte Stripe" 
+          // Remove enabled from updates but allow other changes
+          delete updates.enabled;
+          if (Object.keys(updates).length === 0) {
+            return res.status(400).json({ 
+              message: "Connectez d'abord votre compte Stripe pour activer la garantie" 
+            });
+          }
+          // Save other changes without enabling
+          const config = await storage.upsertGuaranteeConfig(userId, updates);
+          return res.json({ 
+            success: true, 
+            config,
+            warning: "Configuration sauvegardée. Connectez Stripe pour activer la garantie."
           });
         }
         
@@ -3301,8 +3312,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           const account = await stripe.accounts.retrieve(existingConfig.stripeAccountId);
           if (!account.charges_enabled || !account.details_submitted) {
-            return res.status(400).json({ 
-              message: "Veuillez compléter la configuration de votre compte Stripe" 
+            // Remove enabled from updates but allow other changes
+            delete updates.enabled;
+            if (Object.keys(updates).length === 0) {
+              return res.status(400).json({ 
+                message: "Veuillez compléter la configuration de votre compte Stripe" 
+              });
+            }
+            // Save other changes without enabling
+            const config = await storage.upsertGuaranteeConfig(userId, updates);
+            return res.json({ 
+              success: true, 
+              config,
+              warning: "Configuration sauvegardée. Complétez Stripe pour activer la garantie."
             });
           }
         } catch (stripeError) {
