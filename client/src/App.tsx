@@ -59,6 +59,9 @@ import IntegrationConnections from "@/pages/integrations/IntegrationConnections"
 import IntegrationCustomers from "@/pages/integrations/IntegrationCustomers";
 import IntegrationOrders from "@/pages/integrations/IntegrationOrders";
 
+// Short link redirect
+import ShortLink from "@/pages/ShortLink";
+
 function Router() {
   return (
     <Switch>
@@ -196,6 +199,9 @@ function Router() {
       <Route path="/review/:token" component={ReviewPage} />
       <Route path="/review/collect" component={ReviewCollect} />
       <Route path="/embed/reviews" component={ReviewsEmbed} />
+      
+      {/* Short link redirect (no auth required) */}
+      <Route path="/s/:code" component={ShortLink} />
 
       {/* Marketing - Protected dashboard pages */}
       <Route path="/marketing">

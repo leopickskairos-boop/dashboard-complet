@@ -226,6 +226,7 @@ export interface IStorage {
   getGuaranteeSessionById(id: string): Promise<GuaranteeSession | undefined>;
   getGuaranteeSessionByReservationId(reservationId: string): Promise<GuaranteeSession | undefined>;
   getGuaranteeSessionByCheckoutSessionId(checkoutSessionId: string): Promise<GuaranteeSession | undefined>;
+  getGuaranteeSessionByShortCode(shortCode: string): Promise<GuaranteeSession | undefined>;
   createGuaranteeSession(session: InsertGuaranteeSession): Promise<GuaranteeSession>;
   updateGuaranteeSession(id: string, updates: Partial<GuaranteeSession>): Promise<GuaranteeSession | undefined>;
   
@@ -265,6 +266,7 @@ export interface IStorage {
   getReviewRequestById(id: string, userId: string): Promise<ReviewRequest | undefined>;
   getReviewRequestByIdAdmin(id: string): Promise<ReviewRequest | undefined>;
   getReviewRequestByToken(token: string): Promise<ReviewRequest | undefined>;
+  getReviewRequestByShortCode(shortCode: string): Promise<ReviewRequest | undefined>;
   getPendingReviewRequests(maxAge: Date): Promise<ReviewRequest[]>;
   createReviewRequest(request: InsertReviewRequest): Promise<ReviewRequest>;
   updateReviewRequest(id: string, updates: Partial<ReviewRequest>): Promise<ReviewRequest | undefined>;
@@ -1577,6 +1579,14 @@ export class DatabaseStorage implements IStorage {
     return session || undefined;
   }
 
+  async getGuaranteeSessionByShortCode(shortCode: string): Promise<GuaranteeSession | undefined> {
+    const [session] = await db
+      .select()
+      .from(guaranteeSessions)
+      .where(eq(guaranteeSessions.shortCode, shortCode));
+    return session || undefined;
+  }
+
   async createGuaranteeSession(session: InsertGuaranteeSession): Promise<GuaranteeSession> {
     const [created] = await db
       .insert(guaranteeSessions)
@@ -1862,6 +1872,14 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(reviewRequests)
       .where(eq(reviewRequests.trackingToken, token));
+    return request || undefined;
+  }
+
+  async getReviewRequestByShortCode(shortCode: string): Promise<ReviewRequest | undefined> {
+    const [request] = await db
+      .select()
+      .from(reviewRequests)
+      .where(eq(reviewRequests.shortCode, shortCode));
     return request || undefined;
   }
 

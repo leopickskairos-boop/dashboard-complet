@@ -826,6 +826,9 @@ export const guaranteeSessions = pgTable("guarantee_sessions", {
   vehicule: text("vehicule"),
   typeService: text("type_service"),
   
+  // Lien court pour SMS
+  shortCode: text("short_code").unique(), // Code court (ex: g_abc123)
+  
   // Stripe
   paymentProvider: text("payment_provider").default("stripe"),
   checkoutSessionId: text("checkout_session_id"),
@@ -1142,6 +1145,7 @@ export const reviewRequests = pgTable("review_requests", {
   
   // Tracking
   trackingToken: text("tracking_token").unique(),
+  shortCode: text("short_code").unique(), // Code court pour SMS (ex: r_abc123)
   linkClickedAt: timestamp("link_clicked_at"),
   platformClicked: text("platform_clicked"),
   

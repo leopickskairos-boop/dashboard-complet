@@ -3989,6 +3989,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         stripeAccount: config.stripeAccountId,
       });
       
+      // Generate short code for SMS
+      const guaranteeShortCode = `g${Date.now().toString(36).slice(-4)}${Math.random().toString(36).slice(2, 5)}`;
+      
       // Create guarantee session in DB with all N8N callback fields
       const session = await storage.createGuaranteeSession({
         userId,
@@ -4001,6 +4004,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         reservationTime: data.reservation_time,
         checkoutSessionId: checkoutSession.id,
         penaltyAmount: config.penaltyAmount,
+        shortCode: guaranteeShortCode,
         status: 'pending',
         // Agent/Business info for N8N callback
         agentId: data.agent_id,
@@ -5255,6 +5259,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const trackingToken = `rv_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+      const shortCode = `r${Date.now().toString(36).slice(-4)}${Math.random().toString(36).slice(2, 5)}`;
       
       const request = await storage.createReviewRequest({
         userId,
@@ -5264,6 +5269,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         sendMethod: sendMethod || 'both',
         incentiveId: incentiveId && incentiveId.trim() !== '' ? incentiveId : null,
         trackingToken,
+        shortCode,
         status: 'pending',
       });
       
@@ -5734,6 +5740,36 @@ Format: Utilise des bullet points et reste concis (max 200 mots).`;
     }
   });
 
+  // Public endpoint: Resolve short link
+  app.get("/api/short/:code", async (req, res) => {
+    try {
+      const { code } = req.params;
+      
+      // Try to find a review request with this short code
+      const reviewRequest = await storage.getReviewRequestByShortCode(code);
+      if (reviewRequest) {
+        return res.json({
+          type: "review",
+          token: reviewRequest.trackingToken,
+        });
+      }
+      
+      // Try to find a guarantee session with this short code
+      const guaranteeSession = await storage.getGuaranteeSessionByShortCode(code);
+      if (guaranteeSession) {
+        return res.json({
+          type: "guarantee",
+          sessionId: guaranteeSession.id,
+        });
+      }
+      
+      res.status(404).json({ message: "Lien invalide ou expiré" });
+    } catch (error: any) {
+      console.error("[ShortLink] Error resolving:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
   // Public endpoint: Track link click from review request
   app.get("/api/reviews/public/track/:token", async (req, res) => {
     try {
@@ -5991,8 +6027,9 @@ Format: Utilise des bullet points et reste concis (max 200 mots).`;
       const incentives = await storage.getReviewIncentives(user.id);
       const defaultIncentive = incentives.find(i => i.isDefault && i.isActive);
 
-      // Generate tracking token
+      // Generate tracking token and short code
       const trackingToken = `rv_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+      const shortCode = `r${Date.now().toString(36).slice(-4)}${Math.random().toString(36).slice(2, 5)}`;
 
       // Parse reservation date
       let parsedReservationDate = null;
@@ -6011,6 +6048,7 @@ Format: Utilise des bullet points et reste concis (max 200 mots).`;
         reservationTime: reservation_time || null,
         sendMethod: send_method,
         trackingToken,
+        shortCode,
         incentiveId: defaultIncentive?.id || null,
         status: 'pending',
       });
