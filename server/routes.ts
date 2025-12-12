@@ -4850,6 +4850,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
         paymentMethodId: paymentMethodId || null,
       });
       
+      // Send confirmation email and SMS
+      try {
+        if (session.customerEmail) {
+          const { sendConfirmationEmail } = await import('./services/guarantee-email.service');
+          await sendConfirmationEmail({ config, session });
+          console.log(`📧 [Guarantee] Confirmation email sent to ${session.customerEmail}`);
+        }
+        
+        if (session.customerPhone) {
+          const { sendGuaranteeConfirmationSms } = await import('./services/twilio-sms.service');
+          await sendGuaranteeConfirmationSms(
+            session.customerPhone,
+            session.customerName,
+            config.companyName || 'Notre établissement',
+            new Date(session.reservationDate),
+            session.reservationTime || null,
+            session.nbPersons
+          );
+          console.log(`📱 [Guarantee] Confirmation SMS sent to ${session.customerPhone}`);
+        }
+      } catch (notifError) {
+        console.error('[Guarantee] Error sending confirmation notifications:', notifError);
+        // Don't fail the request if notifications fail
+      }
+      
+      // Trigger N8N Workflow 2 for Google Calendar booking
+      try {
+        const n8nWebhookUrl = 'https://djeydejy.app.n8n.cloud/webhook/garantie-nouvelle-resa';
+        
+        const webhookPayload = {
+          event: 'card_validated',
+          session_id: session.id,
+          customer_name: session.customerName,
+          customer_email: session.customerEmail,
+          customer_phone: session.customerPhone,
+          reservation_date: session.reservationDate,
+          reservation_time: session.reservationTime,
+          nb_persons: session.nbPersons,
+          agent_id: session.agentId,
+          validated_at: new Date().toISOString(),
+          payment_method_id: paymentMethodId,
+        };
+        
+        console.log(`[Guarantee] Triggering N8N Workflow 2 for calendar booking: ${session.id}`);
+        
+        const n8nResponse = await fetch(n8nWebhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(webhookPayload),
+        });
+        
+        if (n8nResponse.ok) {
+          console.log(`✅ [Guarantee] N8N Workflow 2 triggered successfully for session ${session.id}`);
+        } else {
+          console.error(`[Guarantee] N8N webhook returned ${n8nResponse.status}: ${await n8nResponse.text()}`);
+        }
+      } catch (n8nError) {
+        console.error('[Guarantee] Error triggering N8N workflow:', n8nError);
+        // Don't fail the request if N8N fails - the card is still validated
+      }
+      
       res.json({ success: true });
     } catch (error: any) {
       console.error('[Guarantee] Error validating session:', error);
