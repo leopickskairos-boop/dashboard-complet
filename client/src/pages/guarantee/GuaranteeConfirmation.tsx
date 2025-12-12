@@ -41,7 +41,7 @@ export default function GuaranteeConfirmation() {
             <div className="flex items-center gap-3 text-gray-300">
               <Calendar className="h-5 w-5 text-[#C8B88A]" />
               <span className="text-sm">
-                Un email de confirmation vous a été envoyé
+                Un SMS de confirmation vous a été envoyé
               </span>
             </div>
           </div>
