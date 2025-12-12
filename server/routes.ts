@@ -4879,8 +4879,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const n8nWebhookUrl = 'https://djeydejy.app.n8n.cloud/webhook/garantie-nouvelle-resa';
         
+        // Fetch SpeedAI client data for additional business info
+        let speedaiClient = null;
+        if (session.agentId) {
+          speedaiClient = await storage.getSpeedaiClientByAgentId(session.agentId);
+        }
+        
         // Calculate datetime for Google Calendar
-        const timezone = config.timezone || 'Europe/Paris';
+        const timezone = session.timezone || config.timezone || speedaiClient?.timezone || 'Europe/Paris';
         const reservationDate = new Date(session.reservationDate);
         
         // Parse reservation time (format: "HH:MM" or "HHhMM")
@@ -4896,7 +4902,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Build start and end datetime in ISO format with timezone offset
         const startDate = new Date(reservationDate);
         startDate.setHours(hours, minutes, 0, 0);
-        const endDate = new Date(startDate.getTime() + 60 * 60 * 1000); // +1 hour
+        
+        // Duration from session or default 60 minutes
+        const durationMinutes = session.duration || 60;
+        const endDate = new Date(startDate.getTime() + durationMinutes * 60 * 1000);
         
         // Format as ISO string
         const startDatetime = startDate.toISOString();
@@ -4912,20 +4921,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Event info
           event: 'card_validated',
           session_id: session.id,
+          reservation_id: session.reservationId,
           validated_at: new Date().toISOString(),
           payment_method_id: paymentMethodId,
           
-          // Google Calendar required fields
-          calendar_id: config.calendarId || null,
+          // ===== GOOGLE CALENDAR REQUIRED FIELDS =====
+          calendar_id: session.calendarId || config.calendarId || null,
           timeMin: dayStart.toISOString(),
           timeMax: dayEnd.toISOString(),
           timeZone: timezone,
+          calendar_platform: 'google_calendar',
           
           // Reservation datetime
           start_datetime: startDatetime,
           end_datetime: endDatetime,
           
-          // Customer info
+          // ===== CUSTOMER INFO =====
           nom_client: session.customerName,
           customer_name: session.customerName,
           client_email: session.customerEmail,
@@ -4933,27 +4944,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
           client_phone: session.customerPhone,
           customer_phone: session.customerPhone,
           
-          // Reservation details
+          // ===== RESERVATION DETAILS =====
           nb_personnes: session.nbPersons,
           nb_persons: session.nbPersons,
           date_demandee: session.reservationDate,
           reservation_date: session.reservationDate,
           heure_demandee: session.reservationTime,
           reservation_time: session.reservationTime,
+          minimum_duration: durationMinutes,
+          duration: durationMinutes,
           
-          // Business info
+          // ===== BUSINESS CONFIGURATION =====
           agency_id: session.agentId,
           agent_id: session.agentId,
-          business_type: config.companyName || 'Restaurant',
-          company_name: config.companyName,
+          business_type: session.businessType || speedaiClient?.businessType || 'restaurant',
+          company_name: session.companyName || config.companyName || speedaiClient?.businessName,
+          agency_name: speedaiClient?.businessName || config.companyName,
+          company_email: session.companyEmail || config.senderEmail || speedaiClient?.contactEmail,
+          company_phone: config.companyPhone || speedaiClient?.contactPhone,
+          company_address: config.companyAddress,
           
-          // Description for calendar event
+          // ===== EMAIL/SMS SETTINGS =====
+          email_from_resend: config.senderEmail || 'garantie@rdv-notif.tech',
+          email_enabled: config.autoSendEmailOnValidation ?? true,
+          sms_enabled: config.smsEnabled ?? false,
+          auto_send_email_on_create: config.autoSendEmailOnCreate ?? true,
+          auto_send_sms_on_create: config.autoSendSmsOnCreate ?? false,
+          auto_send_email_on_validation: config.autoSendEmailOnValidation ?? true,
+          auto_send_sms_on_validation: config.autoSendSmsOnValidation ?? false,
+          
+          // ===== TIMEZONE & CAPACITY =====
+          timezone: timezone,
+          max_capacity: config.minPersons || 1,
+          penalty_amount: config.penaltyAmount || 30,
+          cancellation_delay: config.cancellationDelay || 24,
+          
+          // ===== BRANDING =====
+          logo_url: config.logoUrl,
+          brand_color: config.brandColor || '#C8B88A',
+          terms_url: config.termsUrl,
+          
+          // ===== DESCRIPTION FOR CALENDAR EVENT =====
           resume: `Réservation ${session.customerName} - ${session.nbPersons} pers.`,
-          description: `📅 Réservation Restaurant\n👤 Client : ${session.customerName}\n👥 Personnes : ${session.nbPersons}\n📞 Téléphone : ${session.customerPhone || 'N/A'}\n📧 Email : ${session.customerEmail || 'N/A'}`,
+          description: `📅 Réservation ${session.businessType || 'Restaurant'}\n👤 Client : ${session.customerName}\n👥 Personnes : ${session.nbPersons}\n📞 Téléphone : ${session.customerPhone || 'N/A'}\n📧 Email : ${session.customerEmail || 'N/A'}\n🔒 CB Garantie validée`,
+          
+          // ===== VEHICLE/SERVICE (for garages) =====
+          vehicule: session.vehicule,
+          type_service: session.typeService,
         };
         
         console.log(`[Guarantee] Triggering N8N Workflow 2 for calendar booking: ${session.id}`);
-        console.log(`[Guarantee] Calendar ID: ${config.calendarId}, TimeZone: ${timezone}`);
+        console.log(`[Guarantee] Calendar ID: ${session.calendarId || config.calendarId}, TimeZone: ${timezone}, Business: ${webhookPayload.business_type}`);
         
         const n8nResponse = await fetch(n8nWebhookUrl, {
           method: 'POST',
