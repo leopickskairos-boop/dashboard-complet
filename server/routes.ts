@@ -5029,6 +5029,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== N8N CALLBACK: CONFIRM BOOKING AFTER CALENDAR CREATION =====
+  // Called by N8N Workflow 2 after successfully creating the Google Calendar event
+  app.post("/api/guarantee/confirm-booking", requireApiKey, async (req, res) => {
+    try {
+      const { session_id, client_email, calendar_event_id, calendar_link, status } = req.body;
+      
+      console.log(`[Guarantee] Confirm booking received for session: ${session_id}`);
+      
+      if (!session_id) {
+        return res.status(400).json({ success: false, message: "session_id requis" });
+      }
+      
+      // Find and update the session
+      const session = await storage.getGuaranteeSession(session_id);
+      
+      if (!session) {
+        console.error(`[Guarantee] Session not found: ${session_id}`);
+        return res.status(404).json({ success: false, message: "Session non trouvée" });
+      }
+      
+      // Update session with calendar info if provided
+      const updateData: any = {
+        updatedAt: new Date(),
+      };
+      
+      // If status is provided, update it
+      if (status === 'completed' || status === 'confirmed') {
+        updateData.status = 'validated'; // Keep as validated, RDV is now in calendar
+      }
+      
+      await storage.updateGuaranteeSession(session_id, updateData);
+      
+      console.log(`✅ [Guarantee] Booking confirmed for session ${session_id}`);
+      console.log(`   Calendar Event ID: ${calendar_event_id || 'N/A'}`);
+      console.log(`   Client Email: ${client_email || session.customerEmail}`);
+      
+      res.json({ 
+        success: true, 
+        message: "Réservation confirmée avec succès",
+        session_id,
+        calendar_event_id,
+      });
+    } catch (error: any) {
+      console.error('[Guarantee] Error confirming booking:', error);
+      res.status(500).json({ success: false, message: "Erreur serveur" });
+    }
+  });
+
   // ===== REVIEWS & REPUTATION MANAGEMENT ROUTES =====
 
   // Get review configuration
