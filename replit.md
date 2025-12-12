@@ -73,6 +73,9 @@ The project utilizes a modern web stack for a responsive and professional user i
     -   Public pages for customers to select review platforms and confirm submission
     -   Incentive display on public page (shows offer with validity period)
     -   Automatic promo code generation after review confirmation (format: MERCI-{6_CHARS})
+    -   Promo code usage tracking via POST /api/reviews/promo/use endpoint (N8N integration)
+    -   Revenue tracking: promoOrderAmount field tracks order amounts when promo codes are used
+    -   Dashboard KPIs: promosUsed/promosGenerated ratio and revenueGenerated (CA généré)
     -   Configurable timing modes: smart (AI), fixed_delay, fixed_time
     -   Multi-platform support: Google, TripAdvisor, Facebook, Yelp, Doctolib, Pages Jaunes
     -   Alert configuration for negative reviews, 5-star reviews, response delays
