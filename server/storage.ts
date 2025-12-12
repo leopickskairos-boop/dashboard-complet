@@ -279,6 +279,7 @@ export interface IStorage {
     promosGenerated: number;
     promosUsed: number;
     revenueGenerated: number;
+    estimatedRevenue: number;
   }>;
   usePromoCode(promoCode: string, orderAmount: number): Promise<ReviewRequest | null>;
   
@@ -1922,11 +1923,15 @@ export class DatabaseStorage implements IStorage {
     promosGenerated: number;
     promosUsed: number;
     revenueGenerated: number;
+    estimatedRevenue: number;
   }> {
     const allRequests = await db
       .select()
       .from(reviewRequests)
       .where(eq(reviewRequests.userId, userId));
+    
+    const config = await this.getReviewConfig(userId);
+    const avgClientValue = config?.averageClientValue || 0;
     
     const requestsSent = allRequests.filter(r => r.sentAt).length;
     const linkClicks = allRequests.filter(r => r.linkClickedAt).length;
@@ -1936,6 +1941,7 @@ export class DatabaseStorage implements IStorage {
     const revenueGenerated = allRequests
       .filter(r => r.promoOrderAmount)
       .reduce((sum, r) => sum + (r.promoOrderAmount || 0), 0);
+    const estimatedRevenue = Math.round(reviewsConfirmed * (avgClientValue / 100));
     
     return {
       requestsSent,
@@ -1946,6 +1952,7 @@ export class DatabaseStorage implements IStorage {
       promosGenerated,
       promosUsed,
       revenueGenerated,
+      estimatedRevenue,
     };
   }
 
