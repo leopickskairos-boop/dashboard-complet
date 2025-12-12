@@ -1325,6 +1325,58 @@ export default function ReviewsSettings() {
                   data-testid="input-doctolib-url"
                 />
               </div>
+
+              <div className="p-3 rounded-xl border border-border/40 bg-muted/20 hover:bg-muted/30 transition-colors">
+                <Label className="flex items-center gap-2 text-xs font-medium mb-2">
+                  <Globe className="h-3.5 w-3.5 text-[#00665C]" />
+                  TheFork
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={config?.theForkUrl || ""}
+                    onChange={(e) => handleSaveSettings("theForkUrl", e.target.value)}
+                    placeholder="https://thefork.fr/..."
+                    className="text-xs h-8"
+                    data-testid="input-thefork-url"
+                  />
+                  {config?.theForkUrl && (
+                    <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                      <a href={config.theForkUrl} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-xl border border-border/40 bg-muted/20">
+              <Label className="flex items-center gap-2 text-xs font-medium mb-3">
+                <Settings className="h-3.5 w-3.5 text-[#C8B88A]" />
+                Valeur moyenne d'un client (€)
+              </Label>
+              <div className="flex items-center gap-3">
+                <Input
+                  type="number"
+                  min={0}
+                  step={1}
+                  defaultValue={Math.round((config?.averageClientValue || 0) / 100)}
+                  onBlur={(e) => {
+                    const euros = parseInt(e.target.value || "0", 10);
+                    const centimes = euros * 100;
+                    if (centimes !== (config?.averageClientValue || 0)) {
+                      handleSaveSettings("averageClientValue", centimes);
+                    }
+                  }}
+                  placeholder="50"
+                  className="text-sm h-9 max-w-[120px]"
+                  data-testid="input-average-client-value"
+                />
+                <span className="text-sm text-muted-foreground">€</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                Utilisé pour estimer le revenu généré par vos avis
+              </p>
             </div>
           </CardContent>
         </CollapsibleContent>

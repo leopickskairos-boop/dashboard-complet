@@ -5806,9 +5806,11 @@ Format: Utilise des bullet points et reste concis (max 200 mots).`;
           yelp: config?.yelpUrl,
           doctolib: config?.doctolibUrl,
           pagesJaunes: config?.pagesJaunesUrl,
+          theFork: config?.theForkUrl,
         },
         priority: config?.platformsPriority || ['google', 'tripadvisor', 'facebook'],
         customerName: request.customerName,
+        companyName: config?.companyName,
         incentive: incentive ? {
           displayMessage: incentive.displayMessage,
           type: incentive.type,
