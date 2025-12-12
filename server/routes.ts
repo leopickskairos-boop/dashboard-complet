@@ -3301,6 +3301,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ===== GUARANTEE PUBLIC ENDPOINTS (N8N) =====
   
+  // Handle missing agent_id - return JSON error instead of HTML
+  app.get("/api/guarantee/status/", (req, res) => {
+    res.status(400).json({ 
+      guarantee_enabled: false,
+      error: "agent_id requis dans l'URL",
+      example: "/api/guarantee/status/agent_xxxxx"
+    });
+  });
+  
   // Check if guarantee is enabled for an agent (called by N8N before creating session)
   // GET /api/guarantee/status/:agent_id
   app.get("/api/guarantee/status/:agent_id", async (req, res) => {
