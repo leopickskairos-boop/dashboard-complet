@@ -18,6 +18,7 @@ import {
   reviewAlerts,
   reviewSources,
   reviewSyncLogs,
+  reviewAutomations,
   marketingContacts,
   marketingConsentHistory,
   marketingSegments,
@@ -71,6 +72,8 @@ import {
   type InsertReviewSource,
   type ReviewSyncLog,
   type InsertReviewSyncLog,
+  type ReviewAutomation,
+  type InsertReviewAutomation,
   type MarketingContact,
   type InsertMarketingContact,
   type MarketingConsentHistory,
@@ -332,6 +335,14 @@ export interface IStorage {
   // Reviews with source
   getReviewByPlatformId(platformReviewId: string, platform: string): Promise<Review | undefined>;
   upsertReviewFromPlatform(review: InsertReview): Promise<Review>;
+  
+  // Review automations
+  getReviewAutomations(userId: string): Promise<ReviewAutomation[]>;
+  getReviewAutomationById(id: string, userId: string): Promise<ReviewAutomation | undefined>;
+  createReviewAutomation(automation: InsertReviewAutomation): Promise<ReviewAutomation>;
+  updateReviewAutomation(id: string, userId: string, updates: Partial<InsertReviewAutomation>): Promise<ReviewAutomation | undefined>;
+  deleteReviewAutomation(id: string, userId: string): Promise<void>;
+  toggleReviewAutomation(id: string, userId: string): Promise<ReviewAutomation | undefined>;
   
   // ===== MARKETING MODULE =====
   
@@ -2410,6 +2421,71 @@ export class DatabaseStorage implements IStorage {
       .values(review)
       .returning();
     return created;
+  }
+
+  // ===== REVIEW AUTOMATIONS IMPLEMENTATION =====
+
+  async getReviewAutomations(userId: string): Promise<ReviewAutomation[]> {
+    return await db
+      .select()
+      .from(reviewAutomations)
+      .where(eq(reviewAutomations.userId, userId))
+      .orderBy(desc(reviewAutomations.createdAt));
+  }
+
+  async getReviewAutomationById(id: string, userId: string): Promise<ReviewAutomation | undefined> {
+    const [automation] = await db
+      .select()
+      .from(reviewAutomations)
+      .where(and(
+        eq(reviewAutomations.id, id),
+        eq(reviewAutomations.userId, userId)
+      ));
+    return automation || undefined;
+  }
+
+  async createReviewAutomation(automation: InsertReviewAutomation): Promise<ReviewAutomation> {
+    const [created] = await db
+      .insert(reviewAutomations)
+      .values(automation)
+      .returning();
+    return created;
+  }
+
+  async updateReviewAutomation(id: string, userId: string, updates: Partial<InsertReviewAutomation>): Promise<ReviewAutomation | undefined> {
+    const [updated] = await db
+      .update(reviewAutomations)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(
+        eq(reviewAutomations.id, id),
+        eq(reviewAutomations.userId, userId)
+      ))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteReviewAutomation(id: string, userId: string): Promise<void> {
+    await db
+      .delete(reviewAutomations)
+      .where(and(
+        eq(reviewAutomations.id, id),
+        eq(reviewAutomations.userId, userId)
+      ));
+  }
+
+  async toggleReviewAutomation(id: string, userId: string): Promise<ReviewAutomation | undefined> {
+    const automation = await this.getReviewAutomationById(id, userId);
+    if (!automation) return undefined;
+    
+    const [updated] = await db
+      .update(reviewAutomations)
+      .set({ isActive: !automation.isActive, updatedAt: new Date() })
+      .where(and(
+        eq(reviewAutomations.id, id),
+        eq(reviewAutomations.userId, userId)
+      ))
+      .returning();
+    return updated || undefined;
   }
 
   // ===== MARKETING MODULE IMPLEMENTATION =====
