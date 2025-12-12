@@ -276,7 +276,9 @@ export interface IStorage {
     conversionRate: number;
     promosGenerated: number;
     promosUsed: number;
+    revenueGenerated: number;
   }>;
+  usePromoCode(promoCode: string, orderAmount: number): Promise<ReviewRequest | null>;
   
   // Reviews
   getReviews(userId: string, filters?: {
@@ -1901,6 +1903,7 @@ export class DatabaseStorage implements IStorage {
     conversionRate: number;
     promosGenerated: number;
     promosUsed: number;
+    revenueGenerated: number;
   }> {
     const allRequests = await db
       .select()
@@ -1912,6 +1915,9 @@ export class DatabaseStorage implements IStorage {
     const reviewsConfirmed = allRequests.filter(r => r.reviewConfirmedAt).length;
     const promosGenerated = allRequests.filter(r => r.promoCode).length;
     const promosUsed = allRequests.filter(r => r.promoCodeUsedAt).length;
+    const revenueGenerated = allRequests
+      .filter(r => r.promoOrderAmount)
+      .reduce((sum, r) => sum + (r.promoOrderAmount || 0), 0);
     
     return {
       requestsSent,
@@ -1921,7 +1927,29 @@ export class DatabaseStorage implements IStorage {
       conversionRate: requestsSent > 0 ? Math.round((reviewsConfirmed / requestsSent) * 100) : 0,
       promosGenerated,
       promosUsed,
+      revenueGenerated,
     };
+  }
+
+  async usePromoCode(promoCode: string, orderAmount: number): Promise<ReviewRequest | null> {
+    const [request] = await db
+      .select()
+      .from(reviewRequests)
+      .where(eq(reviewRequests.promoCode, promoCode));
+    
+    if (!request) return null;
+    if (request.promoCodeUsedAt) return null;
+    
+    const [updated] = await db
+      .update(reviewRequests)
+      .set({
+        promoCodeUsedAt: new Date(),
+        promoOrderAmount: orderAmount,
+      })
+      .where(eq(reviewRequests.id, request.id))
+      .returning();
+    
+    return updated || null;
   }
 
   async getReviews(userId: string, filters?: {

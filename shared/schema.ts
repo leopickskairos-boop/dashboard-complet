@@ -1153,6 +1153,7 @@ export const reviewRequests = pgTable("review_requests", {
   incentiveId: varchar("incentive_id").references(() => reviewIncentives.id, { onDelete: 'set null' }),
   promoCode: text("promo_code"),
   promoCodeUsedAt: timestamp("promo_code_used_at"),
+  promoOrderAmount: integer("promo_order_amount"),
   
   // Statut
   status: text("status").notNull().default("pending"), // 'pending', 'scheduled', 'sent', 'clicked', 'confirmed', 'expired'

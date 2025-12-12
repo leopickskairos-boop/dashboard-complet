@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Send, Plus, Loader2, Mail, Phone, CheckCircle2, Clock, Eye, MousePointer, Ticket } from "lucide-react";
+import { Send, Plus, Loader2, Mail, Phone, CheckCircle2, Clock, Eye, MousePointer, Ticket, Euro } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import type { ReviewRequest, ReviewIncentive } from "@shared/schema";
@@ -42,6 +42,7 @@ export default function ReviewsCampaigns() {
     conversionRate: number;
     promosGenerated: number;
     promosUsed: number;
+    revenueGenerated: number;
   }>({
     queryKey: ["/api/reviews/requests/stats"],
   });
@@ -230,7 +231,7 @@ export default function ReviewsCampaigns() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-5">
         <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -288,6 +289,21 @@ export default function ReviewsCampaigns() {
               </div>
             </div>
             <p className="text-[10px] text-muted-foreground/70 mt-2">Codes promo utilisés / générés</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-emerald-500/10">
+                <Euro className="h-5 w-5 text-emerald-400" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{((stats?.revenueGenerated ?? 0) / 100).toFixed(2)}€</p>
+                <p className="text-xs text-muted-foreground">CA généré</p>
+              </div>
+            </div>
+            <p className="text-[10px] text-muted-foreground/70 mt-2">Revenus liés aux codes promo</p>
           </CardContent>
         </Card>
       </div>

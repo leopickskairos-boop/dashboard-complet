@@ -5421,6 +5421,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Use a promo code (for N8N/external integrations)
+  app.post("/api/reviews/promo/use", async (req, res) => {
+    try {
+      const { promo_code, order_amount } = req.body;
+      
+      if (!promo_code || typeof promo_code !== 'string') {
+        return res.status(400).json({ message: "Code promo requis" });
+      }
+      if (typeof order_amount !== 'number' || order_amount < 0) {
+        return res.status(400).json({ message: "Montant de commande invalide" });
+      }
+      
+      const result = await storage.usePromoCode(promo_code, order_amount);
+      
+      if (!result) {
+        return res.status(404).json({ message: "Code promo invalide ou déjà utilisé" });
+      }
+      
+      res.json({
+        success: true,
+        message: "Code promo utilisé avec succès",
+        data: {
+          promoCode: result.promoCode,
+          orderAmount: order_amount,
+          usedAt: result.promoCodeUsedAt,
+        }
+      });
+    } catch (error: any) {
+      console.error("[Reviews] Error using promo code:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
   // Get all reviews with filters
   app.get("/api/reviews", requireAuth, async (req, res) => {
     try {
