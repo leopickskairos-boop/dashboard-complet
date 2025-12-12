@@ -5031,7 +5031,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ===== N8N CALLBACK: CONFIRM BOOKING AFTER CALENDAR CREATION =====
   // Called by N8N Workflow 2 after successfully creating the Google Calendar event
-  app.post("/api/guarantee/confirm-booking", requireApiKey, async (req, res) => {
+  // Accepts both client API key OR N8N_MASTER_API_KEY for authentication
+  app.post("/api/guarantee/confirm-booking", async (req, res) => {
+    // Check for N8N Master API Key OR client API key
+    const authHeader = req.headers.authorization;
+    const n8nMasterKey = process.env.N8N_MASTER_API_KEY;
+    
+    if (!authHeader?.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, error: "Authorization header required" });
+    }
+    
+    const providedKey = authHeader.substring(7);
+    
+    // Accept N8N_MASTER_API_KEY for N8N callbacks
+    const isN8nMasterKey = n8nMasterKey && providedKey === n8nMasterKey;
+    
+    if (!isN8nMasterKey) {
+      // Try to validate as client API key
+      const users = await storage.getAllUsersWithApiKey();
+      let validUser = null;
+      
+      for (const u of users) {
+        if (u.apiKeyHash) {
+          const bcrypt = await import('bcryptjs');
+          const isMatch = await bcrypt.compare(providedKey, u.apiKeyHash);
+          if (isMatch) {
+            validUser = u;
+            break;
+          }
+        }
+      }
+      
+      if (!validUser) {
+        console.log(`[Guarantee] Confirm-booking auth failed. Key preview: ${providedKey.substring(0, 20)}...`);
+        return res.status(401).json({ success: false, error: "Invalid API key" });
+      }
+    }
+    
+    console.log(`[Guarantee] Confirm-booking auth: ${isN8nMasterKey ? 'N8N Master Key' : 'Client API Key'}`);
     try {
       const { session_id, client_email, calendar_event_id, calendar_link, status } = req.body;
       
