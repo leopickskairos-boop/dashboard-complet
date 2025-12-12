@@ -25,6 +25,11 @@ export default function ReviewsCampaigns() {
     sendMethod: "both",
     incentiveId: "",
   });
+  
+  // État pour le dialog "marquer utilisé"
+  const [usePromoOpen, setUsePromoOpen] = useState(false);
+  const [selectedPromoCode, setSelectedPromoCode] = useState("");
+  const [orderAmount, setOrderAmount] = useState("");
 
   const { data: requests, isLoading: requestsLoading } = useQuery<ReviewRequest[]>({
     queryKey: ["/api/reviews/requests"],
@@ -92,6 +97,33 @@ export default function ReviewsCampaigns() {
       toast({
         title: "Erreur",
         description: "Impossible d'envoyer la demande.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const usePromoMutation = useMutation({
+    mutationFn: async ({ promoCode, orderAmount }: { promoCode: string; orderAmount: number }) => {
+      return await apiRequest("POST", "/api/reviews/promo/use", {
+        promo_code: promoCode,
+        order_amount: orderAmount,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/reviews/requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/reviews/requests/stats"] });
+      toast({
+        title: "Code promo utilisé",
+        description: "Le montant a été enregistré avec succès.",
+      });
+      setUsePromoOpen(false);
+      setOrderAmount("");
+      setSelectedPromoCode("");
+    },
+    onError: () => {
+      toast({
+        title: "Erreur",
+        description: "Code invalide ou déjà utilisé.",
         variant: "destructive",
       });
     },
@@ -228,6 +260,50 @@ export default function ReviewsCampaigns() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Dialog pour marquer un code promo comme utilisé */}
+        <Dialog open={usePromoOpen} onOpenChange={setUsePromoOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Marquer le code comme utilisé</DialogTitle>
+              <DialogDescription>
+                Entrez le montant de la commande associée au code <span className="font-mono font-medium text-foreground">{selectedPromoCode}</span>
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Montant de la commande (€) *</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={orderAmount}
+                  onChange={(e) => setOrderAmount(e.target.value)}
+                  placeholder="Ex: 45.90"
+                  data-testid="input-order-amount"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setUsePromoOpen(false)} data-testid="button-cancel-use-promo">
+                Annuler
+              </Button>
+              <Button
+                onClick={() => {
+                  const amountInCents = Math.round(parseFloat(orderAmount) * 100);
+                  if (amountInCents > 0) {
+                    usePromoMutation.mutate({ promoCode: selectedPromoCode, orderAmount: amountInCents });
+                  }
+                }}
+                disabled={!orderAmount || parseFloat(orderAmount) <= 0 || usePromoMutation.isPending}
+                className="bg-[#C8B88A] hover:bg-[#C8B88A]/90 text-black"
+                data-testid="button-confirm-use-promo"
+              >
+                {usePromoMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirmer"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* KPI Cards */}
@@ -356,9 +432,29 @@ export default function ReviewsCampaigns() {
                       </TableCell>
                       <TableCell>
                         {request.promoCode ? (
-                          <Badge variant="outline" className="font-mono text-[10px] px-1.5 py-0 border-border/50">
-                            {request.promoCode}
-                          </Badge>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="font-mono text-[10px] px-1.5 py-0 border-border/50">
+                              {request.promoCode}
+                            </Badge>
+                            {request.promoCodeUsedAt ? (
+                              <Badge className="text-[10px] px-1.5 py-0 bg-[#4CEFAD]/15 text-[#4CEFAD] border-0">
+                                Utilisé
+                              </Badge>
+                            ) : (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 px-2 text-[10px] text-[#C8B88A] hover:text-[#C8B88A] hover:bg-[#C8B88A]/10"
+                                onClick={() => {
+                                  setSelectedPromoCode(request.promoCode!);
+                                  setUsePromoOpen(true);
+                                }}
+                                data-testid={`button-use-promo-${request.id}`}
+                              >
+                                Utiliser
+                              </Button>
+                            )}
+                          </div>
                         ) : <span className="text-xs text-muted-foreground">-</span>}
                       </TableCell>
                       <TableCell className="text-right">
