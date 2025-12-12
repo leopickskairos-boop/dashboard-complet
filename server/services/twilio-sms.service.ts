@@ -167,7 +167,7 @@ export async function sendGuaranteeCardRequestSms(
   phone: string,
   customerName: string,
   companyName: string,
-  checkoutUrl: string,
+  validationUrl: string,
   reservationDate: Date,
   nbPersons: number
 ): Promise<SmsResult> {
@@ -179,7 +179,13 @@ export async function sendGuaranteeCardRequestSms(
   }
 
   const dateStr = formatDateShort(reservationDate);
-  const message = `${companyName} - Réservation ${dateStr}\n\nBonjour ${customerName},\nPour confirmer votre table (${nbPersons} pers.), enregistrez votre CB :\n${checkoutUrl}\n\n🔒 Sécurisé, non débité`;
+  
+  // Professional, concise SMS message
+  const message = `${companyName}\n\n` +
+    `Bonjour ${customerName},\n` +
+    `Confirmez votre réservation du ${dateStr} (${nbPersons} pers.) :\n` +
+    `${validationUrl}\n\n` +
+    `Sécurisé - Aucun débit`;
 
   return service.sendSms({ to: phone, message });
 }

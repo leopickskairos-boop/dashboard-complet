@@ -4024,13 +4024,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         smsError: null as string | null,
       };
       
+      // Use our short URL instead of the long Stripe checkout URL
+      // This is cleaner and more professional for SMS/email
+      const shortValidationUrl = `${frontendUrl}/guarantee/validate/${session.id}`;
+      
       // Send email if configured and enabled
       if (config.autoSendEmailOnCreate !== false && data.customer_email && isEmailConfigured(config)) {
         try {
           const emailResult = await sendCardRequestEmail({
             config,
             session,
-            checkoutUrl: checkoutSession.url!,
+            checkoutUrl: shortValidationUrl,
           });
           notificationResults.emailSent = emailResult.success;
           if (!emailResult.success) {
@@ -4050,7 +4054,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             data.customer_phone,
             data.customer_name,
             config.companyName || 'Établissement',
-            checkoutSession.url!,
+            shortValidationUrl,
             parseFrenchDate(data.reservation_date),
             nbPersons
           );
@@ -4691,7 +4695,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Check expiration (7 days)
+      // Check expiration (7 days for our session)
       const createdAt = new Date(session.createdAt);
       const expiryDate = new Date(createdAt.getTime() + 7 * 24 * 60 * 60 * 1000);
       if (new Date() > expiryDate) {
@@ -4700,24 +4704,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const config = await storage.getGuaranteeConfig(session.userId);
       
-      if (!config?.stripeAccountId || !session.checkoutSessionId) {
-        return res.status(400).json({ message: "Session de paiement non disponible" });
+      if (!config?.stripeAccountId) {
+        return res.status(400).json({ message: "Configuration Stripe manquante" });
       }
       
-      // Retrieve the checkout session to get the URL
-      const checkoutSession = await stripe.checkout.sessions.retrieve(
-        session.checkoutSessionId,
-        { stripeAccount: config.stripeAccountId }
-      );
+      let checkoutUrl: string | null = null;
       
-      if (checkoutSession.status === 'complete') {
-        return res.status(400).json({ 
-          message: "Cette réservation a déjà été confirmée" 
+      // Try to retrieve existing Stripe checkout session
+      if (session.checkoutSessionId) {
+        try {
+          const checkoutSession = await stripe.checkout.sessions.retrieve(
+            session.checkoutSessionId,
+            { stripeAccount: config.stripeAccountId }
+          );
+          
+          if (checkoutSession.status === 'complete') {
+            return res.status(400).json({ 
+              message: "Cette réservation a déjà été confirmée" 
+            });
+          }
+          
+          // Check if session is still valid (Stripe sessions expire after 24h)
+          if (checkoutSession.url && checkoutSession.status === 'open') {
+            checkoutUrl = checkoutSession.url;
+          }
+        } catch (stripeError: any) {
+          // Session expired or invalid - we'll create a new one
+          console.log(`[Guarantee] Stripe session expired or invalid, creating new one: ${stripeError.message}`);
+        }
+      }
+      
+      // Create new Stripe checkout session if needed
+      if (!checkoutUrl) {
+        console.log(`[Guarantee] Creating new Stripe checkout session for ${sessionId}`);
+        
+        const frontendUrl = getFrontendUrl();
+        const totalAmount = (session.penaltyAmount || 30) * (session.nbPersons || 1);
+        
+        const newCheckoutSession = await stripe.checkout.sessions.create({
+          payment_method_types: ['card'],
+          mode: 'setup',
+          customer_email: session.customerEmail || undefined,
+          success_url: `${frontendUrl}/guarantee/confirmation?session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: `${frontendUrl}/guarantee/annulation?session_id=${sessionId}`,
+          metadata: {
+            guarantee_session_id: sessionId,
+            penalty_amount: String(session.penaltyAmount || 30),
+            nb_persons: String(session.nbPersons || 1),
+            total_penalty: String(totalAmount),
+          },
+          setup_intent_data: {
+            metadata: {
+              guarantee_session_id: sessionId,
+              penalty_amount: String(session.penaltyAmount || 30),
+              nb_persons: String(session.nbPersons || 1),
+            },
+          },
+        }, {
+          stripeAccount: config.stripeAccountId,
         });
+        
+        // Update session with new checkout session ID
+        await storage.updateGuaranteeSession(sessionId, {
+          checkoutSessionId: newCheckoutSession.id,
+        });
+        
+        checkoutUrl = newCheckoutSession.url;
+        console.log(`[Guarantee] New checkout session created: ${newCheckoutSession.id}`);
+      }
+      
+      if (!checkoutUrl) {
+        return res.status(500).json({ message: "Impossible de créer la session de paiement" });
       }
       
       res.json({
-        checkout_url: checkoutSession.url,
+        checkout_url: checkoutUrl,
       });
     } catch (error: any) {
       console.error('[Guarantee] Error getting checkout URL:', error);
