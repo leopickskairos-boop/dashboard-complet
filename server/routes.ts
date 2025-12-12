@@ -4879,21 +4879,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const n8nWebhookUrl = 'https://djeydejy.app.n8n.cloud/webhook/garantie-nouvelle-resa';
         
+        // Calculate datetime for Google Calendar
+        const timezone = config.timezone || 'Europe/Paris';
+        const reservationDate = new Date(session.reservationDate);
+        
+        // Parse reservation time (format: "HH:MM" or "HHhMM")
+        let hours = 12, minutes = 0;
+        if (session.reservationTime) {
+          const timeMatch = session.reservationTime.match(/(\d{1,2})[h:](\d{2})/i);
+          if (timeMatch) {
+            hours = parseInt(timeMatch[1], 10);
+            minutes = parseInt(timeMatch[2], 10);
+          }
+        }
+        
+        // Build start and end datetime in ISO format with timezone offset
+        const startDate = new Date(reservationDate);
+        startDate.setHours(hours, minutes, 0, 0);
+        const endDate = new Date(startDate.getTime() + 60 * 60 * 1000); // +1 hour
+        
+        // Format as ISO string
+        const startDatetime = startDate.toISOString();
+        const endDatetime = endDate.toISOString();
+        
+        // timeMin/timeMax for Google Calendar query (same day range)
+        const dayStart = new Date(reservationDate);
+        dayStart.setHours(0, 0, 0, 0);
+        const dayEnd = new Date(reservationDate);
+        dayEnd.setHours(23, 59, 59, 999);
+        
         const webhookPayload = {
+          // Event info
           event: 'card_validated',
           session_id: session.id,
-          customer_name: session.customerName,
-          customer_email: session.customerEmail,
-          customer_phone: session.customerPhone,
-          reservation_date: session.reservationDate,
-          reservation_time: session.reservationTime,
-          nb_persons: session.nbPersons,
-          agent_id: session.agentId,
           validated_at: new Date().toISOString(),
           payment_method_id: paymentMethodId,
+          
+          // Google Calendar required fields
+          calendar_id: config.calendarId || null,
+          timeMin: dayStart.toISOString(),
+          timeMax: dayEnd.toISOString(),
+          timeZone: timezone,
+          
+          // Reservation datetime
+          start_datetime: startDatetime,
+          end_datetime: endDatetime,
+          
+          // Customer info
+          nom_client: session.customerName,
+          customer_name: session.customerName,
+          client_email: session.customerEmail,
+          customer_email: session.customerEmail,
+          client_phone: session.customerPhone,
+          customer_phone: session.customerPhone,
+          
+          // Reservation details
+          nb_personnes: session.nbPersons,
+          nb_persons: session.nbPersons,
+          date_demandee: session.reservationDate,
+          reservation_date: session.reservationDate,
+          heure_demandee: session.reservationTime,
+          reservation_time: session.reservationTime,
+          
+          // Business info
+          agency_id: session.agentId,
+          agent_id: session.agentId,
+          business_type: config.companyName || 'Restaurant',
+          company_name: config.companyName,
+          
+          // Description for calendar event
+          resume: `Réservation ${session.customerName} - ${session.nbPersons} pers.`,
+          description: `📅 Réservation Restaurant\n👤 Client : ${session.customerName}\n👥 Personnes : ${session.nbPersons}\n📞 Téléphone : ${session.customerPhone || 'N/A'}\n📧 Email : ${session.customerEmail || 'N/A'}`,
         };
         
         console.log(`[Guarantee] Triggering N8N Workflow 2 for calendar booking: ${session.id}`);
+        console.log(`[Guarantee] Calendar ID: ${config.calendarId}, TimeZone: ${timezone}`);
         
         const n8nResponse = await fetch(n8nWebhookUrl, {
           method: 'POST',
