@@ -71,6 +71,22 @@ const statusColors: Record<string, { bg: string; text: string; label: string }> 
   cancelled: { bg: "bg-red-500/10", text: "text-red-400", label: "Annulée" },
 };
 
+const sampleContact = {
+  prenom: "Marie",
+  nom: "Dupont", 
+  email: "marie.dupont@exemple.fr",
+  telephone: "0612345678",
+  entreprise: "Société ABC",
+};
+
+function replaceVariablesWithSample(content: string): string {
+  let result = content;
+  Object.entries(sampleContact).forEach(([key, value]) => {
+    result = result.replace(new RegExp(`\\{${key}\\}`, 'gi'), value);
+  });
+  return result;
+}
+
 export default function MarketingCampaigns() {
   const { toast } = useToast();
   const queryClientInst = useQueryClient();
@@ -79,6 +95,7 @@ export default function MarketingCampaigns() {
   const [channelFilter, setChannelFilter] = useState<string>("all");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState<any>(null);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   const { data: campaigns, isLoading } = useQuery<any[]>({
     queryKey: [`/api/marketing/campaigns?status=${statusFilter}&channel=${channelFilter}`],
@@ -548,9 +565,23 @@ export default function MarketingCampaigns() {
                 )}
               />
 
-              <DialogFooter>
+              <DialogFooter className="flex-wrap gap-2">
                 <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)}>
                   Annuler
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="secondary"
+                  onClick={() => setIsPreviewOpen(true)}
+                  disabled={
+                    (channel === 'email' && !form.getValues('emailContent')) ||
+                    (channel === 'sms' && !form.getValues('smsContent')) ||
+                    (channel === 'both' && (!form.getValues('emailContent') || !form.getValues('smsContent')))
+                  }
+                  data-testid="button-preview-campaign"
+                >
+                  <Eye className="h-4 w-4 mr-2" />
+                  Aperçu
                 </Button>
                 <Button
                   type="submit"
@@ -563,6 +594,118 @@ export default function MarketingCampaigns() {
               </DialogFooter>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="h-5 w-5" />
+              Aperçu de la campagne
+            </DialogTitle>
+            <DialogDescription>
+              Prévisualisation avec les variables remplacées par des données d'exemple
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6">
+            <Card className="bg-muted/30">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Contact d'exemple utilisé
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm">
+                <div className="grid grid-cols-2 gap-2">
+                  <div><span className="text-muted-foreground">Prénom:</span> {sampleContact.prenom}</div>
+                  <div><span className="text-muted-foreground">Nom:</span> {sampleContact.nom}</div>
+                  <div><span className="text-muted-foreground">Email:</span> {sampleContact.email}</div>
+                  <div><span className="text-muted-foreground">Téléphone:</span> {sampleContact.telephone}</div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {(channel === 'email' || channel === 'both') && (
+              <Card>
+                <CardHeader className="pb-2">
+                  <div className="flex items-center gap-2">
+                    <Mail className="h-4 w-4 text-blue-400" />
+                    <CardTitle className="text-sm font-medium">Aperçu Email</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {form.getValues('emailContent') ? (
+                    <>
+                      {form.getValues('emailSubject') && (
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Sujet</p>
+                          <p className="font-semibold" data-testid="preview-email-subject">
+                            {replaceVariablesWithSample(form.getValues('emailSubject') || '')}
+                          </p>
+                        </div>
+                      )}
+                      {form.getValues('emailPreviewText') && (
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Prévisualisation</p>
+                          <p className="text-sm text-muted-foreground" data-testid="preview-email-previewtext">
+                            {replaceVariablesWithSample(form.getValues('emailPreviewText') || '')}
+                          </p>
+                        </div>
+                      )}
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-2">Contenu</p>
+                        <div 
+                          className="border rounded-md p-4 bg-background prose prose-sm dark:prose-invert max-w-none"
+                          data-testid="preview-email-content"
+                          dangerouslySetInnerHTML={{ 
+                            __html: replaceVariablesWithSample(form.getValues('emailContent') || '') 
+                          }}
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic" data-testid="preview-email-empty">
+                      Aucun contenu email saisi
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {(channel === 'sms' || channel === 'both') && (
+              <Card>
+                <CardHeader className="pb-2">
+                  <div className="flex items-center gap-2">
+                    <MessageSquare className="h-4 w-4 text-green-400" />
+                    <CardTitle className="text-sm font-medium">Aperçu SMS</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {form.getValues('smsContent') ? (
+                    <div className="bg-green-500/10 rounded-lg p-4 max-w-xs">
+                      <p className="text-sm" data-testid="preview-sms-content">
+                        {replaceVariablesWithSample(form.getValues('smsContent') || '')}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        {replaceVariablesWithSample(form.getValues('smsContent') || '').length} caractères
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic" data-testid="preview-sms-empty">
+                      Aucun contenu SMS saisi
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsPreviewOpen(false)}>
+              Fermer
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
