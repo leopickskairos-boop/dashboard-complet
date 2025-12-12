@@ -788,6 +788,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 try {
                   // Send ALL stored info to N8N for calendar booking
                   const n8nPayload = {
+                    // ========== FLOW CONTROL FLAGS FOR N8N ==========
+                    // These flags tell N8N that payment is validated and calendar can be booked
+                    payment_validated: true,  // TRUE = Card validated, proceed with calendar
+                    calendar_booking_allowed: true,  // TRUE = OK to book Google Calendar NOW
+                    workflow_control: {
+                      action_required: "BOOK_CALENDAR_NOW",
+                      can_book_calendar: true,
+                      reason: "Customer validated card on Stripe - proceed with calendar booking",
+                      instructions: [
+                        "1. Card validation CONFIRMED by Stripe",
+                        "2. You can NOW book the Google Calendar event",
+                        "3. After booking, call POST /api/guarantee/confirm-booking with session_id"
+                      ]
+                    },
+                    // ================================================
+                    
                     // Status
                     status: 'validated',
                     event: 'cb_validated',
@@ -4040,7 +4056,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Return enriched response for N8N
+      // Return enriched response for N8N with explicit flow control
       res.json({
         success: true,
         guaranteeRequired: true,
@@ -4048,6 +4064,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         url: `${frontendUrl}/guarantee/validate/${session.id}`,
         checkoutUrl: checkoutSession.url,
         status: 'pending',
+        
+        // ========== FLOW CONTROL FLAGS FOR N8N ==========
+        // These flags tell N8N exactly what to do next
+        workflow_control: {
+          action_required: "WAIT_FOR_STRIPE_VALIDATION",
+          can_book_calendar: false,
+          reason: "Customer must validate card on Stripe before calendar booking",
+          next_trigger: "Dashboard will call N8N_WEBHOOK_CB_VALIDEE when card is validated",
+          instructions: [
+            "1. DO NOT book Google Calendar yet",
+            "2. WAIT for the dashboard to trigger your webhook",
+            "3. Calendar booking webhook will be called ONLY after Stripe validation",
+            "4. Check 'payment_validated: true' in the callback payload"
+          ]
+        },
+        payment_validated: false,  // Explicit flag: false = DO NOT proceed with calendar
+        calendar_booking_allowed: false,  // Explicit flag: false = BLOCK calendar booking
+        // ================================================
+        
         customer: {
           name: data.customer_name,
           email: data.customer_email,
