@@ -1032,6 +1032,9 @@ export const reviewConfig = pgTable("review_config", {
   emailSubject: text("email_subject"),
   emailMessage: text("email_message"),
   
+  // Valeur moyenne d'un client (en centimes) pour calculer le revenu estimé
+  averageClientValue: integer("average_client_value"), // ex: 5000 = 50€
+  
   // Plateformes (liens directs)
   googlePlaceId: text("google_place_id"),
   googleReviewUrl: text("google_review_url"),
@@ -1040,6 +1043,7 @@ export const reviewConfig = pgTable("review_config", {
   pagesJaunesUrl: text("pages_jaunes_url"),
   doctolibUrl: text("doctolib_url"),
   yelpUrl: text("yelp_url"),
+  theForkUrl: text("the_fork_url"),
   
   // Connexions API (OAuth) - stub pour phase 2
   googleBusinessConnected: boolean("google_business_connected").notNull().default(false),

@@ -200,7 +200,7 @@ function PlatformConnectionsSection() {
     }
   };
 
-  const connectedSources = sources.filter(s => s.status === "active");
+  const connectedSources = sources.filter(s => s.connectionStatus === "active");
   const lastSync = syncLogs.length > 0 ? syncLogs[0] : null;
 
   return (
@@ -297,9 +297,9 @@ function PlatformConnectionsSection() {
                 {sources.find(s => s.platform === "tripadvisor") ? (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      {getStatusBadge(sources.find(s => s.platform === "tripadvisor")?.status || "")}
+                      {getStatusBadge(sources.find(s => s.platform === "tripadvisor")?.connectionStatus || "")}
                       <span className="text-[10px] text-muted-foreground">
-                        {sources.find(s => s.platform === "tripadvisor")?.reviewCount || 0} avis
+                        {sources.find(s => s.platform === "tripadvisor")?.totalReviewsCount || 0} avis
                       </span>
                     </div>
                     <div className="flex gap-1.5">
@@ -390,11 +390,11 @@ function PlatformConnectionsSection() {
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="text-xs">
-                      {formatDistanceToNow(new Date(lastSync.syncedAt), { addSuffix: true, locale: fr })}
+                      {formatDistanceToNow(new Date(lastSync.startedAt), { addSuffix: true, locale: fr })}
                     </span>
                     {lastSync.status === "success" ? (
                       <Badge className="bg-[#4CEFAD]/10 text-[#4CEFAD] border-[#4CEFAD]/20 text-[10px]">
-                        {lastSync.reviewsFetched} avis récupérés
+                        {lastSync.fetchedCount || 0} avis récupérés
                       </Badge>
                     ) : (
                       <Badge variant="destructive" className="text-[10px]">
@@ -485,9 +485,9 @@ function PlatformCard({
       {source ? (
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            {getStatusBadge(source.status)}
+            {getStatusBadge(source.connectionStatus)}
             <span className="text-[10px] text-muted-foreground">
-              {source.reviewCount || 0} avis
+              {source.totalReviewsCount || 0} avis
             </span>
           </div>
           <div className="flex gap-1.5">
