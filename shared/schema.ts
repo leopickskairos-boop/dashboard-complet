@@ -1180,6 +1180,51 @@ export const insertReviewRequestSchema = createInsertSchema(reviewRequests).omit
 export type InsertReviewRequest = z.infer<typeof insertReviewRequestSchema>;
 export type ReviewRequest = typeof reviewRequests.$inferSelect;
 
+// Review automations table - envois automatiques d'avis
+export const reviewAutomations = pgTable("review_automations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  
+  name: text("name").notNull(),
+  description: text("description"),
+  
+  // Trigger type
+  triggerType: text("trigger_type").notNull(), // 'new_client', 'post_visit', 'post_reservation', 'days_after_visit', 'manual'
+  triggerConfig: jsonb("trigger_config"), // { daysAfter: 1, sendTime: '18:00' }
+  
+  // Send configuration
+  sendMethod: text("send_method").notNull().default("both"), // 'email', 'sms', 'both'
+  incentiveId: varchar("incentive_id").references(() => reviewIncentives.id, { onDelete: 'set null' }),
+  
+  // Status
+  isActive: boolean("is_active").notNull().default(false),
+  
+  // Stats
+  totalSent: integer("total_sent").default(0),
+  totalClicked: integer("total_clicked").default(0),
+  totalConverted: integer("total_converted").default(0),
+  
+  // Timestamps
+  lastTriggeredAt: timestamp("last_triggered_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Insert schema for review automations
+export const insertReviewAutomationSchema = createInsertSchema(reviewAutomations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  totalSent: true,
+  totalClicked: true,
+  totalConverted: true,
+  lastTriggeredAt: true,
+});
+
+// Types for review automations
+export type InsertReviewAutomation = z.infer<typeof insertReviewAutomationSchema>;
+export type ReviewAutomation = typeof reviewAutomations.$inferSelect;
+
 // Reviews table (centralized from all platforms)
 export const reviews = pgTable("reviews", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
