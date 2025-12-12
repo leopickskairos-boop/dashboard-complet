@@ -102,6 +102,10 @@ class TwilioSmsService {
       if (cleaned.startsWith('0') && cleaned.length === 10) {
         cleaned = '+33' + cleaned.substring(1);
       } 
+      // French number starting with 6 or 7 (mobile) without leading 0
+      else if ((cleaned.startsWith('6') || cleaned.startsWith('7')) && cleaned.length === 9) {
+        cleaned = '+33' + cleaned;
+      }
       // Already has country code without +
       else if (cleaned.length >= 11) {
         cleaned = '+' + cleaned;
@@ -110,12 +114,26 @@ class TwilioSmsService {
         return null;
       }
     }
-
-    // Validate E.164 format (+ followed by 10-15 digits)
-    if (/^\+\d{10,15}$/.test(cleaned)) {
+    
+    // Fix common French mobile formatting issues
+    // Case: +336XXXXXXXXX (13 digits) - one extra 6
+    if (cleaned.startsWith('+336') && cleaned.length === 13) {
+      // Check if it's a double 6 issue: +336644... should be +33644...
+      const afterPrefix = cleaned.substring(4); // Get after +336
+      if (afterPrefix.startsWith('6') || afterPrefix.startsWith('7')) {
+        // Looks like +33 6 6XXXXXXXX - remove the extra 6
+        cleaned = '+33' + afterPrefix;
+        console.log(`[TwilioSMS] Fixed double-6 issue: ${phone} -> ${cleaned}`);
+      }
+    }
+    
+    // Validate E.164 format for French numbers (+33 followed by 9 digits = 12 total)
+    // Or general format (+ followed by 10-15 digits)
+    if (/^\+33\d{9}$/.test(cleaned) || /^\+\d{10,15}$/.test(cleaned)) {
       return cleaned;
     }
 
+    console.warn(`[TwilioSMS] Invalid phone format after cleanup: ${cleaned} (original: ${phone})`);
     return null;
   }
 }
