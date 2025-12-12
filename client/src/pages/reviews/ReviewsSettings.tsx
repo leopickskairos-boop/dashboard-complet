@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -549,6 +549,9 @@ export default function ReviewsSettings() {
   const [showNewIncentiveDialog, setShowNewIncentiveDialog] = useState(false);
   const [platformLinksOpen, setPlatformLinksOpen] = useState(false);
   const [aiResponseOpen, setAiResponseOpen] = useState(false);
+  const [localSmsMessage, setLocalSmsMessage] = useState("");
+  const [localEmailSubject, setLocalEmailSubject] = useState("");
+  const [localEmailMessage, setLocalEmailMessage] = useState("");
   const [newIncentive, setNewIncentive] = useState({
     type: "percentage",
     percentageValue: 10,
@@ -567,6 +570,14 @@ export default function ReviewsSettings() {
   const { data: incentives = [], isLoading: loadingIncentives } = useQuery<ReviewIncentive[]>({
     queryKey: ["/api/reviews/incentives"],
   });
+
+  useEffect(() => {
+    if (config) {
+      setLocalSmsMessage(config.smsMessage || "");
+      setLocalEmailSubject(config.emailSubject || "");
+      setLocalEmailMessage(config.emailMessage || "");
+    }
+  }, [config]);
 
   const updateMutation = useMutation({
     mutationFn: async (data: Partial<ReviewConfig>) => {
@@ -850,23 +861,33 @@ export default function ReviewsSettings() {
             <div className="space-y-2">
               <Label>Message SMS (160 car. max)</Label>
               <Textarea
-                value={config?.smsMessage || ""}
-                onChange={(e) => handleSaveSettings("smsMessage", e.target.value)}
+                value={localSmsMessage}
+                onChange={(e) => setLocalSmsMessage(e.target.value)}
+                onBlur={() => {
+                  if (localSmsMessage !== (config?.smsMessage || "")) {
+                    handleSaveSettings("smsMessage", localSmsMessage);
+                  }
+                }}
                 placeholder="Merci de votre visite ! Partagez votre expérience avec nous..."
                 maxLength={160}
                 className="resize-none"
                 data-testid="textarea-sms-message"
               />
               <p className="text-xs text-muted-foreground">
-                {(config?.smsMessage?.length || 0)}/160 caractères
+                {localSmsMessage.length}/160 caractères
               </p>
             </div>
 
             <div className="space-y-2">
               <Label>Objet de l'email</Label>
               <Input
-                value={config?.emailSubject || ""}
-                onChange={(e) => handleSaveSettings("emailSubject", e.target.value)}
+                value={localEmailSubject}
+                onChange={(e) => setLocalEmailSubject(e.target.value)}
+                onBlur={() => {
+                  if (localEmailSubject !== (config?.emailSubject || "")) {
+                    handleSaveSettings("emailSubject", localEmailSubject);
+                  }
+                }}
                 placeholder="Partagez votre expérience avec nous !"
                 data-testid="input-email-subject"
               />
@@ -875,8 +896,13 @@ export default function ReviewsSettings() {
             <div className="space-y-2">
               <Label>Corps de l'email</Label>
               <Textarea
-                value={config?.emailMessage || ""}
-                onChange={(e) => handleSaveSettings("emailMessage", e.target.value)}
+                value={localEmailMessage}
+                onChange={(e) => setLocalEmailMessage(e.target.value)}
+                onBlur={() => {
+                  if (localEmailMessage !== (config?.emailMessage || "")) {
+                    handleSaveSettings("emailMessage", localEmailMessage);
+                  }
+                }}
                 placeholder="<p>Bonjour {nom},</p><p>Merci de votre visite...</p>"
                 className="min-h-[80px] resize-none font-mono text-xs"
                 data-testid="textarea-email-message"
