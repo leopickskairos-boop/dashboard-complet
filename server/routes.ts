@@ -4879,6 +4879,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const n8nWebhookUrl = 'https://djeydejy.app.n8n.cloud/webhook/garantie-nouvelle-resa';
         
+        // Fetch user data for API key
+        const user = await storage.getUser(session.userId);
+        
         // Fetch SpeedAI client data for additional business info
         let speedaiClient = null;
         if (session.agentId) {
@@ -4991,6 +4994,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // ===== VEHICLE/SERVICE (for garages) =====
           vehicule: session.vehicule,
           type_service: session.typeService,
+          
+          // ===== SPEEDAI DASHBOARD ACCESS =====
+          // Each client has their own API key and dashboard access
+          api_key: user?.apiKey || null, // Client's SpeedAI API key for N8N callbacks
+          dashboard_url: process.env.FRONTEND_URL || 'https://speedai-b2b-platform-v2.replit.app',
+          user_id: session.userId,
+          user_email: user?.email,
         };
         
         console.log(`[Guarantee] Triggering N8N Workflow 2 for calendar booking: ${session.id}`);
