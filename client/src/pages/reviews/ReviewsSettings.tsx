@@ -660,6 +660,7 @@ function AutomationsSection() {
 
   const openEditDialog = (automation: ReviewAutomation) => {
     const triggerConfig = automation.triggerConfig as { 
+      timingMode?: string;
       daysAfter?: number; 
       sendTime?: string;
       sendWindowStart?: string;
@@ -671,7 +672,7 @@ function AutomationsSection() {
       name: automation.name,
       description: automation.description || "",
       triggerType: automation.triggerType,
-      timingMode: "fixed_delay",
+      timingMode: triggerConfig?.timingMode || "fixed_delay",
       daysAfter: triggerConfig?.daysAfter || 3,
       sendTime: triggerConfig?.sendTime || "10:00",
       sendWindowStart: triggerConfig?.sendWindowStart || "10:00",
@@ -691,6 +692,7 @@ function AutomationsSection() {
       description: formData.description || null,
       triggerType: formData.triggerType,
       triggerConfig: needsTimingConfig ? {
+        timingMode: formData.timingMode,
         daysAfter: formData.daysAfter,
         sendTime: formData.sendTime,
         sendWindowStart: formData.sendWindowStart,
