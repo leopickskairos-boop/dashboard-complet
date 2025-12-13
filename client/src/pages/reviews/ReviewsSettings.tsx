@@ -501,689 +501,739 @@ export default function ReviewsSettings() {
 
           {localConfig.enabled && (
             <>
-              <Separator className="bg-border/30" />
-
-              {/* Section 2: Déclenchement */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-lg bg-blue-500/10">
-                    <Calendar className="h-4 w-4 text-blue-400" />
-                  </div>
-                  <Label className="text-sm font-medium">Déclenchement</Label>
-                </div>
-                <Select
-                  value={localConfig.triggerType}
-                  onValueChange={(value) => setLocalConfig(prev => ({ ...prev, triggerType: value }))}
-                >
-                  <SelectTrigger data-testid="select-trigger-type">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {TRIGGER_TYPES.map((trigger) => (
-                      <SelectItem key={trigger.value} value={trigger.value}>
-                        <div>
-                          <span>{trigger.label}</span>
-                          <span className="text-xs text-muted-foreground ml-2">- {trigger.description}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  Définit le moment où la demande d'avis sera envoyée
-                </p>
-              </div>
-
-              <Separator className="bg-border/30" />
-
-              {/* Section 3: Timing d'envoi */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-lg bg-purple-500/10">
-                    <Clock className="h-4 w-4 text-purple-400" />
-                  </div>
-                  <Label className="text-sm font-medium">Timing d'envoi</Label>
-                </div>
-
-                <Select
-                  value={localConfig.timingMode}
-                  onValueChange={(value) => setLocalConfig(prev => ({ ...prev, timingMode: value }))}
-                >
-                  <SelectTrigger data-testid="select-timing-mode">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {TIMING_MODES.map((mode) => (
-                      <SelectItem key={mode.value} value={mode.value}>
-                        <div>
-                          <span>{mode.label}</span>
-                          <span className="text-xs text-muted-foreground ml-2">- {mode.description}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                {localConfig.timingMode === "fixed_delay" && (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label className="text-xs">Délai (heures)</Label>
-                      <Input
-                        type="number"
-                        min={1}
-                        max={168}
-                        value={localConfig.fixedDelayHours}
-                        onChange={(e) => setLocalConfig(prev => ({ ...prev, fixedDelayHours: parseInt(e.target.value) || 24 }))}
-                        data-testid="input-delay-hours"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {localConfig.timingMode === "fixed_time" && (
-                  <div className="space-y-2">
-                    <Label className="text-xs">Heure d'envoi</Label>
-                    <Input
-                      type="time"
-                      value={localConfig.fixedTime}
-                      onChange={(e) => setLocalConfig(prev => ({ ...prev, fixedTime: e.target.value }))}
-                      data-testid="input-fixed-time"
-                    />
-                  </div>
-                )}
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-xs">Fenêtre début</Label>
-                    <Input
-                      type="time"
-                      value={localConfig.sendWindowStart}
-                      onChange={(e) => setLocalConfig(prev => ({ ...prev, sendWindowStart: e.target.value }))}
-                      data-testid="input-window-start"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs">Fenêtre fin</Label>
-                    <Input
-                      type="time"
-                      value={localConfig.sendWindowEnd}
-                      onChange={(e) => setLocalConfig(prev => ({ ...prev, sendWindowEnd: e.target.value }))}
-                      data-testid="input-window-end"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-muted/10">
-                  <div className="flex items-center gap-3">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm">Éviter les week-ends</p>
-                      <p className="text-xs text-muted-foreground">Ne pas envoyer samedi et dimanche</p>
-                    </div>
-                  </div>
-                  <Switch
-                    checked={localConfig.avoidWeekends}
-                    onCheckedChange={(value) => setLocalConfig(prev => ({ ...prev, avoidWeekends: value }))}
-                    data-testid="switch-avoid-weekends"
-                  />
-                </div>
-              </div>
-
-              <Separator className="bg-border/30" />
-
-              {/* Section 4: Méthode d'envoi */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-lg bg-green-500/10">
-                    <Send className="h-4 w-4 text-green-400" />
-                  </div>
-                  <Label className="text-sm font-medium">Méthode d'envoi</Label>
-                </div>
-
-                <div className="grid gap-2">
-                  {SEND_METHODS.map((method) => (
-                    <div
-                      key={method.value}
-                      className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${
-                        localConfig.sendMethod === method.value
-                          ? "border-[#C8B88A]/50 bg-[#C8B88A]/5"
-                          : "border-border/40 bg-muted/10 hover:bg-muted/20"
-                      }`}
-                      onClick={() => setLocalConfig(prev => ({ ...prev, sendMethod: method.value }))}
-                      data-testid={`option-method-${method.value}`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <method.icon className={`h-4 w-4 ${localConfig.sendMethod === method.value ? "text-[#C8B88A]" : "text-muted-foreground"}`} />
-                        <span className="text-sm">{method.label}</span>
-                        {method.recommended && (
-                          <Badge className="bg-green-500/10 text-green-400 border-green-500/20 text-[10px]">
-                            Recommandé
-                          </Badge>
-                        )}
+              <Accordion type="multiple" defaultValue={["timing", "message"]} className="space-y-2">
+                {/* Accordéon: Déclenchement & Timing */}
+                <AccordionItem value="timing" className="border rounded-xl px-4 border-border/40 bg-muted/5">
+                  <AccordionTrigger className="hover:no-underline py-4" data-testid="accordion-timing">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 rounded-lg bg-purple-500/10">
+                        <Clock className="h-4 w-4 text-purple-400" />
                       </div>
-                      <div className={`w-4 h-4 rounded-full border-2 ${
-                        localConfig.sendMethod === method.value
-                          ? "border-[#C8B88A] bg-[#C8B88A]"
-                          : "border-muted-foreground"
-                      }`}>
-                        {localConfig.sendMethod === method.value && (
-                          <CheckCircle2 className="w-full h-full text-black" />
-                        )}
-                      </div>
+                      <span className="text-sm font-medium">Déclenchement & Timing</span>
                     </div>
-                  ))}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Le SMS est recommandé pour les restaurants (taux d'ouverture 98%)
-                </p>
-              </div>
-
-              <Separator className="bg-border/30" />
-
-              {/* Section 5: Contenu du message */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="p-1.5 rounded-lg bg-[#C8B88A]/10">
-                      <MessageSquare className="h-4 w-4 text-[#C8B88A]" />
-                    </div>
-                    <Label className="text-sm font-medium">Contenu du message</Label>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleGenerateAI}
-                    disabled={isGeneratingAI}
-                    data-testid="button-generate-ai"
-                  >
-                    {isGeneratingAI ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <Sparkles className="h-4 w-4 mr-2" />
-                    )}
-                    Générer avec l'IA
-                  </Button>
-                </div>
-
-                <p className="text-xs text-muted-foreground bg-muted/30 p-3 rounded-lg flex items-start gap-2">
-                  <Info className="h-4 w-4 mt-0.5 shrink-0" />
-                  Ce message sera utilisé pour tous les envois automatiques. Utilisez {"{prenom}"} pour personnaliser.
-                </p>
-
-                {(localConfig.sendMethod === "sms" || localConfig.sendMethod === "both") && (
-                  <div className="space-y-2">
-                    <Label className="text-xs">Message SMS (160 caractères max)</Label>
-                    <Textarea
-                      value={localConfig.smsMessage}
-                      onChange={(e) => setLocalConfig(prev => ({ ...prev, smsMessage: e.target.value }))}
-                      placeholder="Bonjour {prenom}, merci pour votre visite ! Partagez votre avis..."
-                      maxLength={160}
-                      className="resize-none"
-                      rows={3}
-                      data-testid="textarea-sms-message"
-                    />
-                    <p className="text-xs text-muted-foreground text-right">
-                      {localConfig.smsMessage.length}/160
-                    </p>
-                  </div>
-                )}
-
-                {(localConfig.sendMethod === "email" || localConfig.sendMethod === "both") && (
-                  <>
-                    <div className="space-y-2">
-                      <Label className="text-xs">Objet de l'email</Label>
-                      <Input
-                        value={localConfig.emailSubject}
-                        onChange={(e) => setLocalConfig(prev => ({ ...prev, emailSubject: e.target.value }))}
-                        placeholder="Votre avis compte pour nous !"
-                        data-testid="input-email-subject"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="text-xs">Corps de l'email</Label>
-                      <Textarea
-                        value={localConfig.emailMessage}
-                        onChange={(e) => setLocalConfig(prev => ({ ...prev, emailMessage: e.target.value }))}
-                        placeholder="Bonjour {prenom},&#10;&#10;Merci pour votre visite ! Votre avis nous aide à nous améliorer..."
-                        className="resize-none min-h-[120px]"
-                        data-testid="textarea-email-body"
-                      />
-                    </div>
-                  </>
-                )}
-              </div>
-
-              <Separator className="bg-border/30" />
-
-              {/* Section 6: Offres incitatives */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="p-1.5 rounded-lg bg-amber-500/10">
-                      <Gift className="h-4 w-4 text-amber-500" />
-                    </div>
-                    <Label className="text-sm font-medium">Offre incitative (optionnel)</Label>
-                  </div>
-                  <Dialog open={showNewIncentiveDialog} onOpenChange={setShowNewIncentiveDialog}>
-                    <DialogTrigger asChild>
-                      <Button variant="ghost" size="sm" data-testid="button-new-incentive">
-                        <Plus className="h-4 w-4 mr-1" />
-                        Créer une offre
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Créer une offre incitative</DialogTitle>
-                        <DialogDescription>
-                          Cette offre sera affichée dans les messages de demande d'avis
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="space-y-4 py-4">
-                        <div className="space-y-2">
-                          <Label>Type d'offre</Label>
-                          <Select
-                            value={newIncentive.type}
-                            onValueChange={(value) => setNewIncentive({ ...newIncentive, type: value })}
-                          >
-                            <SelectTrigger data-testid="select-incentive-type">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {INCENTIVE_TYPES.map((type) => (
-                                <SelectItem key={type.value} value={type.value}>
-                                  <span className="flex items-center gap-2">
-                                    <type.icon className="h-4 w-4" />
-                                    {type.label}
-                                  </span>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        {newIncentive.type === "percentage" && (
-                          <div className="space-y-2">
-                            <Label>Pourcentage de réduction</Label>
-                            <div className="flex items-center gap-2">
-                              <Input
-                                type="number"
-                                min={1}
-                                max={100}
-                                value={newIncentive.percentageValue}
-                                onChange={(e) => setNewIncentive({ ...newIncentive, percentageValue: parseInt(e.target.value) || 0 })}
-                                data-testid="input-percentage-value"
-                              />
-                              <span className="text-muted-foreground">%</span>
-                            </div>
-                          </div>
-                        )}
-
-                        {newIncentive.type === "amount" && (
-                          <div className="space-y-2">
-                            <Label>Montant de la réduction</Label>
-                            <div className="flex items-center gap-2">
-                              <Input
-                                type="number"
-                                min={1}
-                                step={0.5}
-                                value={(newIncentive.fixedAmountValue / 100).toFixed(2)}
-                                onChange={(e) => setNewIncentive({ ...newIncentive, fixedAmountValue: Math.round(parseFloat(e.target.value || "0") * 100) })}
-                                data-testid="input-amount-value"
-                              />
-                              <span className="text-muted-foreground">€</span>
-                            </div>
-                          </div>
-                        )}
-
-                        {newIncentive.type === "free_item" && (
-                          <div className="space-y-2">
-                            <Label>Article offert</Label>
-                            <Input
-                              placeholder="ex: Café, Dessert, Entrée..."
-                              value={newIncentive.freeItemName}
-                              onChange={(e) => setNewIncentive({ ...newIncentive, freeItemName: e.target.value })}
-                              data-testid="input-free-item"
-                            />
-                          </div>
-                        )}
-
-                        {newIncentive.type === "loyalty_points" && (
-                          <div className="space-y-2">
-                            <Label>Points fidélité</Label>
-                            <Input
-                              type="number"
-                              min={1}
-                              value={newIncentive.loyaltyPointsValue}
-                              onChange={(e) => setNewIncentive({ ...newIncentive, loyaltyPointsValue: parseInt(e.target.value) || 0 })}
-                              data-testid="input-loyalty-points"
-                            />
-                          </div>
-                        )}
-
-                        {newIncentive.type === "other" && (
-                          <div className="space-y-2">
-                            <Label>Description de l'offre</Label>
-                            <Input
-                              placeholder="ex: Cadeau surprise"
-                              value={newIncentive.customDescription}
-                              onChange={(e) => setNewIncentive({ ...newIncentive, customDescription: e.target.value })}
-                              data-testid="input-custom-description"
-                            />
-                          </div>
-                        )}
-
-                        <div className="space-y-2">
-                          <Label>Message affiché aux clients *</Label>
-                          <Textarea
-                            placeholder="ex: Obtenez 10% de réduction sur votre prochaine visite !"
-                            value={newIncentive.displayMessage}
-                            onChange={(e) => setNewIncentive({ ...newIncentive, displayMessage: e.target.value })}
-                            className="resize-none"
-                            data-testid="textarea-incentive-message"
-                          />
-                        </div>
-                      </div>
-                      <DialogFooter>
-                        <Button variant="outline" onClick={() => setShowNewIncentiveDialog(false)}>
-                          Annuler
-                        </Button>
-                        <Button 
-                          onClick={handleCreateIncentive} 
-                          disabled={createIncentiveMutation.isPending}
-                          data-testid="button-create-incentive"
-                        >
-                          {createIncentiveMutation.isPending ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            "Créer"
-                          )}
-                        </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-
-                <Select
-                  value={localConfig.selectedIncentiveId || "_none"}
-                  onValueChange={(value) => setLocalConfig(prev => ({ ...prev, selectedIncentiveId: value === "_none" ? "" : value }))}
-                >
-                  <SelectTrigger data-testid="select-incentive">
-                    <SelectValue placeholder="Aucune offre" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="_none">Aucune offre</SelectItem>
-                    {incentives.filter(i => i.isActive).map((incentive) => (
-                      <SelectItem key={incentive.id} value={incentive.id}>
-                        <span className="flex items-center gap-2">
-                          {(() => {
-                            const Icon = getIncentiveIcon(incentive.type);
-                            return <Icon className="h-4 w-4" />;
-                          })()}
-                          {getIncentiveLabel(incentive)}
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                {selectedIncentive && (
-                  <div className="p-3 rounded-xl border border-[#C8B88A]/30 bg-[#C8B88A]/5">
-                    <div className="flex items-center justify-between">
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-4 space-y-6">
+                    {/* Section 2: Déclenchement */}
+                    <div className="space-y-3">
                       <div className="flex items-center gap-2">
-                        {(() => {
-                          const Icon = getIncentiveIcon(selectedIncentive.type);
-                          return <Icon className="h-4 w-4 text-[#C8B88A]" />;
-                        })()}
-                        <span className="text-sm font-medium">{getIncentiveLabel(selectedIncentive)}</span>
+                        <div className="p-1.5 rounded-lg bg-blue-500/10">
+                          <Calendar className="h-4 w-4 text-blue-400" />
+                        </div>
+                        <Label className="text-sm font-medium">Déclenchement</Label>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() => deleteIncentiveMutation.mutate(selectedIncentive.id)}
-                        data-testid="button-delete-incentive"
-                      >
-                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                      </Button>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">{selectedIncentive.displayMessage}</p>
-                  </div>
-                )}
-
-                <p className="text-[10px] text-muted-foreground">
-                  Conformément au RGPD, les offres doivent être clairement identifiées comme telles.
-                </p>
-              </div>
-
-              <Separator className="bg-border/30" />
-
-              {/* Section 7: Message de remerciement */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 rounded-xl border border-border/40 bg-muted/20">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-pink-500/10">
-                      <Gift className="h-5 w-5 text-pink-400" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Message de remerciement</p>
-                      <p className="text-xs text-muted-foreground">Envoi automatique après confirmation d'avis avec code promo</p>
-                    </div>
-                  </div>
-                  <Switch
-                    checked={localConfig.thankYouEnabled}
-                    onCheckedChange={(value) => setLocalConfig(prev => ({ ...prev, thankYouEnabled: value }))}
-                    data-testid="switch-thank-you-enabled"
-                  />
-                </div>
-
-                {localConfig.thankYouEnabled && (
-                  <div className="space-y-4 pl-4 border-l-2 border-pink-500/30 ml-4">
-                    <div className="space-y-2">
-                      <Label className="text-xs">Méthode d'envoi du remerciement</Label>
                       <Select
-                        value={localConfig.thankYouSendMethod}
-                        onValueChange={(value) => setLocalConfig(prev => ({ ...prev, thankYouSendMethod: value }))}
+                        value={localConfig.triggerType}
+                        onValueChange={(value) => setLocalConfig(prev => ({ ...prev, triggerType: value }))}
                       >
-                        <SelectTrigger data-testid="select-thank-you-method">
+                        <SelectTrigger data-testid="select-trigger-type">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {SEND_METHODS.map((method) => (
-                            <SelectItem key={method.value} value={method.value}>
-                              <div className="flex items-center gap-2">
-                                <method.icon className="h-4 w-4" />
-                                <span>{method.label}</span>
+                          {TRIGGER_TYPES.map((trigger) => (
+                            <SelectItem key={trigger.value} value={trigger.value}>
+                              <div>
+                                <span>{trigger.label}</span>
+                                <span className="text-xs text-muted-foreground ml-2">- {trigger.description}</span>
                               </div>
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
+                      <p className="text-xs text-muted-foreground">
+                        Définit le moment où la demande d'avis sera envoyée
+                      </p>
                     </div>
 
-                    {(localConfig.thankYouSendMethod === "sms" || localConfig.thankYouSendMethod === "both") && (
-                      <div className="space-y-2">
-                        <Label className="text-xs">Message SMS de remerciement</Label>
-                        <Textarea
-                          value={localConfig.thankYouSmsMessage}
-                          onChange={(e) => setLocalConfig(prev => ({ ...prev, thankYouSmsMessage: e.target.value }))}
-                          placeholder="Ex: Merci {prenom} pour votre avis ! Votre code promo: {code_promo}. L'équipe {entreprise}"
-                          rows={3}
-                          data-testid="textarea-thank-you-sms"
-                        />
-                        <p className="text-[10px] text-muted-foreground">
-                          Variables: {"{prenom}"}, {"{nom}"}, {"{code_promo}"}, {"{entreprise}"}. Laissez vide pour le message par défaut.
-                        </p>
-                      </div>
-                    )}
+                    <Separator className="bg-border/30" />
 
-                    {(localConfig.thankYouSendMethod === "email" || localConfig.thankYouSendMethod === "both") && (
-                      <>
+                    {/* Section 3: Timing d'envoi */}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 rounded-lg bg-purple-500/10">
+                          <Clock className="h-4 w-4 text-purple-400" />
+                        </div>
+                        <Label className="text-sm font-medium">Timing d'envoi</Label>
+                      </div>
+
+                      <Select
+                        value={localConfig.timingMode}
+                        onValueChange={(value) => setLocalConfig(prev => ({ ...prev, timingMode: value }))}
+                      >
+                        <SelectTrigger data-testid="select-timing-mode">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {TIMING_MODES.map((mode) => (
+                            <SelectItem key={mode.value} value={mode.value}>
+                              <div>
+                                <span>{mode.label}</span>
+                                <span className="text-xs text-muted-foreground ml-2">- {mode.description}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      {localConfig.timingMode === "fixed_delay" && (
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label className="text-xs">Délai (heures)</Label>
+                            <Input
+                              type="number"
+                              min={1}
+                              max={168}
+                              value={localConfig.fixedDelayHours}
+                              onChange={(e) => setLocalConfig(prev => ({ ...prev, fixedDelayHours: parseInt(e.target.value) || 24 }))}
+                              data-testid="input-delay-hours"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {localConfig.timingMode === "fixed_time" && (
                         <div className="space-y-2">
-                          <Label className="text-xs">Objet de l'email</Label>
+                          <Label className="text-xs">Heure d'envoi</Label>
                           <Input
-                            value={localConfig.thankYouEmailSubject}
-                            onChange={(e) => setLocalConfig(prev => ({ ...prev, thankYouEmailSubject: e.target.value }))}
-                            placeholder="Ex: Merci pour votre avis - {entreprise}"
-                            data-testid="input-thank-you-email-subject"
+                            type="time"
+                            value={localConfig.fixedTime}
+                            onChange={(e) => setLocalConfig(prev => ({ ...prev, fixedTime: e.target.value }))}
+                            data-testid="input-fixed-time"
+                          />
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label className="text-xs">Fenêtre début</Label>
+                          <Input
+                            type="time"
+                            value={localConfig.sendWindowStart}
+                            onChange={(e) => setLocalConfig(prev => ({ ...prev, sendWindowStart: e.target.value }))}
+                            data-testid="input-window-start"
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label className="text-xs">Contenu de l'email (HTML)</Label>
-                          <Textarea
-                            value={localConfig.thankYouEmailMessage}
-                            onChange={(e) => setLocalConfig(prev => ({ ...prev, thankYouEmailMessage: e.target.value }))}
-                            placeholder="Laissez vide pour utiliser le template par défaut avec design professionnel"
-                            rows={4}
-                            data-testid="textarea-thank-you-email"
+                          <Label className="text-xs">Fenêtre fin</Label>
+                          <Input
+                            type="time"
+                            value={localConfig.sendWindowEnd}
+                            onChange={(e) => setLocalConfig(prev => ({ ...prev, sendWindowEnd: e.target.value }))}
+                            data-testid="input-window-end"
                           />
-                          <p className="text-[10px] text-muted-foreground">
-                            Variables: {"{prenom}"}, {"{nom}"}, {"{code_promo}"}, {"{entreprise}"}. Laissez vide pour le template par défaut.
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-muted/10">
+                        <div className="flex items-center gap-3">
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          <div>
+                            <p className="text-sm">Éviter les week-ends</p>
+                            <p className="text-xs text-muted-foreground">Ne pas envoyer samedi et dimanche</p>
+                          </div>
+                        </div>
+                        <Switch
+                          checked={localConfig.avoidWeekends}
+                          onCheckedChange={(value) => setLocalConfig(prev => ({ ...prev, avoidWeekends: value }))}
+                          data-testid="switch-avoid-weekends"
+                        />
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* Accordéon: Canal & Message */}
+                <AccordionItem value="message" className="border rounded-xl px-4 border-border/40 bg-muted/5">
+                  <AccordionTrigger className="hover:no-underline py-4" data-testid="accordion-message">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 rounded-lg bg-green-500/10">
+                        <Send className="h-4 w-4 text-green-400" />
+                      </div>
+                      <span className="text-sm font-medium">Canal & Message</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-4 space-y-6">
+                    {/* Section 4: Méthode d'envoi */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 rounded-lg bg-green-500/10">
+                          <Send className="h-4 w-4 text-green-400" />
+                        </div>
+                        <Label className="text-sm font-medium">Méthode d'envoi</Label>
+                      </div>
+
+                      <div className="grid gap-2">
+                        {SEND_METHODS.map((method) => (
+                          <div
+                            key={method.value}
+                            className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${
+                              localConfig.sendMethod === method.value
+                                ? "border-[#C8B88A]/50 bg-[#C8B88A]/5"
+                                : "border-border/40 bg-muted/10 hover:bg-muted/20"
+                            }`}
+                            onClick={() => setLocalConfig(prev => ({ ...prev, sendMethod: method.value }))}
+                            data-testid={`option-method-${method.value}`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <method.icon className={`h-4 w-4 ${localConfig.sendMethod === method.value ? "text-[#C8B88A]" : "text-muted-foreground"}`} />
+                              <span className="text-sm">{method.label}</span>
+                              {method.recommended && (
+                                <Badge className="bg-green-500/10 text-green-400 border-green-500/20 text-[10px]">
+                                  Recommandé
+                                </Badge>
+                              )}
+                            </div>
+                            <div className={`w-4 h-4 rounded-full border-2 ${
+                              localConfig.sendMethod === method.value
+                                ? "border-[#C8B88A] bg-[#C8B88A]"
+                                : "border-muted-foreground"
+                            }`}>
+                              {localConfig.sendMethod === method.value && (
+                                <CheckCircle2 className="w-full h-full text-black" />
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Le SMS est recommandé pour les restaurants (taux d'ouverture 98%)
+                      </p>
+                    </div>
+
+                    <Separator className="bg-border/30" />
+
+                    {/* Section 5: Contenu du message */}
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <div className="flex items-center gap-2">
+                          <div className="p-1.5 rounded-lg bg-[#C8B88A]/10">
+                            <MessageSquare className="h-4 w-4 text-[#C8B88A]" />
+                          </div>
+                          <Label className="text-sm font-medium">Contenu du message</Label>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleGenerateAI}
+                          disabled={isGeneratingAI}
+                          data-testid="button-generate-ai"
+                        >
+                          {isGeneratingAI ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <Sparkles className="h-4 w-4 mr-2" />
+                          )}
+                          Générer avec l'IA
+                        </Button>
+                      </div>
+
+                      <p className="text-xs text-muted-foreground bg-muted/30 p-3 rounded-lg flex items-start gap-2">
+                        <Info className="h-4 w-4 mt-0.5 shrink-0" />
+                        Ce message sera utilisé pour tous les envois automatiques. Utilisez {"{prenom}"} pour personnaliser.
+                      </p>
+
+                      {(localConfig.sendMethod === "sms" || localConfig.sendMethod === "both") && (
+                        <div className="space-y-2">
+                          <Label className="text-xs">Message SMS (160 caractères max)</Label>
+                          <Textarea
+                            value={localConfig.smsMessage}
+                            onChange={(e) => setLocalConfig(prev => ({ ...prev, smsMessage: e.target.value }))}
+                            placeholder="Bonjour {prenom}, merci pour votre visite ! Partagez votre avis..."
+                            maxLength={160}
+                            className="resize-none"
+                            rows={3}
+                            data-testid="textarea-sms-message"
+                          />
+                          <p className="text-xs text-muted-foreground text-right">
+                            {localConfig.smsMessage.length}/160
                           </p>
                         </div>
-                      </>
-                    )}
+                      )}
 
-                    <div className="p-3 rounded-lg bg-pink-500/5 border border-pink-500/20">
-                      <div className="flex items-start gap-2">
-                        <Info className="h-4 w-4 text-pink-400 mt-0.5 shrink-0" />
-                        <p className="text-xs text-muted-foreground">
-                          Ce message est envoyé automatiquement lorsqu'un client confirme avoir laissé un avis. 
-                          Le code promo généré est inclus dans le message.
-                        </p>
+                      {(localConfig.sendMethod === "email" || localConfig.sendMethod === "both") && (
+                        <>
+                          <div className="space-y-2">
+                            <Label className="text-xs">Objet de l'email</Label>
+                            <Input
+                              value={localConfig.emailSubject}
+                              onChange={(e) => setLocalConfig(prev => ({ ...prev, emailSubject: e.target.value }))}
+                              placeholder="Votre avis compte pour nous !"
+                              data-testid="input-email-subject"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label className="text-xs">Corps de l'email</Label>
+                            <Textarea
+                              value={localConfig.emailMessage}
+                              onChange={(e) => setLocalConfig(prev => ({ ...prev, emailMessage: e.target.value }))}
+                              placeholder="Bonjour {prenom},&#10;&#10;Merci pour votre visite ! Votre avis nous aide à nous améliorer..."
+                              className="resize-none min-h-[120px]"
+                              data-testid="textarea-email-body"
+                            />
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* Accordéon: Offres incitatives */}
+                <AccordionItem value="incentives" className="border rounded-xl px-4 border-border/40 bg-muted/5">
+                  <AccordionTrigger className="hover:no-underline py-4" data-testid="accordion-incentives">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 rounded-lg bg-amber-500/10">
+                        <Gift className="h-4 w-4 text-amber-500" />
                       </div>
+                      <span className="text-sm font-medium">Offres incitatives</span>
                     </div>
-                  </div>
-                )}
-              </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-4">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <Label className="text-sm font-medium">Offre incitative (optionnel)</Label>
+                        <Dialog open={showNewIncentiveDialog} onOpenChange={setShowNewIncentiveDialog}>
+                          <DialogTrigger asChild>
+                            <Button variant="ghost" size="sm" data-testid="button-new-incentive">
+                              <Plus className="h-4 w-4 mr-1" />
+                              Créer une offre
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Créer une offre incitative</DialogTitle>
+                              <DialogDescription>
+                                Cette offre sera affichée dans les messages de demande d'avis
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div className="space-y-4 py-4">
+                              <div className="space-y-2">
+                                <Label>Type d'offre</Label>
+                                <Select
+                                  value={newIncentive.type}
+                                  onValueChange={(value) => setNewIncentive({ ...newIncentive, type: value })}
+                                >
+                                  <SelectTrigger data-testid="select-incentive-type">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {INCENTIVE_TYPES.map((type) => (
+                                      <SelectItem key={type.value} value={type.value}>
+                                        <span className="flex items-center gap-2">
+                                          <type.icon className="h-4 w-4" />
+                                          {type.label}
+                                        </span>
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
 
-              <Separator className="bg-border/30" />
-
-              {/* Section 8: Réponses IA aux avis */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 rounded-xl border border-border/40 bg-muted/20">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-violet-500/10">
-                      <Bot className="h-5 w-5 text-violet-400" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Réponses IA aux avis</p>
-                      <p className="text-xs text-muted-foreground">Génération automatique de réponses personnalisées</p>
-                    </div>
-                  </div>
-                  <Switch
-                    checked={localConfig.aiResponseEnabled}
-                    onCheckedChange={(value) => setLocalConfig(prev => ({ ...prev, aiResponseEnabled: value }))}
-                    data-testid="switch-ai-response-enabled"
-                  />
-                </div>
-
-                {localConfig.aiResponseEnabled && (
-                  <div className="space-y-4 pl-4 border-l-2 border-violet-500/30 ml-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label className="text-xs">Ton des réponses</Label>
-                        <Select
-                          value={localConfig.aiResponseTone}
-                          onValueChange={(value) => setLocalConfig(prev => ({ ...prev, aiResponseTone: value }))}
-                        >
-                          <SelectTrigger data-testid="select-ai-tone">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {AI_RESPONSE_TONES.map((tone) => (
-                              <SelectItem key={tone.value} value={tone.value}>
-                                <div>
-                                  <span>{tone.label}</span>
-                                  <span className="text-xs text-muted-foreground ml-2">- {tone.description}</span>
+                              {newIncentive.type === "percentage" && (
+                                <div className="space-y-2">
+                                  <Label>Pourcentage de réduction</Label>
+                                  <div className="flex items-center gap-2">
+                                    <Input
+                                      type="number"
+                                      min={1}
+                                      max={100}
+                                      value={newIncentive.percentageValue}
+                                      onChange={(e) => setNewIncentive({ ...newIncentive, percentageValue: parseInt(e.target.value) || 0 })}
+                                      data-testid="input-percentage-value"
+                                    />
+                                    <span className="text-muted-foreground">%</span>
+                                  </div>
                                 </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                              )}
+
+                              {newIncentive.type === "amount" && (
+                                <div className="space-y-2">
+                                  <Label>Montant de la réduction</Label>
+                                  <div className="flex items-center gap-2">
+                                    <Input
+                                      type="number"
+                                      min={1}
+                                      step={0.5}
+                                      value={(newIncentive.fixedAmountValue / 100).toFixed(2)}
+                                      onChange={(e) => setNewIncentive({ ...newIncentive, fixedAmountValue: Math.round(parseFloat(e.target.value || "0") * 100) })}
+                                      data-testid="input-amount-value"
+                                    />
+                                    <span className="text-muted-foreground">€</span>
+                                  </div>
+                                </div>
+                              )}
+
+                              {newIncentive.type === "free_item" && (
+                                <div className="space-y-2">
+                                  <Label>Article offert</Label>
+                                  <Input
+                                    placeholder="ex: Café, Dessert, Entrée..."
+                                    value={newIncentive.freeItemName}
+                                    onChange={(e) => setNewIncentive({ ...newIncentive, freeItemName: e.target.value })}
+                                    data-testid="input-free-item"
+                                  />
+                                </div>
+                              )}
+
+                              {newIncentive.type === "loyalty_points" && (
+                                <div className="space-y-2">
+                                  <Label>Points fidélité</Label>
+                                  <Input
+                                    type="number"
+                                    min={1}
+                                    value={newIncentive.loyaltyPointsValue}
+                                    onChange={(e) => setNewIncentive({ ...newIncentive, loyaltyPointsValue: parseInt(e.target.value) || 0 })}
+                                    data-testid="input-loyalty-points"
+                                  />
+                                </div>
+                              )}
+
+                              {newIncentive.type === "other" && (
+                                <div className="space-y-2">
+                                  <Label>Description de l'offre</Label>
+                                  <Input
+                                    placeholder="ex: Cadeau surprise"
+                                    value={newIncentive.customDescription}
+                                    onChange={(e) => setNewIncentive({ ...newIncentive, customDescription: e.target.value })}
+                                    data-testid="input-custom-description"
+                                  />
+                                </div>
+                              )}
+
+                              <div className="space-y-2">
+                                <Label>Message affiché aux clients *</Label>
+                                <Textarea
+                                  placeholder="ex: Obtenez 10% de réduction sur votre prochaine visite !"
+                                  value={newIncentive.displayMessage}
+                                  onChange={(e) => setNewIncentive({ ...newIncentive, displayMessage: e.target.value })}
+                                  className="resize-none"
+                                  data-testid="textarea-incentive-message"
+                                />
+                              </div>
+                            </div>
+                            <DialogFooter>
+                              <Button variant="outline" onClick={() => setShowNewIncentiveDialog(false)}>
+                                Annuler
+                              </Button>
+                              <Button 
+                                onClick={handleCreateIncentive} 
+                                disabled={createIncentiveMutation.isPending}
+                                data-testid="button-create-incentive"
+                              >
+                                {createIncentiveMutation.isPending ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  "Créer"
+                                )}
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
                       </div>
 
-                      <div className="space-y-2">
-                        <Label className="text-xs">Langue des réponses</Label>
-                        <Select
-                          value={localConfig.aiResponseLanguage}
-                          onValueChange={(value) => setLocalConfig(prev => ({ ...prev, aiResponseLanguage: value }))}
-                        >
-                          <SelectTrigger data-testid="select-ai-language">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {AI_RESPONSE_LANGUAGES.map((lang) => (
-                              <SelectItem key={lang.value} value={lang.value}>
-                                {lang.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
+                      <Select
+                        value={localConfig.selectedIncentiveId || "_none"}
+                        onValueChange={(value) => setLocalConfig(prev => ({ ...prev, selectedIncentiveId: value === "_none" ? "" : value }))}
+                      >
+                        <SelectTrigger data-testid="select-incentive">
+                          <SelectValue placeholder="Aucune offre" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="_none">Aucune offre</SelectItem>
+                          {incentives.filter(i => i.isActive).map((incentive) => (
+                            <SelectItem key={incentive.id} value={incentive.id}>
+                              <span className="flex items-center gap-2">
+                                {(() => {
+                                  const Icon = getIncentiveIcon(incentive.type);
+                                  return <Icon className="h-4 w-4" />;
+                                })()}
+                                {getIncentiveLabel(incentive)}
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
 
-                    <div className="space-y-2">
-                      <Label className="text-xs">Longueur maximale des réponses (caractères)</Label>
-                      <Input
-                        type="number"
-                        min={50}
-                        max={500}
-                        value={localConfig.aiMaxLength}
-                        onChange={(e) => setLocalConfig(prev => ({ ...prev, aiMaxLength: parseInt(e.target.value) || 300 }))}
-                        data-testid="input-ai-max-length"
-                      />
-                      <p className="text-xs text-muted-foreground">Entre 50 et 500 caractères</p>
-                    </div>
-
-                    <div className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-muted/10">
-                      <div className="flex items-center gap-3">
-                        <Sparkles className="h-4 w-4 text-violet-400" />
-                        <div>
-                          <p className="text-sm">Génération automatique</p>
-                          <p className="text-xs text-muted-foreground">Générer automatiquement les réponses pour les nouveaux avis</p>
+                      {selectedIncentive && (
+                        <div className="p-3 rounded-xl border border-[#C8B88A]/30 bg-[#C8B88A]/5">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              {(() => {
+                                const Icon = getIncentiveIcon(selectedIncentive.type);
+                                return <Icon className="h-4 w-4 text-[#C8B88A]" />;
+                              })()}
+                              <span className="text-sm font-medium">{getIncentiveLabel(selectedIncentive)}</span>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => deleteIncentiveMutation.mutate(selectedIncentive.id)}
+                              data-testid="button-delete-incentive"
+                            >
+                              <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                            </Button>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">{selectedIncentive.displayMessage}</p>
                         </div>
-                      </div>
-                      <Switch
-                        checked={localConfig.aiAutoGenerate}
-                        onCheckedChange={(value) => setLocalConfig(prev => ({ ...prev, aiAutoGenerate: value }))}
-                        data-testid="switch-ai-auto-generate"
-                      />
-                    </div>
+                      )}
 
-                    <div className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-muted/10">
-                      <div className="flex items-center gap-3">
-                        <Tag className="h-4 w-4 text-violet-400" />
-                        <div>
-                          <p className="text-sm">Inclure le nom de l'entreprise</p>
-                          <p className="text-xs text-muted-foreground">Mentionner le nom de votre entreprise dans les réponses</p>
+                      <p className="text-[10px] text-muted-foreground">
+                        Conformément au RGPD, les offres doivent être clairement identifiées comme telles.
+                      </p>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* Accordéon: Message de remerciement */}
+                <AccordionItem value="thankyou" className="border rounded-xl px-4 border-border/40 bg-muted/5">
+                  <AccordionTrigger className="hover:no-underline py-4" data-testid="accordion-thankyou">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 rounded-lg bg-pink-500/10">
+                        <Gift className="h-4 w-4 text-pink-400" />
+                      </div>
+                      <span className="text-sm font-medium">Message de remerciement</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-4">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between p-4 rounded-xl border border-border/40 bg-muted/20">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-pink-500/10">
+                            <Gift className="h-5 w-5 text-pink-400" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">Activer les remerciements</p>
+                            <p className="text-xs text-muted-foreground">Envoi automatique après confirmation d'avis avec code promo</p>
+                          </div>
                         </div>
+                        <Switch
+                          checked={localConfig.thankYouEnabled}
+                          onCheckedChange={(value) => setLocalConfig(prev => ({ ...prev, thankYouEnabled: value }))}
+                          data-testid="switch-thank-you-enabled"
+                        />
                       </div>
-                      <Switch
-                        checked={localConfig.aiIncludeCompanyName}
-                        onCheckedChange={(value) => setLocalConfig(prev => ({ ...prev, aiIncludeCompanyName: value }))}
-                        data-testid="switch-ai-include-company"
-                      />
+
+                      {localConfig.thankYouEnabled && (
+                        <div className="space-y-4 pl-4 border-l-2 border-pink-500/30 ml-4">
+                          <div className="space-y-2">
+                            <Label className="text-xs">Méthode d'envoi du remerciement</Label>
+                            <Select
+                              value={localConfig.thankYouSendMethod}
+                              onValueChange={(value) => setLocalConfig(prev => ({ ...prev, thankYouSendMethod: value }))}
+                            >
+                              <SelectTrigger data-testid="select-thank-you-method">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {SEND_METHODS.map((method) => (
+                                  <SelectItem key={method.value} value={method.value}>
+                                    <div className="flex items-center gap-2">
+                                      <method.icon className="h-4 w-4" />
+                                      <span>{method.label}</span>
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {(localConfig.thankYouSendMethod === "sms" || localConfig.thankYouSendMethod === "both") && (
+                            <div className="space-y-2">
+                              <Label className="text-xs">Message SMS de remerciement</Label>
+                              <Textarea
+                                value={localConfig.thankYouSmsMessage}
+                                onChange={(e) => setLocalConfig(prev => ({ ...prev, thankYouSmsMessage: e.target.value }))}
+                                placeholder="Ex: Merci {prenom} pour votre avis ! Votre code promo: {code_promo}. L'équipe {entreprise}"
+                                rows={3}
+                                data-testid="textarea-thank-you-sms"
+                              />
+                              <p className="text-[10px] text-muted-foreground">
+                                Variables: {"{prenom}"}, {"{nom}"}, {"{code_promo}"}, {"{entreprise}"}. Laissez vide pour le message par défaut.
+                              </p>
+                            </div>
+                          )}
+
+                          {(localConfig.thankYouSendMethod === "email" || localConfig.thankYouSendMethod === "both") && (
+                            <>
+                              <div className="space-y-2">
+                                <Label className="text-xs">Objet de l'email</Label>
+                                <Input
+                                  value={localConfig.thankYouEmailSubject}
+                                  onChange={(e) => setLocalConfig(prev => ({ ...prev, thankYouEmailSubject: e.target.value }))}
+                                  placeholder="Ex: Merci pour votre avis - {entreprise}"
+                                  data-testid="input-thank-you-email-subject"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label className="text-xs">Contenu de l'email (HTML)</Label>
+                                <Textarea
+                                  value={localConfig.thankYouEmailMessage}
+                                  onChange={(e) => setLocalConfig(prev => ({ ...prev, thankYouEmailMessage: e.target.value }))}
+                                  placeholder="Laissez vide pour utiliser le template par défaut avec design professionnel"
+                                  rows={4}
+                                  data-testid="textarea-thank-you-email"
+                                />
+                                <p className="text-[10px] text-muted-foreground">
+                                  Variables: {"{prenom}"}, {"{nom}"}, {"{code_promo}"}, {"{entreprise}"}. Laissez vide pour le template par défaut.
+                                </p>
+                              </div>
+                            </>
+                          )}
+
+                          <div className="p-3 rounded-lg bg-pink-500/5 border border-pink-500/20">
+                            <div className="flex items-start gap-2">
+                              <Info className="h-4 w-4 text-pink-400 mt-0.5 shrink-0" />
+                              <p className="text-xs text-muted-foreground">
+                                Ce message est envoyé automatiquement lorsqu'un client confirme avoir laissé un avis. 
+                                Le code promo généré est inclus dans le message.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                )}
-              </div>
+                  </AccordionContent>
+                </AccordionItem>
 
-              <Separator className="bg-border/30" />
+                {/* Accordéon: Réponses IA aux avis */}
+                <AccordionItem value="airesponse" className="border rounded-xl px-4 border-border/40 bg-muted/5">
+                  <AccordionTrigger className="hover:no-underline py-4" data-testid="accordion-airesponse">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 rounded-lg bg-violet-500/10">
+                        <Bot className="h-4 w-4 text-violet-400" />
+                      </div>
+                      <span className="text-sm font-medium">Réponses IA aux avis</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-4">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between p-4 rounded-xl border border-border/40 bg-muted/20">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-violet-500/10">
+                            <Bot className="h-5 w-5 text-violet-400" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">Activer les réponses IA</p>
+                            <p className="text-xs text-muted-foreground">Génération automatique de réponses personnalisées</p>
+                          </div>
+                        </div>
+                        <Switch
+                          checked={localConfig.aiResponseEnabled}
+                          onCheckedChange={(value) => setLocalConfig(prev => ({ ...prev, aiResponseEnabled: value }))}
+                          data-testid="switch-ai-response-enabled"
+                        />
+                      </div>
 
-              {/* Section 10: Synchronisation des avis existants */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-lg bg-blue-500/10">
-                    <Globe className="h-4 w-4 text-blue-500" />
-                  </div>
-                  <Label className="text-sm font-medium">Synchronisation des avis existants</Label>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Connectez vos profils professionnels pour récupérer vos avis existants et y répondre depuis SpeedAI. Ces connexions ne sont pas utilisées pour envoyer des liens aux clients.
-                </p>
+                      {localConfig.aiResponseEnabled && (
+                        <div className="space-y-4 pl-4 border-l-2 border-violet-500/30 ml-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label className="text-xs">Ton des réponses</Label>
+                              <Select
+                                value={localConfig.aiResponseTone}
+                                onValueChange={(value) => setLocalConfig(prev => ({ ...prev, aiResponseTone: value }))}
+                              >
+                                <SelectTrigger data-testid="select-ai-tone">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {AI_RESPONSE_TONES.map((tone) => (
+                                    <SelectItem key={tone.value} value={tone.value}>
+                                      <div>
+                                        <span>{tone.label}</span>
+                                        <span className="text-xs text-muted-foreground ml-2">- {tone.description}</span>
+                                      </div>
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
 
-                <div className="grid gap-4">
+                            <div className="space-y-2">
+                              <Label className="text-xs">Langue des réponses</Label>
+                              <Select
+                                value={localConfig.aiResponseLanguage}
+                                onValueChange={(value) => setLocalConfig(prev => ({ ...prev, aiResponseLanguage: value }))}
+                              >
+                                <SelectTrigger data-testid="select-ai-language">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {AI_RESPONSE_LANGUAGES.map((lang) => (
+                                    <SelectItem key={lang.value} value={lang.value}>
+                                      {lang.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label className="text-xs">Longueur maximale des réponses (caractères)</Label>
+                            <Input
+                              type="number"
+                              min={50}
+                              max={500}
+                              value={localConfig.aiMaxLength}
+                              onChange={(e) => setLocalConfig(prev => ({ ...prev, aiMaxLength: parseInt(e.target.value) || 300 }))}
+                              data-testid="input-ai-max-length"
+                            />
+                            <p className="text-xs text-muted-foreground">Entre 50 et 500 caractères</p>
+                          </div>
+
+                          <div className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-muted/10">
+                            <div className="flex items-center gap-3">
+                              <Sparkles className="h-4 w-4 text-violet-400" />
+                              <div>
+                                <p className="text-sm">Génération automatique</p>
+                                <p className="text-xs text-muted-foreground">Générer automatiquement les réponses pour les nouveaux avis</p>
+                              </div>
+                            </div>
+                            <Switch
+                              checked={localConfig.aiAutoGenerate}
+                              onCheckedChange={(value) => setLocalConfig(prev => ({ ...prev, aiAutoGenerate: value }))}
+                              data-testid="switch-ai-auto-generate"
+                            />
+                          </div>
+
+                          <div className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-muted/10">
+                            <div className="flex items-center gap-3">
+                              <Tag className="h-4 w-4 text-violet-400" />
+                              <div>
+                                <p className="text-sm">Inclure le nom de l'entreprise</p>
+                                <p className="text-xs text-muted-foreground">Mentionner le nom de votre entreprise dans les réponses</p>
+                              </div>
+                            </div>
+                            <Switch
+                              checked={localConfig.aiIncludeCompanyName}
+                              onCheckedChange={(value) => setLocalConfig(prev => ({ ...prev, aiIncludeCompanyName: value }))}
+                              data-testid="switch-ai-include-company"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* Accordéon: Synchronisation des avis existants */}
+                <AccordionItem value="sync" className="border rounded-xl px-4 border-border/40 bg-muted/5">
+                  <AccordionTrigger className="hover:no-underline py-4" data-testid="accordion-sync">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 rounded-lg bg-blue-500/10">
+                        <Globe className="h-4 w-4 text-blue-500" />
+                      </div>
+                      <span className="text-sm font-medium">Synchronisation des avis</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-4">
+                    <div className="space-y-4">
+                      <p className="text-xs text-muted-foreground">
+                        Connectez vos profils professionnels pour récupérer vos avis existants et y répondre depuis SpeedAI. Ces connexions ne sont pas utilisées pour envoyer des liens aux clients.
+                      </p>
+
+                      <div className="grid gap-4">
                   {/* Google Business Profile */}
                   {(() => {
                     const googleSource = getSourceByPlatform("google");
@@ -1438,10 +1488,11 @@ export default function ReviewsSettings() {
                       </div>
                     );
                   })()}
-                </div>
-              </div>
-
-              <Separator className="bg-border/30" />
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
 
               {/* Section 9: Résumé visuel */}
               <div className="space-y-3">
