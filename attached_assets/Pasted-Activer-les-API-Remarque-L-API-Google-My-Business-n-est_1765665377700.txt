@@ -1,0 +1,114 @@
+Activer les API
+Remarque : L'API Google My Business n'est visible dans la console Google APIs que pour les utilisateurs dont le compte Google a été autorisé via l'envoi du formulaire de demande d'accès. Pour en savoir plus, consultez Demander des droits d'accès aux API.
+Vous devez activer huit API associées à la fiche de l'établissement dans la console Google APIs :
+
+API Google My Business
+API My Business Account Management
+API My Business Lodging
+API My Business Place Actions
+API My Business Notifications
+API My Business Verifications
+API My Business Business Information
+API My Business Q&A
+Activer une API
+Si vous avez suivi toutes les étapes de la section Conditions préalables et si des droits d'accès à l'API vous ont été accordés, mais que vous ne pouvez toujours pas utiliser le raccourci fourni, vous pouvez activer l'API manuellement en suivant la procédure ci-dessous.
+
+Pour activer une API pour votre projet, procédez comme suit :
+
+Dans la console Google APIs, ouvrez la bibliothèque des API. Si vous y êtes invité, sélectionnez un projet ou créez-en un. La bibliothèque des API répertorie toutes les API disponibles, regroupées par famille de produits et classées en fonction de leur popularité.
+Si l'API que vous souhaitez activer n'apparaît pas dans la liste, utilisez la recherche pour la trouver.
+Sélectionnez l'API que vous souhaitez activer, puis cliquez sur le bouton Activer.
+Si vous y êtes invité, activez la facturation.
+Si vous y êtes invité, acceptez les conditions d'utilisation de l'API.
+Si vous êtes un utilisateur Google Workspace, confirmez que la fiche d'établissement Google est activée pour votre compte dans votre organisation Google Workspace. Si elle ne l'est pas, le message d'erreur "403 - PERMISSION DENIED" s'affichera lorsque vous utiliserez les API GBP.
+
+Demander un ID client OAuth 2.0
+Vous devez disposer d'un ID client OAuth 2.0, car votre application accède à des données protégées et non publiques. Cela permet à votre application de demander l'autorisation d'accéder aux données de localisation de votre organisation pour le compte de ses utilisateurs.
+
+Votre application doit envoyer un jeton OAuth 2.0 avec toute requête des API Fiche d'établissement qui accède à des informations privées sur l'utilisateur.
+
+Si vous ne l'avez pas déjà fait, accédez à la section "Identifiants" de la console Google APIs et cliquez sur Créer des identifiants > ID client OAuth pour créer vos identifiants OAuth 2.0. Une fois les identifiants créés, votre ID client s'affiche sur la page Identifiants. Cliquez sur l'ID client pour obtenir des détails, tels que le code secret du client, les URI de redirection, l'adresse d'origine JavaScript et l'adresse e-mail.
+
+Apprendre les bases de l'architecture REST
+Il existe deux façons d'appeler les API :
+
+Envoyer une requête HTTP et analyser les réponses
+Utiliser des bibliothèques clientes
+Si vous décidez de ne pas utiliser des bibliothèques clientes, vous devez comprendre les principes de base de l'architecture REST.
+
+REST est un style d'architecture logicielle qui fournit une approche pratique et cohérente pour demander et modifier des données.
+
+Le terme REST est l'acronyme de Representational State Transfer. Dans le contexte des API Google, il fait référence à l'utilisation de verbes HTTP pour récupérer et modifier les représentations des données stockées par Google.
+
+Les systèmes RESTful stockent les ressources dans un datastore. Un client envoie une requête au serveur pour effectuer une action particulière (par exemple, pour créer, récupérer, mettre à jour ou supprimer une ressource), et le serveur effectue l'action et envoie une réponse. Cette réponse prend souvent la forme d'une représentation de la ressource spécifiée.
+
+Dans les API RESTful de Google, le client spécifie une action avec un verbe HTTP, tel que GET, POST, PUT ou DELETE. Le client spécifie une ressource par un identifiant de ressource uniforme globalement unique (URI) au format suivant :
+
+
+https://apiName.googleapis.com/apiVersion/resourcePath?parameters
+Étant donné que toutes les ressources d'API possèdent des URI uniques accessibles via HTTP, REST permet la mise en cache des données, et son fonctionnement est optimisé pour l'infrastructure distribuée du Web.
+
+Les définitions de méthodes, fournies dans la documentation sur les normes HTTP 1.1, peuvent vous être utiles. Elles incluent des spécifications pour GET, POST, PUT et DELETE.
+
+REST dans les API Fiche d'établissement
+Les opérations des API Fiche d'établissement sont directement mappées aux verbes HTTP REST.
+
+Le format spécifique des API Fiche d'établissement est indiqué dans l'URI suivant :
+
+
+https://apiName.googleapis.com/apiVersion/resourcePath?parameters
+L'ensemble complet des URI utilisés pour chaque opération acceptée dans les API est disponible dans la documentation de référence des API Fiche d'établissement.
+
+Les chemins d'accès aux ressources varient selon le point de terminaison.
+
+Par exemple, le chemin d'accès à la ressource d'un compte s'affiche comme dans l'exemple suivant :
+
+
+accounts/accountId
+Le chemin d'accès à la ressource d'un établissement apparaît dans le format suivant :
+
+
+locations/locationId
+Apprendre les bases du format JSON
+Les API Fiche d'établissement renvoient des données au format JSON.
+
+JavaScript Object Notation (JSON) est un format de données commun qui ne dépend pas du langage et qui fournit une représentation textuelle simple de structures de données arbitraires. Pour en savoir plus, accédez à json.org.
+
+Utiliser Oauth Playground pour créer une simple requête HTTP
+Vous pouvez tester les API Fiche d'établissement sur OAuth 2.0 Playground. Étant donné que les API Fiche d'établissement ne sont pas des API publiques, vous devez suivre quelques étapes supplémentaires pour les utiliser dans Playground. Avant de vous lancer, assurez-vous de disposer d'un ID client pour une application Web.
+
+Ouvrez votre projet dans la console Google APIs. Si vous ne possédez pas d'ID client OAuth pour les applications Web, créez-en un maintenant :
+Dans la liste déroulante Créer des identifiants, sélectionnez ID client OAuth.
+Dans le champ Type d'application, cliquez sur Application Web.
+Ajoutez l'élément suivant en tant qu'URI de redirection valide :
+
+
+ https://developers.google.com/oauthplayground
+ 
+Cliquez sur Créer.
+Copiez l'ID client dans le presse-papiers.
+Accédez à l'outil OAuth 2.0 Playground.
+Cliquez sur l'icône en forme de roue dentée pour ouvrir les options de configuration, puis apportez les modifications suivantes :
+Définissez OAuth flow (flux OAuth) sur Client-side (côté client).
+Cochez la case Use your own OAuth credentials (Utiliser vos propres identifiants OAuth).
+Dans le champ "OAuth Client ID", collez votre ID client OAuth.
+Fermez les options de configuration.
+Sous "Step 1 - Select & authorize APIs" (Étape 1 – Sélectionner et autoriser des API), collez le champ d'application suivant pour l'API Fiche d'établissement dans le champ Input your own scopes (Saisir vos propres champs d'application) :
+
+
+https://www.googleapis.com/auth/business.manage
+Cliquez sur Authorize APIs (Autoriser les API).
+Lorsque vous y êtes invité, cliquez sur Accept (Accepter).
+Sous "Step 2 – Configure request to API" (Étape 2 – Configurer la requête d'API), collez l'URI suivant dans le champ Request URI (URI de la demande) :
+
+
+https://mybusinessaccountmanagement.googleapis.com/v1/accounts
+Cliquez sur Send the request (Envoyer la requête). La réponse devrait afficher l'état 200 OK.
+Pour en savoir plus sur les différents types de requêtes, consultez la documentation de référence des API Fiche d'établissement.
+
+Remarque : Il n'existe pas d'environnement de bac à sable pour les API Fiche d'établissement. Certains appels autorisent un paramètre de requête validateOnly qui, lorsqu'il est défini sur true, valide une requête sans y apporter de modifications.
+Remarque : OAuth 2.0 Playground ajoute automatiquement des en-têtes de débogage. Si vous utilisez un autre client et souhaitez afficher des messages d'erreur détaillés dans la réponse, ajoutez l'en-tête suivant à la requête : X-GOOG-API-FORMAT-VERSION: 2.
+Bibliothèques clientes
+Les bibliothèques clientes des API Fiche d'établissement sont compatibles avec les fonctionnalités de ces API. Elles offrent des fonctionnalités communes à toutes les API Google, comme le transport HTTP, la gestion des erreurs, l'authentification et l'analyse JSON.
+
+Vous pouvez télécharger des bibliothèques clientes à partir de la section Bibliothèques.

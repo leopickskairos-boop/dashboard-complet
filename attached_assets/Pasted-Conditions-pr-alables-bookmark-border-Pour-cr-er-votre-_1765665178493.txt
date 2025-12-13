@@ -1,0 +1,32 @@
+Conditions préalables
+
+bookmark_border
+Pour créer votre première application cliente, vous devez remplir les conditions préalables suivantes :
+
+Obtenir un compte Google
+Essayer les fiches d'établissement
+Créer un projet dans la console Google APIs
+Créer un compte d'organisation
+Demander l'accès à l'API
+Obtenir un compte Google
+Vous devez disposer d'un compte Google pour créer un projet dans la console Google APIs. Si vous avez déjà un compte, vous n'avez rien à faire.
+
+Essayer les fiches d'établissement
+Cette documentation de l'API part du principe que vous avez déjà utilisé les fiches d'établissement, et que vous connaissez les concepts de la programmation pour le Web et les formats de données Web.
+
+Si vous n'avez jamais utilisé les fiches d'établissement, essayez l'interface utilisateur avant de commencer à coder.
+
+Créer un projet dans la console Google APIs
+Avant de pouvoir envoyer des demandes aux API Fiche d'établissement, vous devez utiliser la console Google APIs afin de créer un projet, puis demander l'accès aux API Fiche d'établissement pour ce projet. Pour créer un projet, accédez à la console Google APIs. Cliquez sur Créer un projet, saisissez un nom, puis cliquez sur Créer.
+
+Créer un compte d'organisation
+Pour créer un compte d'organisation, accédez au Centre d'aide des Fiches d'établissement Google.
+
+Demander l'accès aux API
+Pour activer votre projet et accéder aux API, procédez comme suit :
+
+Accédez à la console Google APIs, puis sélectionnez le projet que vous avez créé pour l'utiliser avec la fiche d'établissement.
+Pour déterminer votre ID de projet, consultez la colonne ID du projet.
+Désormais, vous devez utiliser notre formulaire de contact de l'API Fiche d'établissement pour demander à accéder à l'API. Sélectionnez "Demande d'accès de base aux API" dans le menu déroulant, puis fournissez les informations demandées.
+Un e-mail de suivi vous est envoyé une fois votre demande examinée.
+Une fois votre demande approuvée, consultez Configuration de base afin d'activer les API Fiche d'établissement pour votre projet.
