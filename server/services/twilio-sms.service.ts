@@ -230,6 +230,35 @@ export async function sendGuaranteeConfirmationSms(
   return service.sendSms({ to: phone, message });
 }
 
+export async function sendAppointmentReminderSms(
+  phone: string,
+  customerName: string | null,
+  companyName: string,
+  reservationDate: Date,
+  reservationTime: string | null,
+  nbPersons: number
+): Promise<SmsResult> {
+  const service = getTwilioService();
+
+  if (!service.isConfigured()) {
+    console.warn('[AppointmentReminderSMS] Platform Twilio not configured');
+    return { success: false, error: 'SMS service not configured' };
+  }
+
+  const dateStr = formatDateShort(reservationDate);
+  const timeStr = reservationTime ? ` a ${reservationTime}` : '';
+  const greeting = customerName ? `Bonjour ${customerName},` : 'Bonjour,';
+  
+  const message = `RAPPEL - ${companyName}\n\n` +
+    `${greeting}\n` +
+    `Nous vous rappelons votre reservation :\n` +
+    `Date: ${dateStr}${timeStr}\n` +
+    `Personnes: ${nbPersons}\n\n` +
+    `A bientot !`;
+
+  return service.sendSms({ to: phone, message });
+}
+
 export function isSmsConfigured(): boolean {
   return getTwilioService().isConfigured();
 }

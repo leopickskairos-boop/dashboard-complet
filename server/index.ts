@@ -8,6 +8,7 @@ import { trialExpirationCron } from "./trial-expiration.cron";
 import { initPushNotificationCrons } from "./push-notification.cron";
 import { startReviewSyncCron } from "./crons/review-sync.cron";
 import { startIntegrationSyncCron } from "./crons/integration-sync.cron";
+import { startAppointmentReminderCron } from "./crons/appointment-reminder.cron";
 
 const DISABLE_INTERNAL_CRONS = process.env.DISABLE_INTERNAL_CRONS === 'true';
 
@@ -91,6 +92,10 @@ app.use((req, res, next) => {
     // Start integration sync cron job
     startIntegrationSyncCron();
     console.log('[Server] Integration sync cron job initialized');
+
+    // Start appointment reminder cron job
+    startAppointmentReminderCron();
+    console.log('[Server] Appointment reminder cron job initialized');
   }
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

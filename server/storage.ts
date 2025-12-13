@@ -243,6 +243,10 @@ export interface IStorage {
     totalAvoided: number;
   }>;
   
+  // Appointment reminders
+  getSessionsForAppointmentReminder(): Promise<Array<GuaranteeSession & { config: ClientGuaranteeConfig }>>;
+  markAppointmentReminderSent(sessionId: string): Promise<void>;
+  
   // ===== REVIEW & REPUTATION SYSTEM =====
   
   // Review config
@@ -1617,6 +1621,53 @@ export class DatabaseStorage implements IStorage {
       .where(eq(guaranteeSessions.id, id))
       .returning();
     return updated || undefined;
+  }
+
+  async getSessionsForAppointmentReminder(): Promise<Array<GuaranteeSession & { config: ClientGuaranteeConfig }>> {
+    const now = new Date();
+    
+    const results = await db
+      .select({
+        session: guaranteeSessions,
+        config: clientGuaranteeConfig,
+      })
+      .from(guaranteeSessions)
+      .innerJoin(clientGuaranteeConfig, eq(guaranteeSessions.userId, clientGuaranteeConfig.userId))
+      .where(
+        and(
+          eq(guaranteeSessions.status, 'validated'),
+          eq(guaranteeSessions.appointmentReminderSent, false),
+          eq(clientGuaranteeConfig.appointmentReminderEnabled, true),
+          isNotNull(guaranteeSessions.reservationDate),
+          gt(guaranteeSessions.reservationDate, now)
+        )
+      );
+    
+    const sessionsToRemind: Array<GuaranteeSession & { config: ClientGuaranteeConfig }> = [];
+    
+    for (const { session, config } of results) {
+      if (!session.reservationDate) continue;
+      
+      const reminderHours = config.appointmentReminderHours || 24;
+      const reminderWindowStart = new Date(session.reservationDate.getTime() - (reminderHours * 60 * 60 * 1000));
+      
+      if (now >= reminderWindowStart && now < session.reservationDate) {
+        sessionsToRemind.push({ ...session, config });
+      }
+    }
+    
+    return sessionsToRemind;
+  }
+
+  async markAppointmentReminderSent(sessionId: string): Promise<void> {
+    await db
+      .update(guaranteeSessions)
+      .set({
+        appointmentReminderSent: true,
+        appointmentReminderSentAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(guaranteeSessions.id, sessionId));
   }
 
   // ===== No-Show Charges =====
