@@ -902,7 +902,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           | undefined;
 
         const stats = await storage.getStats(userId, timeFilter);
-        res.json(stats);
+        const remindersSent = await storage.getRemindersSentCount(userId);
+        res.json({ ...stats, remindersSent });
       } catch (error) {
         console.error("Error fetching stats:", error);
         res

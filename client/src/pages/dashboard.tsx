@@ -115,6 +115,7 @@ export default function Dashboard() {
   const { data: stats, isLoading: statsLoading } = useQuery<{
     totalCalls: number;
     activeCalls: number;
+    remindersSent: number;
     conversionRate: number;
     averageDuration: number;
     hoursSaved: number;
@@ -308,22 +309,22 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            {/* Active Calls - Not Clickable */}
-            <Card className="relative overflow-hidden bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] transition-all duration-200 ease-out hover:translate-y-[-2px] hover:shadow-[0_0_16px_rgba(200,184,138,0.15)]" data-testid="card-active-calls">
+            {/* Reminders Sent - Not Clickable */}
+            <Card className="relative overflow-hidden bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] transition-all duration-200 ease-out hover:translate-y-[-2px] hover:shadow-[0_0_16px_rgba(200,184,138,0.15)]" data-testid="card-reminders-sent">
               <CardContent className="relative p-7">
                 <div className="flex items-start justify-between mb-5">
                   <div className="p-2 rounded-xl bg-white/5 flex items-center justify-center">
-                    <Activity className="w-5 h-5 text-[#C8B88A] transition-opacity duration-150 hover:opacity-80" />
+                    <MessageSquare className="w-5 h-5 text-[#C8B88A] transition-opacity duration-150 hover:opacity-80" />
                   </div>
                 </div>
                 <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-2 font-medium">
-                  Appels actifs
+                  Rappels envoyés
                 </div>
                 <div className="flex items-end justify-between">
-                  <div className="text-[28px] font-semibold tracking-tight" data-testid="stat-active-calls">
-                    {stats?.activeCalls || 0}
+                  <div className="text-[28px] font-semibold tracking-tight" data-testid="stat-reminders-sent">
+                    {stats?.remindersSent || 0}
                   </div>
-                  <div className="text-xs text-muted-foreground">En cours</div>
+                  <div className="text-xs text-muted-foreground">SMS</div>
                 </div>
               </CardContent>
             </Card>

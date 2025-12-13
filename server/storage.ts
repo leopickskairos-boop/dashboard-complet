@@ -252,6 +252,7 @@ export interface IStorage {
   getOrdersForAppointmentReminder(): Promise<Array<ExternalOrder & { guaranteeConfig: ClientGuaranteeConfig | null }>>;
   markCallReminderSent(callId: string): Promise<void>;
   markOrderReminderSent(orderId: string): Promise<void>;
+  getRemindersSentCount(userId: string): Promise<number>;
   
   // ===== REVIEW & REPUTATION SYSTEM =====
   
@@ -1767,6 +1768,37 @@ export class DatabaseStorage implements IStorage {
         updatedAt: new Date(),
       })
       .where(eq(externalOrders.id, orderId));
+  }
+
+  async getRemindersSentCount(userId: string): Promise<number> {
+    // Count reminders sent from guarantee_sessions
+    const [sessionsResult] = await db
+      .select({ count: count() })
+      .from(guaranteeSessions)
+      .where(and(
+        eq(guaranteeSessions.userId, userId),
+        eq(guaranteeSessions.appointmentReminderSent, true)
+      ));
+    
+    // Count reminders sent from calls
+    const [callsResult] = await db
+      .select({ count: count() })
+      .from(calls)
+      .where(and(
+        eq(calls.userId, userId),
+        eq(calls.appointmentReminderSent, true)
+      ));
+    
+    // Count reminders sent from external_orders
+    const [ordersResult] = await db
+      .select({ count: count() })
+      .from(externalOrders)
+      .where(and(
+        eq(externalOrders.userId, userId),
+        eq(externalOrders.appointmentReminderSent, true)
+      ));
+    
+    return (sessionsResult?.count || 0) + (callsResult?.count || 0) + (ordersResult?.count || 0);
   }
 
   // ===== No-Show Charges =====
