@@ -1156,19 +1156,6 @@ Pierre Bernard, , +33698765432`}
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-green-500/10">
-                <Euro className="h-5 w-5 text-green-400" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{((stats?.revenueGenerated || 0) / 100).toFixed(0)}€</p>
-                <p className="text-xs text-muted-foreground">CA généré</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Requests Table */}
