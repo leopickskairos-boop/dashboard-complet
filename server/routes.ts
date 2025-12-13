@@ -929,7 +929,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           | "week"
           | undefined;
 
-        const calls = await storage.getCalls(userId, { timeFilter });
+        const { calls } = await storage.getCalls(userId, { timeFilter, limit: 1000 });
         
         // Calculate enriched metrics from N8N data
         const totalCalls = calls.length;
@@ -1414,13 +1414,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           | undefined;
         const statusFilter = req.query.statusFilter as string | undefined;
         const appointmentsOnly = req.query.appointmentsOnly === "true";
+        const page = req.query.page ? parseInt(req.query.page as string, 10) : 1;
+        const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 20;
 
-        const calls = await storage.getCalls(userId, {
+        const result = await storage.getCalls(userId, {
           timeFilter,
           statusFilter,
           appointmentsOnly,
+          page,
+          limit,
         });
-        res.json(calls);
+        res.json(result);
       } catch (error) {
         console.error("Error fetching calls:", error);
         res

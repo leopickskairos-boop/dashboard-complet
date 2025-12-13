@@ -90,6 +90,7 @@ export default function Dashboard() {
   const [showTranscript, setShowTranscript] = useState<boolean>(false);
   const [showConvertedClientsModal, setShowConvertedClientsModal] = useState<boolean>(false);
   const [hoveredDataPoint, setHoveredDataPoint] = useState<number | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Fetch current user for trial countdown
   const { data: user } = useQuery<PublicUser>({
@@ -107,6 +108,11 @@ export default function Dashboard() {
     
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Reset page to 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [callsTimeFilter, statusFilter, appointmentsOnly]);
 
   // Auto-refresh interval (30 seconds)
   const REFRESH_INTERVAL = 30000;
@@ -133,14 +139,21 @@ export default function Dashboard() {
     refetchIntervalInBackground: false,
   });
 
-  // Fetch calls with filters - auto-refreshes every 30 seconds
-  const { data: calls = [], isLoading: callsLoading } = useQuery<Call[]>({
-    queryKey: ['/api/calls', callsTimeFilter, statusFilter, appointmentsOnly],
+  // Fetch calls with filters and pagination - auto-refreshes every 30 seconds
+  const { data: callsData, isLoading: callsLoading } = useQuery<{ 
+    calls: Call[]; 
+    total: number; 
+    page: number; 
+    totalPages: number 
+  }>({
+    queryKey: ['/api/calls', callsTimeFilter, statusFilter, appointmentsOnly, currentPage],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (callsTimeFilter && callsTimeFilter !== 'all') params.set('timeFilter', callsTimeFilter);
       if (statusFilter && statusFilter !== 'all') params.set('statusFilter', statusFilter);
       if (appointmentsOnly) params.set('appointmentsOnly', 'true');
+      params.set('page', currentPage.toString());
+      params.set('limit', '20');
       const res = await fetch(`/api/calls?${params}`);
       if (!res.ok) throw new Error('Failed to fetch calls');
       return res.json();
@@ -148,6 +161,9 @@ export default function Dashboard() {
     refetchInterval: REFRESH_INTERVAL,
     refetchIntervalInBackground: false,
   });
+
+  const calls = callsData?.calls || [];
+  const totalPages = callsData?.totalPages || 1;
 
   // Fetch chart data with global time filter - auto-refreshes every 30 seconds
   const { data: chartData = [], isLoading: chartLoading } = useQuery<{
@@ -1185,6 +1201,7 @@ export default function Dashboard() {
                 <p className="text-muted-foreground">Aucun appel trouvé pour ces filtres</p>
               </div>
             ) : (
+              <>
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
@@ -1317,6 +1334,34 @@ export default function Dashboard() {
                   </tbody>
                 </table>
               </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex justify-center items-center gap-4 mt-4 pt-4 border-t border-white/[0.06] px-6">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    data-testid="button-prev-page"
+                  >
+                    Précédent
+                  </Button>
+                  <span className="text-sm text-muted-foreground">
+                    Page {currentPage} sur {totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage >= totalPages}
+                    data-testid="button-next-page"
+                  >
+                    Suivant
+                  </Button>
+                </div>
+              )}
+              </>
             )}
           </CardContent>
         </Card>

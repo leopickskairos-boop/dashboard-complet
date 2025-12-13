@@ -159,7 +159,9 @@ export interface IStorage {
     timeFilter?: 'hour' | 'today' | 'two_days' | 'week';
     statusFilter?: string;
     appointmentsOnly?: boolean;
-  }): Promise<Call[]>;
+    page?: number;
+    limit?: number;
+  }): Promise<{ calls: Call[]; total: number; page: number; totalPages: number }>;
   getCallById(id: string, userId: string): Promise<Call | undefined>;
   createCall(call: InsertCall): Promise<Call>;
   getStats(userId: string, timeFilter?: 'hour' | 'today' | 'two_days' | 'week'): Promise<{
@@ -873,9 +875,9 @@ export class DatabaseStorage implements IStorage {
     timeFilter?: 'hour' | 'today' | 'two_days' | 'week';
     statusFilter?: string;
     appointmentsOnly?: boolean;
-  }): Promise<Call[]> {
-    let query = db.select().from(calls).where(eq(calls.userId, userId));
-    
+    page?: number;
+    limit?: number;
+  }): Promise<{ calls: Call[]; total: number; page: number; totalPages: number }> {
     const conditions = [eq(calls.userId, userId)];
     
     if (filters?.timeFilter) {
@@ -894,13 +896,27 @@ export class DatabaseStorage implements IStorage {
       conditions.push(isNotNull(calls.appointmentDate));
     }
     
+    // Get total count
+    const [countResult] = await db
+      .select({ count: count() })
+      .from(calls)
+      .where(and(...conditions));
+    
+    const total = countResult?.count || 0;
+    const page = filters?.page || 1;
+    const limit = filters?.limit || 20;
+    const totalPages = Math.ceil(total / limit);
+    const offset = (page - 1) * limit;
+    
     const result = await db
       .select()
       .from(calls)
       .where(and(...conditions))
-      .orderBy(desc(calls.startTime));
+      .orderBy(desc(calls.startTime))
+      .limit(limit)
+      .offset(offset);
     
-    return result;
+    return { calls: result, total, page, totalPages };
   }
 
   async getCallById(id: string, userId: string): Promise<Call | undefined> {
