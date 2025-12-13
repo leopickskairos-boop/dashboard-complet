@@ -247,6 +247,12 @@ export interface IStorage {
   getSessionsForAppointmentReminder(): Promise<Array<GuaranteeSession & { config: ClientGuaranteeConfig }>>;
   markAppointmentReminderSent(sessionId: string): Promise<void>;
   
+  // Appointment reminders for calls and external orders
+  getCallsForAppointmentReminder(): Promise<Array<Call & { guaranteeConfig: ClientGuaranteeConfig | null }>>;
+  getOrdersForAppointmentReminder(): Promise<Array<ExternalOrder & { guaranteeConfig: ClientGuaranteeConfig | null }>>;
+  markCallReminderSent(callId: string): Promise<void>;
+  markOrderReminderSent(orderId: string): Promise<void>;
+  
   // ===== REVIEW & REPUTATION SYSTEM =====
   
   // Review config
@@ -1668,6 +1674,99 @@ export class DatabaseStorage implements IStorage {
         updatedAt: new Date(),
       })
       .where(eq(guaranteeSessions.id, sessionId));
+  }
+
+  async getCallsForAppointmentReminder(): Promise<Array<Call & { guaranteeConfig: ClientGuaranteeConfig | null }>> {
+    const now = new Date();
+    
+    const results = await db
+      .select({
+        call: calls,
+        config: clientGuaranteeConfig,
+      })
+      .from(calls)
+      .leftJoin(clientGuaranteeConfig, eq(calls.userId, clientGuaranteeConfig.userId))
+      .where(
+        and(
+          eq(calls.appointmentReminderSent, false),
+          isNotNull(calls.appointmentDate),
+          gt(calls.appointmentDate, now),
+          isNotNull(calls.phoneNumber)
+        )
+      );
+    
+    const callsToRemind: Array<Call & { guaranteeConfig: ClientGuaranteeConfig | null }> = [];
+    
+    for (const { call, config } of results) {
+      if (!call.appointmentDate) continue;
+      if (!config?.appointmentReminderEnabled) continue;
+      
+      const reminderHours = config.appointmentReminderHours || 24;
+      const reminderWindowStart = new Date(call.appointmentDate.getTime() - (reminderHours * 60 * 60 * 1000));
+      
+      if (now >= reminderWindowStart && now < call.appointmentDate) {
+        callsToRemind.push({ ...call, guaranteeConfig: config });
+      }
+    }
+    
+    return callsToRemind;
+  }
+
+  async getOrdersForAppointmentReminder(): Promise<Array<ExternalOrder & { guaranteeConfig: ClientGuaranteeConfig | null }>> {
+    const now = new Date();
+    
+    const results = await db
+      .select({
+        order: externalOrders,
+        config: clientGuaranteeConfig,
+      })
+      .from(externalOrders)
+      .leftJoin(clientGuaranteeConfig, eq(externalOrders.userId, clientGuaranteeConfig.userId))
+      .where(
+        and(
+          eq(externalOrders.appointmentReminderSent, false),
+          isNotNull(externalOrders.reservationDate),
+          gt(externalOrders.reservationDate, now),
+          isNotNull(externalOrders.customerPhone)
+        )
+      );
+    
+    const ordersToRemind: Array<ExternalOrder & { guaranteeConfig: ClientGuaranteeConfig | null }> = [];
+    
+    for (const { order, config } of results) {
+      if (!order.reservationDate) continue;
+      if (!config?.appointmentReminderEnabled) continue;
+      
+      const reminderHours = config.appointmentReminderHours || 24;
+      const reminderWindowStart = new Date(order.reservationDate.getTime() - (reminderHours * 60 * 60 * 1000));
+      
+      if (now >= reminderWindowStart && now < order.reservationDate) {
+        ordersToRemind.push({ ...order, guaranteeConfig: config });
+      }
+    }
+    
+    return ordersToRemind;
+  }
+
+  async markCallReminderSent(callId: string): Promise<void> {
+    await db
+      .update(calls)
+      .set({
+        appointmentReminderSent: true,
+        appointmentReminderSentAt: new Date(),
+      })
+      .where(eq(calls.id, callId));
+  }
+
+  async markOrderReminderSent(orderId: string): Promise<void> {
+    await db
+      .update(externalOrders)
+      .set({
+        appointmentReminderSent: true,
+        appointmentReminderSentAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(externalOrders.id, orderId));
   }
 
   // ===== No-Show Charges =====

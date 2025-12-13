@@ -242,6 +242,11 @@ export const calls = pgTable("calls", {
   // Legacy fields
   emailSent: boolean("email_sent").notNull().default(false),
   metadata: jsonb("metadata"), // Any additional data not captured in specific fields
+  
+  // Appointment reminders (SMS)
+  appointmentReminderSent: boolean("appointment_reminder_sent").notNull().default(false),
+  appointmentReminderSentAt: timestamp("appointment_reminder_sent_at"),
+  
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -2358,6 +2363,10 @@ export const externalOrders = pgTable("external_orders", {
   
   // Raw data from source
   metadata: jsonb("metadata"),
+  
+  // Appointment reminders (SMS)
+  appointmentReminderSent: boolean("appointment_reminder_sent").notNull().default(false),
+  appointmentReminderSentAt: timestamp("appointment_reminder_sent_at"),
   
   // Timestamps
   orderDate: timestamp("order_date").notNull(),
