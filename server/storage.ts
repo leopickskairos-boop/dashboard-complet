@@ -38,6 +38,7 @@ import {
   externalActivities,
   integrationWebhooks,
   integrationProviderConfigs,
+  userOAuthConfig,
   type User, 
   type InsertUser, 
   type Call, 
@@ -100,7 +101,9 @@ import {
   type ExternalProduct,
   type ExternalActivity,
   type IntegrationWebhook,
-  type IntegrationProviderConfig
+  type IntegrationProviderConfig,
+  type UserOAuthConfig,
+  type InsertUserOAuthConfig
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lte, desc, sql, count, isNotNull, or, asc, like, ilike, isNull, inArray, ne, lt, gt } from "drizzle-orm";
@@ -644,6 +647,11 @@ export interface IStorage {
     customersBySource: Record<string, number>;
     revenueBySource: Record<string, number>;
   }>;
+
+  // User OAuth Config
+  getUserOAuthConfig(userId: string, provider: string): Promise<UserOAuthConfig | undefined>;
+  upsertUserOAuthConfig(userId: string, provider: string, clientId: string, encryptedSecret: string, label?: string): Promise<UserOAuthConfig>;
+  deleteUserOAuthConfig(userId: string, provider: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -4397,6 +4405,40 @@ export class DatabaseStorage implements IStorage {
       customersBySource,
       revenueBySource
     };
+  }
+
+  // ===== USER OAUTH CONFIG =====
+
+  async getUserOAuthConfig(userId: string, provider: string): Promise<UserOAuthConfig | undefined> {
+    const [config] = await db
+      .select()
+      .from(userOAuthConfig)
+      .where(and(eq(userOAuthConfig.userId, userId), eq(userOAuthConfig.provider, provider)));
+    return config;
+  }
+
+  async upsertUserOAuthConfig(userId: string, provider: string, clientId: string, encryptedSecret: string, label?: string): Promise<UserOAuthConfig> {
+    const existing = await this.getUserOAuthConfig(userId, provider);
+    if (existing) {
+      const [updated] = await db
+        .update(userOAuthConfig)
+        .set({ clientId, encryptedClientSecret: encryptedSecret, label, updatedAt: new Date() })
+        .where(eq(userOAuthConfig.id, existing.id))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db
+        .insert(userOAuthConfig)
+        .values({ userId, provider, clientId, encryptedClientSecret: encryptedSecret, label })
+        .returning();
+      return created;
+    }
+  }
+
+  async deleteUserOAuthConfig(userId: string, provider: string): Promise<void> {
+    await db
+      .delete(userOAuthConfig)
+      .where(and(eq(userOAuthConfig.userId, userId), eq(userOAuthConfig.provider, provider)));
   }
 }
 

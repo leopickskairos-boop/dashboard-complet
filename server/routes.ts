@@ -7001,15 +7001,80 @@ Réponds en JSON avec ce format exact:
     }
   });
 
+  // Get OAuth credentials status (not the secrets, just whether configured)
+  app.get("/api/reviews/oauth/credentials", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const googleConfig = await storage.getUserOAuthConfig(userId, "google");
+      const facebookConfig = await storage.getUserOAuthConfig(userId, "facebook");
+      res.json({
+        google: { configured: !!googleConfig, clientId: googleConfig?.clientId || null },
+        facebook: { configured: !!facebookConfig, clientId: facebookConfig?.clientId || null },
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Save OAuth credentials
+  app.post("/api/reviews/oauth/credentials", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { provider, clientId, clientSecret, label } = req.body;
+      if (!provider || !["google", "facebook"].includes(provider)) {
+        return res.status(400).json({ message: "Provider invalide" });
+      }
+      if (!clientId || !clientSecret) {
+        return res.status(400).json({ message: "Client ID et Client Secret requis" });
+      }
+      const { encryptCredential } = await import("./utils/credential-encryption");
+      const encryptedSecret = encryptCredential(clientSecret);
+      await storage.upsertUserOAuthConfig(userId, provider, clientId, encryptedSecret, label);
+      res.json({ success: true, message: "Credentials sauvegardés" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Delete OAuth credentials
+  app.delete("/api/reviews/oauth/credentials/:provider", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { provider } = req.params;
+      if (!["google", "facebook"].includes(provider)) {
+        return res.status(400).json({ message: "Provider invalide" });
+      }
+      await storage.deleteUserOAuthConfig(userId, provider);
+      res.json({ success: true, message: "Credentials supprimés" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Google OAuth - Initiate connection
   app.get("/api/reviews/oauth/google/connect", requireAuth, async (req, res) => {
     try {
       const userId = req.user!.id;
 
+      // First check user-specific credentials
+      const userConfig = await storage.getUserOAuthConfig(userId, "google");
+      let googleClientId: string | undefined;
+      let googleClientSecret: string | undefined;
+
+      if (userConfig) {
+        const { decryptCredential } = await import("./utils/credential-encryption");
+        googleClientId = userConfig.clientId;
+        googleClientSecret = decryptCredential(userConfig.encryptedClientSecret);
+      } else {
+        // Fallback to environment variables
+        googleClientId = process.env.GOOGLE_CLIENT_ID;
+        googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
+      }
+
       // Check if OAuth is configured
-      if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+      if (!googleClientId || !googleClientSecret) {
         return res.status(503).json({ 
-          message: "OAuth Google non configuré",
+          message: "OAuth Google non configuré. Veuillez configurer vos clés OAuth dans les paramètres.",
           setupRequired: true,
           requiredSecrets: ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET']
         });
