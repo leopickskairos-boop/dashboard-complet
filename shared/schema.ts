@@ -773,6 +773,10 @@ export const clientGuaranteeConfig = pgTable("client_guarantee_config", {
   autoSendEmailOnValidation: boolean("auto_send_email_on_validation").notNull().default(true), // Email confirmation
   autoSendSmsOnValidation: boolean("auto_send_sms_on_validation").notNull().default(false), // SMS confirmation
   
+  // Rappels SMS avant RDV
+  appointmentReminderEnabled: boolean("appointment_reminder_enabled").notNull().default(false),
+  appointmentReminderHours: integer("appointment_reminder_hours").notNull().default(24), // Heures avant le RDV
+  
   // CGV
   termsUrl: text("terms_url"),
   
@@ -847,9 +851,13 @@ export const guaranteeSessions = pgTable("guarantee_sessions", {
   validatedAt: timestamp("validated_at"),
   chargedAt: timestamp("charged_at"),
   
-  // Relances
+  // Relances CB
   reminderCount: integer("reminder_count").notNull().default(0),
   lastReminderAt: timestamp("last_reminder_at"),
+  
+  // Rappel SMS avant RDV
+  appointmentReminderSent: boolean("appointment_reminder_sent").notNull().default(false),
+  appointmentReminderSentAt: timestamp("appointment_reminder_sent_at"),
   
   // Timestamps
   createdAt: timestamp("created_at").notNull().defaultNow(),
