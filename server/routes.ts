@@ -5461,6 +5461,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bulk send review requests (mass campaign)
+  app.post("/api/reviews/requests/bulk", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { contacts, sendMethod, incentiveId } = req.body;
+      
+      if (!contacts || !Array.isArray(contacts) || contacts.length === 0) {
+        return res.status(400).json({ message: "Liste de contacts requise" });
+      }
+      
+      if (!sendMethod || !['email', 'sms', 'both'].includes(sendMethod)) {
+        return res.status(400).json({ message: "Méthode d'envoi invalide" });
+      }
+      
+      // Limit to prevent abuse
+      if (contacts.length > 500) {
+        return res.status(400).json({ message: "Maximum 500 contacts par campagne" });
+      }
+      
+      let successCount = 0;
+      let errorCount = 0;
+      const errors: string[] = [];
+      
+      for (const contact of contacts) {
+        try {
+          const { name, email, phone } = contact;
+          
+          if (!name || (!email && !phone)) {
+            errors.push(`Contact invalide: ${name || 'Sans nom'}`);
+            errorCount++;
+            continue;
+          }
+          
+          // Check sendMethod requirements
+          if (sendMethod === 'email' && !email) {
+            errors.push(`Email manquant pour ${name}`);
+            errorCount++;
+            continue;
+          }
+          if (sendMethod === 'sms' && !phone) {
+            errors.push(`Téléphone manquant pour ${name}`);
+            errorCount++;
+            continue;
+          }
+          if (sendMethod === 'both' && (!email && !phone)) {
+            errors.push(`Email et téléphone manquants pour ${name}`);
+            errorCount++;
+            continue;
+          }
+          
+          await storage.createReviewRequest({
+            userId,
+            customerName: name,
+            customerEmail: email || null,
+            customerPhone: phone || null,
+            sendMethod,
+            incentiveId: incentiveId || null,
+            status: 'pending',
+          });
+          
+          successCount++;
+        } catch (err: any) {
+          errors.push(`Erreur pour ${contact.name}: ${err.message}`);
+          errorCount++;
+        }
+      }
+      
+      res.json({
+        success: true,
+        message: `${successCount} demandes créées, ${errorCount} erreurs`,
+        created: successCount,
+        errors: errorCount,
+        errorDetails: errors.slice(0, 10), // Limit error details
+      });
+    } catch (error: any) {
+      console.error("[Reviews] Error creating bulk requests:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
   // Get all reviews with filters
   app.get("/api/reviews", requireAuth, async (req, res) => {
     try {

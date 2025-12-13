@@ -8,9 +8,10 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Send, Plus, Loader2, Mail, Phone, CheckCircle2, Clock, Eye, MousePointer, Ticket, Euro } from "lucide-react";
+import { Send, Plus, Loader2, Mail, Phone, CheckCircle2, Clock, Eye, MousePointer, Ticket, Euro, Users } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import type { ReviewRequest, ReviewIncentive } from "@shared/schema";
@@ -30,6 +31,14 @@ export default function ReviewsCampaigns() {
   const [usePromoOpen, setUsePromoOpen] = useState(false);
   const [selectedPromoCode, setSelectedPromoCode] = useState("");
   const [orderAmount, setOrderAmount] = useState("");
+
+  // État pour la campagne de masse
+  const [isBulkOpen, setIsBulkOpen] = useState(false);
+  const [bulkData, setBulkData] = useState({
+    contactsCsv: "",
+    sendMethod: "both",
+    incentiveId: "",
+  });
 
   const { data: requests, isLoading: requestsLoading } = useQuery<ReviewRequest[]>({
     queryKey: ["/api/reviews/requests"],
@@ -129,6 +138,51 @@ export default function ReviewsCampaigns() {
     },
   });
 
+  // Parser CSV avec validation selon méthode d'envoi
+  const parseCsvContacts = (csv: string, sendMethod: string) => {
+    const lines = csv.trim().split("\n").filter(line => line.trim());
+    return lines.map(line => {
+      const parts = line.split(",").map(p => p.trim());
+      return {
+        name: parts[0] || "",
+        email: parts[1] || "",
+        phone: parts[2] || "",
+      };
+    }).filter(c => {
+      if (!c.name) return false;
+      if (sendMethod === "email") return !!c.email;
+      if (sendMethod === "sms") return !!c.phone;
+      return !!c.email || !!c.phone; // "both" - au moins un contact
+    });
+  };
+
+  const bulkMutation = useMutation({
+    mutationFn: async (data: { contacts: Array<{ name: string; email: string; phone: string }>; sendMethod: string; incentiveId?: string }) => {
+      return await apiRequest("POST", "/api/reviews/requests/bulk", data);
+    },
+    onSuccess: (result: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/reviews/requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/reviews/requests/stats"] });
+      toast({
+        title: "Campagne lancée",
+        description: `${result.created || 0} demandes créées avec succès.`,
+      });
+      setIsBulkOpen(false);
+      setBulkData({
+        contactsCsv: "",
+        sendMethod: "both",
+        incentiveId: "",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erreur",
+        description: error.message || "Impossible de lancer la campagne.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const getStatusBadge = (status: string) => {
     const baseClasses = "text-[10px] px-2 py-0.5 font-medium border-0";
     switch (status) {
@@ -165,13 +219,114 @@ export default function ReviewsCampaigns() {
           <h1 className="text-lg font-semibold text-foreground">Campagnes d'avis</h1>
           <p className="text-xs text-muted-foreground mt-0.5">Gérez vos demandes d'avis clients</p>
         </div>
-        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-[#C8B88A] hover:bg-[#C8B88A]/90 text-black" data-testid="button-new-request">
-              <Plus className="h-4 w-4 mr-2" />
-              Nouvelle demande
-            </Button>
-          </DialogTrigger>
+        <div className="flex items-center gap-2">
+          {/* Bouton campagne de masse */}
+          <Dialog open={isBulkOpen} onOpenChange={setIsBulkOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" data-testid="button-bulk-campaign">
+                <Users className="h-4 w-4 mr-2" />
+                Campagne de masse
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Campagne de masse</DialogTitle>
+                <DialogDescription>
+                  Envoyez des demandes d'avis à plusieurs clients en une seule fois
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Contacts (format CSV) *</Label>
+                  <Textarea
+                    value={bulkData.contactsCsv}
+                    onChange={(e) => setBulkData({ ...bulkData, contactsCsv: e.target.value })}
+                    placeholder={`Jean Dupont, jean@exemple.fr, +33612345678
+Marie Martin, marie@exemple.fr
+Pierre Bernard, , +33698765432`}
+                    rows={6}
+                    className="font-mono text-xs"
+                    data-testid="textarea-bulk-contacts"
+                  />
+                  <p className="text-[10px] text-muted-foreground">
+                    Format: Nom, Email, Téléphone (un contact par ligne)
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Méthode d'envoi</Label>
+                  <Select
+                    value={bulkData.sendMethod}
+                    onValueChange={(value) => setBulkData({ ...bulkData, sendMethod: value })}
+                  >
+                    <SelectTrigger data-testid="select-bulk-send-method">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="email">Email uniquement</SelectItem>
+                      <SelectItem value="sms">SMS uniquement</SelectItem>
+                      <SelectItem value="both">Email et SMS</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {incentives && incentives.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>Incitation (optionnel)</Label>
+                    <Select
+                      value={bulkData.incentiveId}
+                      onValueChange={(value) => setBulkData({ ...bulkData, incentiveId: value })}
+                    >
+                      <SelectTrigger data-testid="select-bulk-incentive">
+                        <SelectValue placeholder="Sélectionner une incitation" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {incentives.map((inc) => (
+                          <SelectItem key={inc.id} value={inc.id}>
+                            {inc.displayMessage || inc.type}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                <div className="bg-muted/30 rounded-lg p-3">
+                  <p className="text-xs text-muted-foreground">
+                    <span className="font-medium text-foreground">{parseCsvContacts(bulkData.contactsCsv, bulkData.sendMethod).length}</span> contacts valides détectés
+                  </p>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsBulkOpen(false)} data-testid="button-cancel-bulk">
+                  Annuler
+                </Button>
+                <Button
+                  onClick={() => {
+                    const contacts = parseCsvContacts(bulkData.contactsCsv, bulkData.sendMethod);
+                    if (contacts.length > 0) {
+                      bulkMutation.mutate({
+                        contacts,
+                        sendMethod: bulkData.sendMethod,
+                        incentiveId: bulkData.incentiveId || undefined,
+                      });
+                    }
+                  }}
+                  disabled={parseCsvContacts(bulkData.contactsCsv, bulkData.sendMethod).length === 0 || bulkMutation.isPending}
+                  className="bg-[#C8B88A] hover:bg-[#C8B88A]/90 text-black"
+                  data-testid="button-launch-bulk"
+                >
+                  {bulkMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Lancer la campagne"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Bouton nouvelle demande */}
+          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-[#C8B88A] hover:bg-[#C8B88A]/90 text-black" data-testid="button-new-request">
+                <Plus className="h-4 w-4 mr-2" />
+                Nouvelle demande
+              </Button>
+            </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Nouvelle demande d'avis</DialogTitle>
@@ -260,6 +415,7 @@ export default function ReviewsCampaigns() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        </div>
 
         {/* Dialog pour marquer un code promo comme utilisé */}
         <Dialog open={usePromoOpen} onOpenChange={setUsePromoOpen}>
