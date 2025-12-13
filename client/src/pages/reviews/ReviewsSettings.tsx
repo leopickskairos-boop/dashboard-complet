@@ -1695,7 +1695,7 @@ export default function ReviewsSettings() {
                         <div className="flex items-center justify-between p-2 rounded bg-muted/30">
                           <div>
                             <p className="text-xs text-muted-foreground">Client ID</p>
-                            <p className="text-sm font-mono">{oauthCredentials.google.clientId.slice(0, 30)}...</p>
+                            <p className="text-sm font-mono">{oauthCredentials.google.clientId?.slice(0, 30) || 'N/A'}...</p>
                           </div>
                           <Button
                             variant="ghost"
@@ -1763,7 +1763,7 @@ export default function ReviewsSettings() {
                         <div className="flex items-center justify-between p-2 rounded bg-muted/30">
                           <div>
                             <p className="text-xs text-muted-foreground">App ID</p>
-                            <p className="text-sm font-mono">{oauthCredentials.facebook.clientId.slice(0, 30)}...</p>
+                            <p className="text-sm font-mono">{oauthCredentials.facebook.clientId?.slice(0, 30) || 'N/A'}...</p>
                           </div>
                           <Button
                             variant="ghost"
