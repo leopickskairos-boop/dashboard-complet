@@ -11,11 +11,12 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { 
   Settings, Clock, MessageSquare, Loader2, Save, AlertCircle, Gift, Plus, Trash2, Star, Percent, Coffee, Tag, 
-  Zap, Mail, Phone, Power, Sparkles, CheckCircle2, Calendar, Info, Send, Bot, Link2, ExternalLink, RefreshCw, Unlink, Globe, Key
+  Zap, Mail, Phone, Power, Sparkles, CheckCircle2, Calendar, Info, Send, Bot, Link2, ExternalLink, RefreshCw, Unlink, Globe, Key, HelpCircle
 } from "lucide-react";
 import { SiGoogle, SiFacebook, SiTripadvisor } from "react-icons/si";
 import type { ReviewConfig, ReviewIncentive, ReviewSource } from "@shared/schema";
@@ -1305,465 +1306,244 @@ export default function ReviewsSettings() {
                   </AccordionContent>
                 </AccordionItem>
 
-                {/* Accordéon: Synchronisation des avis existants */}
+                {/* Configuration Avis & Réputation */}
                 <AccordionItem value="sync" className="border rounded-xl px-4 border-border/40 bg-muted/5">
                   <AccordionTrigger className="hover:no-underline py-4" data-testid="accordion-sync">
                     <div className="flex items-center gap-2">
                       <div className="p-1.5 rounded-lg bg-blue-500/10">
                         <Globe className="h-4 w-4 text-blue-500" />
                       </div>
-                      <span className="text-sm font-medium">Synchronisation des avis</span>
+                      <span className="text-sm font-medium">Configuration Avis & Réputation</span>
                     </div>
                   </AccordionTrigger>
                   <AccordionContent className="pb-4">
                     <div className="space-y-4">
                       <p className="text-xs text-muted-foreground">
-                        Connectez vos profils professionnels pour récupérer vos avis existants et y répondre depuis SpeedAI. Ces connexions ne sont pas utilisées pour envoyer des liens aux clients.
+                        Connectez vos comptes pour permettre à l'IA de lire, analyser et répondre automatiquement à vos avis clients.
                       </p>
 
-                      {/* Configuration Alert Banner */}
-                      {oauthStatus && (!oauthStatus.google.configured || !oauthStatus.facebook.configured) && (
-                        <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30">
-                          <div className="flex items-start gap-3">
-                            <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5 shrink-0" />
-                            <div className="space-y-2">
-                              <p className="text-sm font-medium text-amber-500">Configuration requise</p>
-                              <p className="text-xs text-muted-foreground">
-                                Pour connecter vos comptes Google ou Facebook, vous devez configurer les clés API dans les <strong>Secrets</strong> de Replit.
-                              </p>
-                              <div className="space-y-2 mt-3">
-                                {!oauthStatus.google.configured && (
-                                  <div className="p-3 rounded-lg bg-muted/20 border border-border/40">
-                                    <div className="flex items-center gap-2 mb-2">
-                                      <SiGoogle className="h-4 w-4 text-[#4285F4]" />
-                                      <span className="text-xs font-medium">Google Business Profile</span>
-                                    </div>
-                                    <p className="text-[11px] text-muted-foreground mb-2">
-                                      Ajoutez ces secrets dans l'onglet "Secrets" de Replit :
-                                    </p>
-                                    <div className="flex flex-wrap gap-1">
-                                      {oauthStatus.google.requiredSecrets.map(secret => (
-                                        <Badge key={secret} variant="outline" className="text-[10px] font-mono">
-                                          {secret}
-                                        </Badge>
-                                      ))}
-                                    </div>
-                                    <a 
-                                      href={oauthStatus.google.setupUrl}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="inline-flex items-center gap-1 text-[11px] text-blue-400 hover:underline mt-2"
-                                    >
-                                      Obtenir les clés Google Cloud Console
-                                      <ExternalLink className="h-3 w-3" />
-                                    </a>
-                                  </div>
-                                )}
-                                {!oauthStatus.facebook.configured && (
-                                  <div className="p-3 rounded-lg bg-muted/20 border border-border/40">
-                                    <div className="flex items-center gap-2 mb-2">
-                                      <SiFacebook className="h-4 w-4 text-[#1877F2]" />
-                                      <span className="text-xs font-medium">Facebook</span>
-                                    </div>
-                                    <p className="text-[11px] text-muted-foreground mb-2">
-                                      Ajoutez ces secrets dans l'onglet "Secrets" de Replit :
-                                    </p>
-                                    <div className="flex flex-wrap gap-1">
-                                      {oauthStatus.facebook.requiredSecrets.map(secret => (
-                                        <Badge key={secret} variant="outline" className="text-[10px] font-mono">
-                                          {secret}
-                                        </Badge>
-                                      ))}
-                                    </div>
-                                    <a 
-                                      href={oauthStatus.facebook.setupUrl}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="inline-flex items-center gap-1 text-[11px] text-blue-400 hover:underline mt-2"
-                                    >
-                                      Créer une app Facebook Developers
-                                      <ExternalLink className="h-3 w-3" />
-                                    </a>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
                       <div className="grid gap-4">
-                  {/* Google Business Profile */}
-                  {(() => {
-                    const googleSource = getSourceByPlatform("google");
-                    const googleConfigured = oauthStatus?.google.configured ?? false;
-                    return (
-                      <div className="p-4 rounded-xl border border-border/40 bg-muted/10">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="p-2 rounded-lg bg-white/10">
-                              <SiGoogle className="h-5 w-5 text-[#4285F4]" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium">Google Business Profile</p>
-                              {googleSource ? (
-                                <div className="flex items-center gap-2 mt-0.5">
-                                  <Badge variant="outline" className="text-[10px] bg-green-500/10 text-green-500 border-green-500/30">
-                                    Connecté
-                                  </Badge>
-                                  <span className="text-xs text-muted-foreground">
-                                    {googleSource.displayName}
-                                  </span>
+                        {/* Google Business Profile */}
+                        {(() => {
+                          const googleSource = getSourceByPlatform("google");
+                          return (
+                            <div className="p-4 rounded-xl border border-border/40 bg-muted/10 space-y-3">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                  <div className="p-2 rounded-lg bg-white/10">
+                                    <SiGoogle className="h-5 w-5 text-[#4285F4]" />
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-medium">Google Business Profile</p>
+                                    {googleSource ? (
+                                      <div className="flex items-center gap-2 mt-0.5">
+                                        <Badge variant="outline" className="text-[10px] bg-green-500/10 text-green-500 border-green-500/30">
+                                          Connecté
+                                        </Badge>
+                                        <span className="text-xs text-muted-foreground">
+                                          {googleSource.displayName}
+                                        </span>
+                                      </div>
+                                    ) : (
+                                      <Badge variant="outline" className="text-[10px] bg-muted text-muted-foreground">
+                                        Non connecté
+                                      </Badge>
+                                    )}
+                                  </div>
                                 </div>
-                              ) : !googleConfigured ? (
-                                <Badge variant="outline" className="text-[10px] bg-amber-500/10 text-amber-500 border-amber-500/30">
-                                  Configuration requise
-                                </Badge>
-                              ) : (
-                                <p className="text-xs text-muted-foreground">Non connecté</p>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {googleSource ? (
-                              <>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => syncSourceMutation.mutate(googleSource.id)}
-                                  disabled={syncingSourceId === googleSource.id}
-                                  data-testid="button-sync-google"
-                                >
-                                  {syncingSourceId === googleSource.id ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                <div className="flex items-center gap-2">
+                                  {googleSource ? (
+                                    <>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => syncSourceMutation.mutate(googleSource.id)}
+                                        disabled={syncingSourceId === googleSource.id}
+                                        data-testid="button-sync-google"
+                                      >
+                                        {syncingSourceId === googleSource.id ? (
+                                          <Loader2 className="h-4 w-4 animate-spin" />
+                                        ) : (
+                                          <RefreshCw className="h-4 w-4" />
+                                        )}
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={handleConnectGoogle}
+                                        disabled={connectingPlatform === "google"}
+                                        data-testid="button-reconnect-google"
+                                      >
+                                        Reconnecter
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => disconnectSourceMutation.mutate(googleSource.id)}
+                                        className="text-destructive hover:text-destructive"
+                                        data-testid="button-disconnect-google"
+                                      >
+                                        <Unlink className="h-4 w-4" />
+                                      </Button>
+                                    </>
                                   ) : (
-                                    <RefreshCw className="h-4 w-4" />
+                                    <Button
+                                      variant="default"
+                                      size="sm"
+                                      onClick={handleConnectGoogle}
+                                      disabled={connectingPlatform === "google"}
+                                      data-testid="button-connect-google"
+                                    >
+                                      {connectingPlatform === "google" ? (
+                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                      ) : (
+                                        <Link2 className="h-4 w-4 mr-2" />
+                                      )}
+                                      Connecter mon compte Google Business
+                                    </Button>
                                   )}
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => disconnectSourceMutation.mutate(googleSource.id)}
-                                  className="text-destructive hover:text-destructive"
-                                  data-testid="button-disconnect-google"
-                                >
-                                  <Unlink className="h-4 w-4" />
-                                </Button>
-                              </>
-                            ) : (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={handleConnectGoogle}
-                                disabled={connectingPlatform === "google" || !googleConfigured}
-                                data-testid="button-connect-google"
-                              >
-                                {connectingPlatform === "google" ? (
-                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                ) : (
-                                  <Link2 className="h-4 w-4 mr-2" />
-                                )}
-                                {googleConfigured ? "Connecter" : "Non configuré"}
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                        {googleSource && googleSource.lastSyncAt && (
-                          <p className="text-xs text-muted-foreground mt-2">
-                            Dernière sync: {new Date(googleSource.lastSyncAt).toLocaleString("fr-FR")}
-                            {googleSource.totalReviewsCount !== null && ` • ${googleSource.totalReviewsCount} avis`}
-                          </p>
-                        )}
-                      </div>
-                    );
-                  })()}
-
-                  {/* Facebook */}
-                  {(() => {
-                    const facebookSource = getSourceByPlatform("facebook");
-                    const facebookConfigured = oauthStatus?.facebook.configured ?? false;
-                    return (
-                      <div className="p-4 rounded-xl border border-border/40 bg-muted/10">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="p-2 rounded-lg bg-white/10">
-                              <SiFacebook className="h-5 w-5 text-[#1877F2]" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium">Facebook</p>
-                              {facebookSource ? (
-                                <div className="flex items-center gap-2 mt-0.5">
-                                  <Badge variant="outline" className="text-[10px] bg-green-500/10 text-green-500 border-green-500/30">
-                                    Connecté
-                                  </Badge>
-                                  <span className="text-xs text-muted-foreground">
-                                    {facebookSource.displayName}
-                                  </span>
                                 </div>
-                              ) : !facebookConfigured ? (
-                                <Badge variant="outline" className="text-[10px] bg-amber-500/10 text-amber-500 border-amber-500/30">
-                                  Configuration requise
-                                </Badge>
-                              ) : (
-                                <p className="text-xs text-muted-foreground">Non connecté</p>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {facebookSource ? (
-                              <>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => syncSourceMutation.mutate(facebookSource.id)}
-                                  disabled={syncingSourceId === facebookSource.id}
-                                  data-testid="button-sync-facebook"
-                                >
-                                  {syncingSourceId === facebookSource.id ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <RefreshCw className="h-4 w-4" />
-                                  )}
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => disconnectSourceMutation.mutate(facebookSource.id)}
-                                  className="text-destructive hover:text-destructive"
-                                  data-testid="button-disconnect-facebook"
-                                >
-                                  <Unlink className="h-4 w-4" />
-                                </Button>
-                              </>
-                            ) : (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={handleConnectFacebook}
-                                disabled={connectingPlatform === "facebook" || !facebookConfigured}
-                                data-testid="button-connect-facebook"
-                              >
-                                {connectingPlatform === "facebook" ? (
-                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                ) : (
-                                  <Link2 className="h-4 w-4 mr-2" />
-                                )}
-                                {facebookConfigured ? "Connecter" : "Non configuré"}
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                        {facebookSource && facebookSource.lastSyncAt && (
-                          <p className="text-xs text-muted-foreground mt-2">
-                            Dernière sync: {new Date(facebookSource.lastSyncAt).toLocaleString("fr-FR")}
-                            {facebookSource.totalReviewsCount !== null && ` • ${facebookSource.totalReviewsCount} avis`}
-                          </p>
-                        )}
-                      </div>
-                    );
-                  })()}
-
-                  {/* TripAdvisor */}
-                  {(() => {
-                    const tripadvisorSource = getSourceByPlatform("tripadvisor");
-                    return (
-                      <div className="p-4 rounded-xl border border-border/40 bg-muted/10">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="p-2 rounded-lg bg-white/10">
-                              <SiTripadvisor className="h-5 w-5 text-[#00AF87]" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium">TripAdvisor</p>
-                              {tripadvisorSource ? (
-                                <div className="flex items-center gap-2 mt-0.5">
-                                  <Badge variant="outline" className="text-[10px] bg-green-500/10 text-green-500 border-green-500/30">
-                                    Connecté
-                                  </Badge>
-                                  <span className="text-xs text-muted-foreground">
-                                    {tripadvisorSource.displayName}
-                                  </span>
-                                </div>
-                              ) : (
-                                <p className="text-xs text-muted-foreground">Non connecté</p>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {tripadvisorSource ? (
-                              <>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => syncSourceMutation.mutate(tripadvisorSource.id)}
-                                  disabled={syncingSourceId === tripadvisorSource.id}
-                                  data-testid="button-sync-tripadvisor"
-                                >
-                                  {syncingSourceId === tripadvisorSource.id ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <RefreshCw className="h-4 w-4" />
-                                  )}
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => disconnectSourceMutation.mutate(tripadvisorSource.id)}
-                                  className="text-destructive hover:text-destructive"
-                                  data-testid="button-disconnect-tripadvisor"
-                                >
-                                  <Unlink className="h-4 w-4" />
-                                </Button>
-                              </>
-                            ) : (
-                              <div className="flex items-center gap-2">
-                                <Input
-                                  placeholder="URL TripAdvisor"
-                                  value={tripadvisorUrl}
-                                  onChange={(e) => setTripadvisorUrl(e.target.value)}
-                                  className="w-48 h-8 text-xs"
-                                  data-testid="input-tripadvisor-url"
-                                />
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => {
-                                    if (tripadvisorUrl.trim()) {
-                                      connectTripAdvisorMutation.mutate({
-                                        tripadvisorUrl: tripadvisorUrl.trim(),
-                                        displayName: tripadvisorName.trim() || "TripAdvisor",
-                                      });
-                                    }
-                                  }}
-                                  disabled={!tripadvisorUrl.trim() || connectTripAdvisorMutation.isPending}
-                                  data-testid="button-connect-tripadvisor"
-                                >
-                                  {connectTripAdvisorMutation.isPending ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <Link2 className="h-4 w-4" />
-                                  )}
-                                </Button>
                               </div>
-                            )}
-                          </div>
-                        </div>
-                        {tripadvisorSource && tripadvisorSource.lastSyncAt && (
-                          <p className="text-xs text-muted-foreground mt-2">
-                            Dernière sync: {new Date(tripadvisorSource.lastSyncAt).toLocaleString("fr-FR")}
-                            {tripadvisorSource.totalReviewsCount !== null && ` • ${tripadvisorSource.totalReviewsCount} avis`}
-                          </p>
-                        )}
-                      </div>
-                    );
-                  })()}
+                              {googleSource && googleSource.lastSyncAt && (
+                                <p className="text-xs text-muted-foreground">
+                                  Dernière sync: {new Date(googleSource.lastSyncAt).toLocaleString("fr-FR")}
+                                  {googleSource.totalReviewsCount !== null && ` • ${googleSource.totalReviewsCount} avis`}
+                                </p>
+                              )}
+                              {/* Accordion Help - Google */}
+                              <Collapsible>
+                                <CollapsibleTrigger className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                                  <HelpCircle className="h-3 w-3" />
+                                  <span>Comment connecter mon compte ?</span>
+                                </CollapsibleTrigger>
+                                <CollapsibleContent className="pt-2">
+                                  <p className="text-xs text-muted-foreground bg-muted/30 p-3 rounded-lg">
+                                    Cliquez sur "Connecter mon compte Google Business". Vous serez redirigé vers Google afin d'autoriser l'accès à vos avis. 
+                                    Aucun mot de passe n'est stocké. L'accès est sécurisé et peut être révoqué à tout moment depuis votre compte Google.
+                                  </p>
+                                </CollapsibleContent>
+                              </Collapsible>
+                            </div>
+                          );
+                        })()}
+
+                        {/* TripAdvisor */}
+                        {(() => {
+                          const tripadvisorSource = getSourceByPlatform("tripadvisor");
+                          return (
+                            <div className="p-4 rounded-xl border border-border/40 bg-muted/10 space-y-3">
+                              <div className="flex items-center justify-between flex-wrap gap-3">
+                                <div className="flex items-center gap-3">
+                                  <div className="p-2 rounded-lg bg-white/10">
+                                    <SiTripadvisor className="h-5 w-5 text-[#00AF87]" />
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-medium">TripAdvisor</p>
+                                    {tripadvisorSource ? (
+                                      <div className="flex items-center gap-2 mt-0.5">
+                                        <Badge variant="outline" className="text-[10px] bg-green-500/10 text-green-500 border-green-500/30">
+                                          Connecté
+                                        </Badge>
+                                        <span className="text-xs text-muted-foreground">
+                                          {tripadvisorSource.displayName}
+                                        </span>
+                                      </div>
+                                    ) : (
+                                      <Badge variant="outline" className="text-[10px] bg-muted text-muted-foreground">
+                                        Non configuré
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {tripadvisorSource ? (
+                                    <>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => syncSourceMutation.mutate(tripadvisorSource.id)}
+                                        disabled={syncingSourceId === tripadvisorSource.id}
+                                        data-testid="button-sync-tripadvisor"
+                                      >
+                                        {syncingSourceId === tripadvisorSource.id ? (
+                                          <Loader2 className="h-4 w-4 animate-spin" />
+                                        ) : (
+                                          <RefreshCw className="h-4 w-4" />
+                                        )}
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => disconnectSourceMutation.mutate(tripadvisorSource.id)}
+                                        className="text-destructive hover:text-destructive"
+                                        data-testid="button-disconnect-tripadvisor"
+                                      >
+                                        <Unlink className="h-4 w-4" />
+                                      </Button>
+                                    </>
+                                  ) : (
+                                    <div className="flex items-center gap-2">
+                                      <Input
+                                        placeholder="URL de votre page TripAdvisor"
+                                        value={tripadvisorUrl}
+                                        onChange={(e) => setTripadvisorUrl(e.target.value)}
+                                        className="w-64 h-8 text-xs"
+                                        data-testid="input-tripadvisor-url"
+                                      />
+                                      <Button
+                                        variant="default"
+                                        size="sm"
+                                        onClick={() => {
+                                          if (tripadvisorUrl.trim()) {
+                                            connectTripAdvisorMutation.mutate({
+                                              tripadvisorUrl: tripadvisorUrl.trim(),
+                                              displayName: tripadvisorName.trim() || "TripAdvisor",
+                                            });
+                                          }
+                                        }}
+                                        disabled={!tripadvisorUrl.trim() || connectTripAdvisorMutation.isPending}
+                                        data-testid="button-connect-tripadvisor"
+                                      >
+                                        {connectTripAdvisorMutation.isPending ? (
+                                          <Loader2 className="h-4 w-4 animate-spin" />
+                                        ) : (
+                                          <Link2 className="h-4 w-4 mr-1" />
+                                        )}
+                                        Connecter
+                                      </Button>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              {tripadvisorSource && tripadvisorSource.lastSyncAt && (
+                                <p className="text-xs text-muted-foreground">
+                                  Dernière sync: {new Date(tripadvisorSource.lastSyncAt).toLocaleString("fr-FR")}
+                                  {tripadvisorSource.totalReviewsCount !== null && ` • ${tripadvisorSource.totalReviewsCount} avis`}
+                                </p>
+                              )}
+                              {/* Accordion Help - TripAdvisor */}
+                              <Collapsible>
+                                <CollapsibleTrigger className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                                  <HelpCircle className="h-3 w-3" />
+                                  <span>Comment connecter mon compte ?</span>
+                                </CollapsibleTrigger>
+                                <CollapsibleContent className="pt-2">
+                                  <p className="text-xs text-muted-foreground bg-muted/30 p-3 rounded-lg">
+                                    Copiez l'URL de votre page TripAdvisor et collez-la dans le champ ci-dessus. 
+                                    La connexion à TripAdvisor dépend de l'accès API de votre établissement. 
+                                    Si votre compte est éligible, vos avis seront synchronisés automatiquement. 
+                                    Sinon, notre équipe vous accompagnera pour activer la connexion dès que possible.
+                                  </p>
+                                </CollapsibleContent>
+                              </Collapsible>
+                            </div>
+                          );
+                        })()}
                       </div>
                     </div>
                   </AccordionContent>
                 </AccordionItem>
 
-                {/* OAuth Config Section */}
-                <AccordionItem value="oauth-config" className="border rounded-xl px-4 border-border/40 bg-muted/5">
-                  <AccordionTrigger className="hover:no-underline py-4" data-testid="accordion-oauth-config">
-                    <div className="flex items-center gap-2">
-                      <div className="p-1.5 rounded-lg bg-amber-500/10">
-                        <Key className="h-4 w-4 text-amber-400" />
-                      </div>
-                      <span className="text-sm font-medium">Configuration OAuth (Clés API)</span>
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="pb-4 space-y-4">
-                    <p className="text-xs text-muted-foreground">
-                      Entrez vos clés OAuth pour lier vos comptes Google Business et Facebook.
-                    </p>
-
-                    {/* Google OAuth Config */}
-                    <div className="p-4 rounded-lg border border-border/40 space-y-3">
-                      <div className="flex items-center gap-2">
-                        <SiGoogle className="h-4 w-4 text-red-500" />
-                        <span className="text-sm font-medium">Google Business</span>
-                      </div>
-                      <div className="space-y-2">
-                        <Input
-                          placeholder="Google Client ID"
-                          value={oauthForm.google.clientId}
-                          onChange={(e) => setOauthForm(prev => ({
-                            ...prev,
-                            google: { ...prev.google, clientId: e.target.value }
-                          }))}
-                          data-testid="input-google-client-id"
-                        />
-                        <Input
-                          type="password"
-                          placeholder="Google Client Secret"
-                          value={oauthForm.google.clientSecret}
-                          onChange={(e) => setOauthForm(prev => ({
-                            ...prev,
-                            google: { ...prev.google, clientSecret: e.target.value }
-                          }))}
-                          data-testid="input-google-client-secret"
-                        />
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => saveOAuthCredentials("google")}
-                          disabled={savingOAuth === "google"}
-                          data-testid="button-save-google-oauth"
-                        >
-                          {savingOAuth === "google" ? (
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          ) : (
-                            <Save className="h-4 w-4 mr-2" />
-                          )}
-                          Sauvegarder
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Facebook OAuth Config */}
-                    <div className="p-4 rounded-lg border border-border/40 space-y-3">
-                      <div className="flex items-center gap-2">
-                        <SiFacebook className="h-4 w-4 text-blue-600" />
-                        <span className="text-sm font-medium">Facebook Pages</span>
-                      </div>
-                      <div className="space-y-2">
-                        <Input
-                          placeholder="Facebook App ID"
-                          value={oauthForm.facebook.clientId}
-                          onChange={(e) => setOauthForm(prev => ({
-                            ...prev,
-                            facebook: { ...prev.facebook, clientId: e.target.value }
-                          }))}
-                          data-testid="input-facebook-app-id"
-                        />
-                        <Input
-                          type="password"
-                          placeholder="Facebook App Secret"
-                          value={oauthForm.facebook.clientSecret}
-                          onChange={(e) => setOauthForm(prev => ({
-                            ...prev,
-                            facebook: { ...prev.facebook, clientSecret: e.target.value }
-                          }))}
-                          data-testid="input-facebook-app-secret"
-                        />
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => saveOAuthCredentials("facebook")}
-                          disabled={savingOAuth === "facebook"}
-                          data-testid="button-save-facebook-oauth"
-                        >
-                          {savingOAuth === "facebook" ? (
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          ) : (
-                            <Save className="h-4 w-4 mr-2" />
-                          )}
-                          Sauvegarder
-                        </Button>
-                      </div>
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
               </Accordion>
 
               {/* Section 9: Résumé visuel */}

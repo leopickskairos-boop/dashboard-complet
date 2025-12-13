@@ -1,0 +1,66 @@
+CONTEXTE PRODUIT
+Nous développons une fonctionnalité “Avis & Réputation” permettant à une IA de lire, analyser et répondre automatiquement aux avis clients laissés sur Google Business Profile et TripAdvisor, au nom du business connecté. L’IA est déjà paramétrée. Il manque uniquement une interface de configuration côté client pour connecter ses comptes de plateformes d’avis.
+
+OBJECTIF
+Créer une section “Configuration Avis & Réputation” dans le dashboard client, permettant de connecter simplement Google Business Profile et TripAdvisor, afin que l’IA puisse récupérer les avis et publier des réponses automatiquement.
+
+STRUCTURE DE LA SECTION
+Ajouter une section dédiée intitulée “Configuration Avis & Réputation” contenant deux blocs distincts :
+- Google Business Profile
+- TripAdvisor
+
+BLOC GOOGLE BUSINESS PROFILE
+Ajouter un bouton principal :
+“Connecter mon compte Google Business”
+
+Fonctionnement attendu :
+- Lancer un flow OAuth 2.0 Google
+- Scope requis :
+https://www.googleapis.com/auth/business.manage
+- Après autorisation, stocker de manière sécurisée :
+  - access_token
+  - refresh_token
+  - account_id
+  - location_id (ou proposer une sélection si plusieurs établissements sont disponibles)
+- Afficher un statut clair :
+  - Connecté
+  - Non connecté
+  - Accès expiré (avec bouton “Reconnecter”)
+- Aucune saisie manuelle de clé ou secret côté client, tout passe par OAuth
+
+BLOC TRIPADVISOR
+Prévoir un encadré de connexion TripAdvisor permettant :
+- soit une connexion via API / identifiants TripAdvisor (si accès disponible)
+- soit un mode “en attente d’activation” si l’API n’est pas encore accessible
+
+Champs à prévoir si API disponible :
+- TripAdvisor Business ID
+- API Key ou Token (si applicable)
+
+Statut visible :
+- Connecté
+- En attente
+- Non configuré
+
+ENCADRÉ DÉROULABLE D’EXPLICATION (ACCORDION)
+Ajouter sous chaque bloc un encadré déroulable intitulé :
+“Comment connecter mon compte ?”
+
+Contenu Google Business Profile :
+“Cliquez sur ‘Connecter mon compte Google Business’. Vous serez redirigé vers Google afin d’autoriser l’accès à vos avis. Aucun mot de passe n’est stocké. L’accès est sécurisé et peut être révoqué à tout moment depuis votre compte Google.”
+
+Contenu TripAdvisor :
+“La connexion à TripAdvisor dépend de l’accès API de votre établissement. Si votre compte est éligible, renseignez les informations demandées. Sinon, notre équipe vous accompagnera pour activer la connexion dès que possible.”
+
+COMPORTEMENT ATTENDU APRÈS CONNEXION
+Une fois un compte connecté :
+- Les avis sont récupérés automatiquement
+- L’IA analyse les avis
+- L’IA génère et publie des réponses automatiquement sur la plateforme concernée
+- Aucune action manuelle n’est requise côté client
+
+CONTRAINTES UX
+- Interface simple, claire, non technique
+- Statut de connexion toujours visible
+- Possibilité de déconnecter un compte
+- Possibilité de reconnecter en cas d’expiration des accès
