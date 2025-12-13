@@ -1029,6 +1029,9 @@ export const reviewConfig = pgTable("review_config", {
   // Activation
   enabled: boolean("enabled").notNull().default(false),
   
+  // Déclenchement
+  triggerType: text("trigger_type").notNull().default("post_visit"), // 'post_visit', 'post_reservation', 'post_interaction'
+  
   // Timing d'envoi
   timingMode: text("timing_mode").notNull().default("smart"), // 'smart', 'fixed_delay', 'fixed_time'
   fixedDelayHours: integer("fixed_delay_hours").notNull().default(24),
@@ -1036,6 +1039,12 @@ export const reviewConfig = pgTable("review_config", {
   sendWindowStart: text("send_window_start").default("10:00"),
   sendWindowEnd: text("send_window_end").default("20:00"),
   avoidWeekends: boolean("avoid_weekends").notNull().default(false),
+  
+  // Méthode d'envoi
+  sendMethod: text("send_method").notNull().default("sms"), // 'sms', 'email', 'both'
+  
+  // Offre incitative par défaut
+  defaultIncentiveId: varchar("default_incentive_id"),
   
   // Informations entreprise
   companyName: text("company_name"),
