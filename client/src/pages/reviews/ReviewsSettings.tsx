@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { 
@@ -1170,16 +1171,16 @@ export default function ReviewsSettings() {
 
               <Separator className="bg-border/30" />
 
-              {/* Section 10: Connexion aux plateformes d'avis */}
+              {/* Section 10: Synchronisation des avis existants */}
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
                   <div className="p-1.5 rounded-lg bg-blue-500/10">
                     <Globe className="h-4 w-4 text-blue-500" />
                   </div>
-                  <Label className="text-sm font-medium">Connexion aux plateformes d'avis</Label>
+                  <Label className="text-sm font-medium">Synchronisation des avis existants</Label>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Connectez vos profils pour synchroniser automatiquement vos avis depuis Google, Facebook et TripAdvisor.
+                  Connectez vos profils professionnels pour récupérer vos avis existants et y répondre depuis SpeedAI. Ces connexions ne sont pas utilisées pour envoyer des liens aux clients.
                 </p>
 
                 <div className="grid gap-4">
@@ -1256,7 +1257,7 @@ export default function ReviewsSettings() {
                         {googleSource && googleSource.lastSyncAt && (
                           <p className="text-xs text-muted-foreground mt-2">
                             Dernière sync: {new Date(googleSource.lastSyncAt).toLocaleString("fr-FR")}
-                            {googleSource.reviewCount !== null && ` • ${googleSource.reviewCount} avis`}
+                            {googleSource.totalReviewsCount !== null && ` • ${googleSource.totalReviewsCount} avis`}
                           </p>
                         )}
                       </div>
@@ -1336,7 +1337,7 @@ export default function ReviewsSettings() {
                         {facebookSource && facebookSource.lastSyncAt && (
                           <p className="text-xs text-muted-foreground mt-2">
                             Dernière sync: {new Date(facebookSource.lastSyncAt).toLocaleString("fr-FR")}
-                            {facebookSource.reviewCount !== null && ` • ${facebookSource.reviewCount} avis`}
+                            {facebookSource.totalReviewsCount !== null && ` • ${facebookSource.totalReviewsCount} avis`}
                           </p>
                         )}
                       </div>
@@ -1431,7 +1432,7 @@ export default function ReviewsSettings() {
                         {tripadvisorSource && tripadvisorSource.lastSyncAt && (
                           <p className="text-xs text-muted-foreground mt-2">
                             Dernière sync: {new Date(tripadvisorSource.lastSyncAt).toLocaleString("fr-FR")}
-                            {tripadvisorSource.reviewCount !== null && ` • ${tripadvisorSource.reviewCount} avis`}
+                            {tripadvisorSource.totalReviewsCount !== null && ` • ${tripadvisorSource.totalReviewsCount} avis`}
                           </p>
                         )}
                       </div>
