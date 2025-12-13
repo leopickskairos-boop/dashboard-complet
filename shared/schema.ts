@@ -1090,6 +1090,14 @@ export const reviewConfig = pgTable("review_config", {
   aiAutoGenerate: boolean("ai_auto_generate").notNull().default(true), // Génère automatiquement lors du sync
   aiIncludeCompanyName: boolean("ai_include_company_name").notNull().default(true),
   aiMaxLength: integer("ai_max_length").notNull().default(300), // Longueur max en caractères
+  aiAutoPost: boolean("ai_auto_post").notNull().default(false), // Publier automatiquement les réponses sur les plateformes
+  
+  // Message de remerciement après confirmation d'avis
+  thankYouEnabled: boolean("thank_you_enabled").notNull().default(true),
+  thankYouSendMethod: text("thank_you_send_method").notNull().default("both"), // 'sms', 'email', 'both'
+  thankYouSmsMessage: text("thank_you_sms_message"),
+  thankYouEmailSubject: text("thank_you_email_subject"),
+  thankYouEmailMessage: text("thank_you_email_message"),
   
   // Timestamps
   createdAt: timestamp("created_at").notNull().defaultNow(),

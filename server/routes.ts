@@ -46,6 +46,7 @@ import { registerMarketingRoutes } from "./marketing-routes";
 import integrationRoutes from "./integration-routes";
 import { sendCardRequestEmail, sendConfirmationEmail, isEmailConfigured } from "./services/guarantee-email.service";
 import { sendGuaranteeCardRequestSms, sendGuaranteeConfirmationSms, isSmsConfigured } from "./services/twilio-sms.service";
+import { sendThankYouMessage } from "./services/review-thank-you.service";
 
 // Extend Express Request type to include user property
 declare global {
@@ -6111,9 +6112,10 @@ Réponds en JSON avec ce format exact:
       }
       
       let promoCode: string | null = null;
+      let incentive = null;
       
       if (request.incentiveId) {
-        const incentive = await storage.getReviewIncentiveById(request.incentiveId, request.userId);
+        incentive = await storage.getReviewIncentiveById(request.incentiveId, request.userId);
         if (incentive) {
           promoCode = `MERCI-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
         }
@@ -6125,6 +6127,15 @@ Réponds en JSON avec ce format exact:
         promoCode,
         status: 'confirmed',
       });
+      
+      // Envoyer le message de remerciement avec le code promo
+      const config = await storage.getReviewConfig(request.userId);
+      if (config) {
+        const updatedRequest = { ...request, promoCode };
+        sendThankYouMessage(updatedRequest, config, incentive).catch((err) => {
+          console.error("[Reviews] Thank you message failed:", err);
+        });
+      }
       
       res.json({ 
         success: true, 

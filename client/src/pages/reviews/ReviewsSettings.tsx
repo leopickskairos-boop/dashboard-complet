@@ -86,6 +86,12 @@ export default function ReviewsSettings() {
     aiMaxLength: 300,
     aiAutoGenerate: true,
     aiIncludeCompanyName: true,
+    // Thank You message settings
+    thankYouEnabled: true,
+    thankYouSendMethod: "both",
+    thankYouSmsMessage: "",
+    thankYouEmailSubject: "",
+    thankYouEmailMessage: "",
   });
 
   const [newIncentive, setNewIncentive] = useState({
@@ -132,6 +138,12 @@ export default function ReviewsSettings() {
         aiMaxLength: config.aiMaxLength || 300,
         aiAutoGenerate: config.aiAutoGenerate ?? true,
         aiIncludeCompanyName: config.aiIncludeCompanyName ?? true,
+        // Thank You message settings
+        thankYouEnabled: config.thankYouEnabled ?? true,
+        thankYouSendMethod: config.thankYouSendMethod || "both",
+        thankYouSmsMessage: config.thankYouSmsMessage || "",
+        thankYouEmailSubject: config.thankYouEmailSubject || "",
+        thankYouEmailMessage: config.thankYouEmailMessage || "",
       }));
     }
   }, [config]);
@@ -220,6 +232,11 @@ export default function ReviewsSettings() {
       aiMaxLength: localConfig.aiMaxLength,
       aiAutoGenerate: localConfig.aiAutoGenerate,
       aiIncludeCompanyName: localConfig.aiIncludeCompanyName,
+      thankYouEnabled: localConfig.thankYouEnabled,
+      thankYouSendMethod: localConfig.thankYouSendMethod,
+      thankYouSmsMessage: localConfig.thankYouSmsMessage,
+      thankYouEmailSubject: localConfig.thankYouEmailSubject,
+      thankYouEmailMessage: localConfig.thankYouEmailMessage,
     });
   };
 
@@ -853,7 +870,108 @@ export default function ReviewsSettings() {
 
               <Separator className="bg-border/30" />
 
-              {/* Section 7: Réponses IA aux avis */}
+              {/* Section 7: Message de remerciement */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 rounded-xl border border-border/40 bg-muted/20">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-pink-500/10">
+                      <Gift className="h-5 w-5 text-pink-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">Message de remerciement</p>
+                      <p className="text-xs text-muted-foreground">Envoi automatique après confirmation d'avis avec code promo</p>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={localConfig.thankYouEnabled}
+                    onCheckedChange={(value) => setLocalConfig(prev => ({ ...prev, thankYouEnabled: value }))}
+                    data-testid="switch-thank-you-enabled"
+                  />
+                </div>
+
+                {localConfig.thankYouEnabled && (
+                  <div className="space-y-4 pl-4 border-l-2 border-pink-500/30 ml-4">
+                    <div className="space-y-2">
+                      <Label className="text-xs">Méthode d'envoi du remerciement</Label>
+                      <Select
+                        value={localConfig.thankYouSendMethod}
+                        onValueChange={(value) => setLocalConfig(prev => ({ ...prev, thankYouSendMethod: value }))}
+                      >
+                        <SelectTrigger data-testid="select-thank-you-method">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {SEND_METHODS.map((method) => (
+                            <SelectItem key={method.value} value={method.value}>
+                              <div className="flex items-center gap-2">
+                                <method.icon className="h-4 w-4" />
+                                <span>{method.label}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {(localConfig.thankYouSendMethod === "sms" || localConfig.thankYouSendMethod === "both") && (
+                      <div className="space-y-2">
+                        <Label className="text-xs">Message SMS de remerciement</Label>
+                        <Textarea
+                          value={localConfig.thankYouSmsMessage}
+                          onChange={(e) => setLocalConfig(prev => ({ ...prev, thankYouSmsMessage: e.target.value }))}
+                          placeholder="Ex: Merci {prenom} pour votre avis ! Votre code promo: {code_promo}. L'équipe {entreprise}"
+                          rows={3}
+                          data-testid="textarea-thank-you-sms"
+                        />
+                        <p className="text-[10px] text-muted-foreground">
+                          Variables: {"{prenom}"}, {"{nom}"}, {"{code_promo}"}, {"{entreprise}"}. Laissez vide pour le message par défaut.
+                        </p>
+                      </div>
+                    )}
+
+                    {(localConfig.thankYouSendMethod === "email" || localConfig.thankYouSendMethod === "both") && (
+                      <>
+                        <div className="space-y-2">
+                          <Label className="text-xs">Objet de l'email</Label>
+                          <Input
+                            value={localConfig.thankYouEmailSubject}
+                            onChange={(e) => setLocalConfig(prev => ({ ...prev, thankYouEmailSubject: e.target.value }))}
+                            placeholder="Ex: Merci pour votre avis - {entreprise}"
+                            data-testid="input-thank-you-email-subject"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-xs">Contenu de l'email (HTML)</Label>
+                          <Textarea
+                            value={localConfig.thankYouEmailMessage}
+                            onChange={(e) => setLocalConfig(prev => ({ ...prev, thankYouEmailMessage: e.target.value }))}
+                            placeholder="Laissez vide pour utiliser le template par défaut avec design professionnel"
+                            rows={4}
+                            data-testid="textarea-thank-you-email"
+                          />
+                          <p className="text-[10px] text-muted-foreground">
+                            Variables: {"{prenom}"}, {"{nom}"}, {"{code_promo}"}, {"{entreprise}"}. Laissez vide pour le template par défaut.
+                          </p>
+                        </div>
+                      </>
+                    )}
+
+                    <div className="p-3 rounded-lg bg-pink-500/5 border border-pink-500/20">
+                      <div className="flex items-start gap-2">
+                        <Info className="h-4 w-4 text-pink-400 mt-0.5 shrink-0" />
+                        <p className="text-xs text-muted-foreground">
+                          Ce message est envoyé automatiquement lorsqu'un client confirme avoir laissé un avis. 
+                          Le code promo généré est inclus dans le message.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <Separator className="bg-border/30" />
+
+              {/* Section 8: Réponses IA aux avis */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between p-4 rounded-xl border border-border/40 bg-muted/20">
                   <div className="flex items-center gap-3">
@@ -965,7 +1083,7 @@ export default function ReviewsSettings() {
 
               <Separator className="bg-border/30" />
 
-              {/* Section 8: Résumé visuel */}
+              {/* Section 9: Résumé visuel */}
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <div className="p-1.5 rounded-lg bg-[#4CEFAD]/10">
