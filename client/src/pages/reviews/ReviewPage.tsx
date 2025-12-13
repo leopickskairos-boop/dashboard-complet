@@ -3,7 +3,7 @@ import { useParams } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Star, ExternalLink, Loader2, CheckCircle2, Gift, Copy, Check, Utensils, Stethoscope, MapPin } from "lucide-react";
-import { SiGoogle, SiFacebook, SiTripadvisor, SiYelp, SiThefork } from "react-icons/si";
+import { SiGoogle, SiFacebook, SiTripadvisor, SiYelp } from "react-icons/si";
 
 interface PlatformData {
   platforms: {
@@ -116,7 +116,7 @@ export default function ReviewPage() {
         bgColor: "bg-[#D32323]",
       },
       theFork: {
-        icon: <SiThefork className="h-6 w-6" />,
+        icon: <Utensils className="h-6 w-6" />,
         name: "TheFork",
         color: "text-white",
         bgColor: "bg-[#00665C]",
