@@ -7206,10 +7206,25 @@ Réponds en JSON avec ce format exact:
     try {
       const userId = req.user!.id;
 
+      // First check user-specific credentials
+      const userConfig = await storage.getUserOAuthConfig(userId, "facebook");
+      let facebookAppId: string | undefined;
+      let facebookAppSecret: string | undefined;
+
+      if (userConfig) {
+        const { decryptCredential } = await import("./utils/credential-encryption");
+        facebookAppId = userConfig.clientId;
+        facebookAppSecret = decryptCredential(userConfig.encryptedClientSecret);
+      } else {
+        // Fallback to environment variables
+        facebookAppId = process.env.FACEBOOK_APP_ID;
+        facebookAppSecret = process.env.FACEBOOK_APP_SECRET;
+      }
+
       // Check if OAuth is configured
-      if (!process.env.FACEBOOK_APP_ID || !process.env.FACEBOOK_APP_SECRET) {
+      if (!facebookAppId || !facebookAppSecret) {
         return res.status(503).json({ 
-          message: "OAuth Facebook non configuré",
+          message: "OAuth Facebook non configuré. Veuillez configurer vos clés OAuth dans les paramètres.",
           setupRequired: true,
           requiredSecrets: ['FACEBOOK_APP_ID', 'FACEBOOK_APP_SECRET']
         });
@@ -7221,7 +7236,7 @@ Réponds en JSON avec ce format exact:
       const redirectUri = `${frontendUrl}/api/reviews/oauth/facebook/callback`;
       const state = Buffer.from(JSON.stringify({ userId })).toString('base64');
 
-      const authUrl = generateFacebookOAuthUrl(redirectUri, state);
+      const authUrl = generateFacebookOAuthUrl(redirectUri, state, facebookAppId);
       
       res.json({ authUrl });
     } catch (error: any) {
@@ -7257,19 +7272,39 @@ Réponds en JSON avec ce format exact:
         return res.redirect('/reviews/settings?error=no_user');
       }
 
+      // Get user-specific or fallback credentials
+      const userConfig = await storage.getUserOAuthConfig(userId, "facebook");
+      let facebookAppId: string | undefined;
+      let facebookAppSecret: string | undefined;
+
+      if (userConfig) {
+        const { decryptCredential } = await import("./utils/credential-encryption");
+        facebookAppId = userConfig.clientId;
+        facebookAppSecret = decryptCredential(userConfig.encryptedClientSecret);
+      } else {
+        facebookAppId = process.env.FACEBOOK_APP_ID;
+        facebookAppSecret = process.env.FACEBOOK_APP_SECRET;
+      }
+
+      // Guard: ensure credentials are available
+      if (!facebookAppId || !facebookAppSecret) {
+        console.error("[FacebookOAuth] No credentials available for token exchange");
+        return res.redirect('/reviews/settings?error=oauth_not_configured');
+      }
+
       const { exchangeFacebookAuthCode, getLongLivedToken, FacebookPagesService } = await import('./services/facebook-pages');
       
       const frontendUrl = process.env.FRONTEND_URL || `https://${req.headers.host}`;
       const redirectUri = `${frontendUrl}/api/reviews/oauth/facebook/callback`;
 
-      const shortLivedToken = await exchangeFacebookAuthCode(code as string, redirectUri);
+      const shortLivedToken = await exchangeFacebookAuthCode(code as string, redirectUri, facebookAppId, facebookAppSecret);
       
       if (!shortLivedToken) {
         return res.redirect('/reviews/settings?error=token_exchange_failed');
       }
 
       // Exchange for long-lived token
-      const longLivedToken = await getLongLivedToken(shortLivedToken.accessToken);
+      const longLivedToken = await getLongLivedToken(shortLivedToken.accessToken, facebookAppId, facebookAppSecret);
       const finalToken = longLivedToken || shortLivedToken;
 
       // Get user's pages

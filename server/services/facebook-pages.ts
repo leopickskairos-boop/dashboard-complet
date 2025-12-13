@@ -214,14 +214,19 @@ export const FACEBOOK_OAUTH_CONFIG = {
   tokenUrl: 'https://graph.facebook.com/v18.0/oauth/access_token',
 };
 
-export async function exchangeFacebookAuthCode(code: string, redirectUri: string): Promise<{
+export async function exchangeFacebookAuthCode(
+  code: string, 
+  redirectUri: string,
+  appId?: string,
+  appSecret?: string
+): Promise<{
   accessToken: string;
   expiresIn: number;
 } | null> {
   try {
     const url = new URL(FACEBOOK_OAUTH_CONFIG.tokenUrl);
-    url.searchParams.set('client_id', FACEBOOK_OAUTH_CONFIG.appId);
-    url.searchParams.set('client_secret', FACEBOOK_OAUTH_CONFIG.appSecret);
+    url.searchParams.set('client_id', appId || FACEBOOK_OAUTH_CONFIG.appId);
+    url.searchParams.set('client_secret', appSecret || FACEBOOK_OAUTH_CONFIG.appSecret);
     url.searchParams.set('redirect_uri', redirectUri);
     url.searchParams.set('code', code);
 
@@ -244,15 +249,19 @@ export async function exchangeFacebookAuthCode(code: string, redirectUri: string
   }
 }
 
-export async function getLongLivedToken(shortLivedToken: string): Promise<{
+export async function getLongLivedToken(
+  shortLivedToken: string,
+  appId?: string,
+  appSecret?: string
+): Promise<{
   accessToken: string;
   expiresIn: number;
 } | null> {
   try {
     const url = new URL(FACEBOOK_OAUTH_CONFIG.tokenUrl);
     url.searchParams.set('grant_type', 'fb_exchange_token');
-    url.searchParams.set('client_id', FACEBOOK_OAUTH_CONFIG.appId);
-    url.searchParams.set('client_secret', FACEBOOK_OAUTH_CONFIG.appSecret);
+    url.searchParams.set('client_id', appId || FACEBOOK_OAUTH_CONFIG.appId);
+    url.searchParams.set('client_secret', appSecret || FACEBOOK_OAUTH_CONFIG.appSecret);
     url.searchParams.set('fb_exchange_token', shortLivedToken);
 
     const response = await fetch(url.toString());
@@ -274,9 +283,9 @@ export async function getLongLivedToken(shortLivedToken: string): Promise<{
   }
 }
 
-export function generateFacebookOAuthUrl(redirectUri: string, state: string): string {
+export function generateFacebookOAuthUrl(redirectUri: string, state: string, appId?: string): string {
   const params = new URLSearchParams({
-    client_id: FACEBOOK_OAUTH_CONFIG.appId,
+    client_id: appId || FACEBOOK_OAUTH_CONFIG.appId,
     redirect_uri: redirectUri,
     response_type: 'code',
     scope: FACEBOOK_OAUTH_CONFIG.scopes.join(','),

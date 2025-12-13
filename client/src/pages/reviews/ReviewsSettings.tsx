@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { 
   Settings, Clock, MessageSquare, Loader2, Save, AlertCircle, Gift, Plus, Trash2, Star, Percent, Coffee, Tag, 
-  Zap, Mail, Phone, Power, Sparkles, CheckCircle2, Calendar, Info, Send, Bot, Link2, ExternalLink, RefreshCw, Unlink, Globe
+  Zap, Mail, Phone, Power, Sparkles, CheckCircle2, Calendar, Info, Send, Bot, Link2, ExternalLink, RefreshCw, Unlink, Globe, Key
 } from "lucide-react";
 import { SiGoogle, SiFacebook, SiTripadvisor } from "react-icons/si";
 import type { ReviewConfig, ReviewIncentive, ReviewSource } from "@shared/schema";
@@ -132,6 +132,80 @@ export default function ReviewsSettings() {
   const { data: oauthStatus } = useQuery<OAuthStatus>({
     queryKey: ["/api/reviews/oauth/status"],
   });
+
+  // OAuth credentials query
+  interface OAuthCredentials {
+    google?: { clientId: string; label?: string; createdAt: string };
+    facebook?: { clientId: string; label?: string; createdAt: string };
+  }
+  const { data: oauthCredentials, refetch: refetchCredentials } = useQuery<OAuthCredentials>({
+    queryKey: ["/api/reviews/oauth/credentials"],
+  });
+
+  // OAuth config state
+  const [oauthForm, setOauthForm] = useState<{
+    google: { clientId: string; clientSecret: string };
+    facebook: { clientId: string; clientSecret: string };
+  }>({
+    google: { clientId: "", clientSecret: "" },
+    facebook: { clientId: "", clientSecret: "" },
+  });
+
+  const [savingOAuth, setSavingOAuth] = useState<string | null>(null);
+
+  const saveOAuthCredentials = async (provider: "google" | "facebook") => {
+    const creds = oauthForm[provider];
+    if (!creds.clientId.trim() || !creds.clientSecret.trim()) {
+      toast({
+        title: "Champs requis",
+        description: "Veuillez remplir Client ID et Client Secret.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setSavingOAuth(provider);
+    try {
+      await apiRequest("POST", "/api/reviews/oauth/credentials", {
+        provider,
+        clientId: creds.clientId,
+        clientSecret: creds.clientSecret,
+      });
+      refetchCredentials();
+      setOauthForm(prev => ({
+        ...prev,
+        [provider]: { clientId: "", clientSecret: "" },
+      }));
+      toast({
+        title: "Credentials sauvegardés",
+        description: `Vos clés ${provider === "google" ? "Google" : "Facebook"} ont été enregistrées.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: error.message || "Impossible de sauvegarder les credentials.",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingOAuth(null);
+    }
+  };
+
+  const deleteOAuthCredentials = async (provider: "google" | "facebook") => {
+    try {
+      await apiRequest("DELETE", `/api/reviews/oauth/credentials/${provider}`);
+      refetchCredentials();
+      toast({
+        title: "Credentials supprimés",
+        description: `Vos clés ${provider === "google" ? "Google" : "Facebook"} ont été supprimées.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: error.message || "Impossible de supprimer les credentials.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const [tripadvisorUrl, setTripadvisorUrl] = useState("");
   const [tripadvisorName, setTripadvisorName] = useState("");
@@ -1584,6 +1658,160 @@ export default function ReviewsSettings() {
                     );
                   })()}
                       </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* OAuth Config Section */}
+                <AccordionItem value="oauth-config" className="border rounded-xl px-4 border-border/40 bg-muted/5">
+                  <AccordionTrigger className="hover:no-underline py-4" data-testid="accordion-oauth-config">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 rounded-lg bg-amber-500/10">
+                        <Key className="h-4 w-4 text-amber-400" />
+                      </div>
+                      <span className="text-sm font-medium">Configuration OAuth (Clés API)</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-4 space-y-4">
+                    <p className="text-xs text-muted-foreground">
+                      Configurez vos propres clés OAuth pour connecter Google Business et Facebook.
+                      Cela vous permet d'utiliser vos propres applications OAuth.
+                    </p>
+
+                    {/* Google OAuth Config */}
+                    <div className="p-4 rounded-lg border border-border/40 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <SiGoogle className="h-4 w-4 text-red-500" />
+                          <span className="text-sm font-medium">Google Business</span>
+                        </div>
+                        {oauthCredentials?.google && (
+                          <Badge variant="outline" className="text-green-600 border-green-600/30">
+                            Configuré
+                          </Badge>
+                        )}
+                      </div>
+                      {oauthCredentials?.google ? (
+                        <div className="flex items-center justify-between p-2 rounded bg-muted/30">
+                          <div>
+                            <p className="text-xs text-muted-foreground">Client ID</p>
+                            <p className="text-sm font-mono">{oauthCredentials.google.clientId.slice(0, 30)}...</p>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => deleteOAuthCredentials("google")}
+                            data-testid="button-delete-google-oauth"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <Input
+                            placeholder="Google Client ID"
+                            value={oauthForm.google.clientId}
+                            onChange={(e) => setOauthForm(prev => ({
+                              ...prev,
+                              google: { ...prev.google, clientId: e.target.value }
+                            }))}
+                            data-testid="input-google-client-id"
+                          />
+                          <Input
+                            type="password"
+                            placeholder="Google Client Secret"
+                            value={oauthForm.google.clientSecret}
+                            onChange={(e) => setOauthForm(prev => ({
+                              ...prev,
+                              google: { ...prev.google, clientSecret: e.target.value }
+                            }))}
+                            data-testid="input-google-client-secret"
+                          />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => saveOAuthCredentials("google")}
+                            disabled={savingOAuth === "google"}
+                            data-testid="button-save-google-oauth"
+                          >
+                            {savingOAuth === "google" ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <Save className="h-4 w-4 mr-2" />
+                            )}
+                            Sauvegarder
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Facebook OAuth Config */}
+                    <div className="p-4 rounded-lg border border-border/40 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <SiFacebook className="h-4 w-4 text-blue-600" />
+                          <span className="text-sm font-medium">Facebook Pages</span>
+                        </div>
+                        {oauthCredentials?.facebook && (
+                          <Badge variant="outline" className="text-green-600 border-green-600/30">
+                            Configuré
+                          </Badge>
+                        )}
+                      </div>
+                      {oauthCredentials?.facebook ? (
+                        <div className="flex items-center justify-between p-2 rounded bg-muted/30">
+                          <div>
+                            <p className="text-xs text-muted-foreground">App ID</p>
+                            <p className="text-sm font-mono">{oauthCredentials.facebook.clientId.slice(0, 30)}...</p>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => deleteOAuthCredentials("facebook")}
+                            data-testid="button-delete-facebook-oauth"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <Input
+                            placeholder="Facebook App ID"
+                            value={oauthForm.facebook.clientId}
+                            onChange={(e) => setOauthForm(prev => ({
+                              ...prev,
+                              facebook: { ...prev.facebook, clientId: e.target.value }
+                            }))}
+                            data-testid="input-facebook-app-id"
+                          />
+                          <Input
+                            type="password"
+                            placeholder="Facebook App Secret"
+                            value={oauthForm.facebook.clientSecret}
+                            onChange={(e) => setOauthForm(prev => ({
+                              ...prev,
+                              facebook: { ...prev.facebook, clientSecret: e.target.value }
+                            }))}
+                            data-testid="input-facebook-app-secret"
+                          />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => saveOAuthCredentials("facebook")}
+                            disabled={savingOAuth === "facebook"}
+                            data-testid="button-save-facebook-oauth"
+                          >
+                            {savingOAuth === "facebook" ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <Save className="h-4 w-4 mr-2" />
+                            )}
+                            Sauvegarder
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </AccordionContent>
                 </AccordionItem>
