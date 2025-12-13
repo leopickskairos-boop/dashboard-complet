@@ -1,0 +1,99 @@
+Voici comment procéder pour configurer correctement votre projet :
+
+1. Installation des dépendances
+
+Dans votre terminal local, placez‑vous à la racine du projet et lancez :
+
+npm install
+
+
+Cela installera toutes les dépendances nécessaires pour le serveur et le client.
+
+2. Création du fichier .env
+
+Créez un fichier nommé .env à la racine du dépôt (là où se trouvent les dossiers client, server, etc.). Ce fichier est ignoré par Git grâce à l’entrée correspondante dans le .gitignore, il ne sera donc jamais poussé sur GitHub.
+
+Remplissez‑le avec les variables suivantes :
+
+# BASE DE DONNÉES POSTGRESQL
+DATABASE_URL=
+PGHOST=
+PGPORT=5432
+PGUSER=
+PGPASSWORD=
+PGDATABASE=
+
+# SESSION
+SESSION_SECRET=
+
+# STRIPE PRODUCTION
+STRIPE_SECRET_KEY=
+VITE_STRIPE_PUBLIC_KEY=
+STRIPE_WEBHOOK_SECRET=
+STRIPE_PRICE_ID=
+STRIPE_CONNECT_CLIENT_ID=
+
+# STRIPE TEST
+TESTING_STRIPE_SECRET_KEY=
+TESTING_VITE_STRIPE_PUBLIC_KEY=
+
+# EMAIL SMTP GMAIL
+SMTP_USER=
+SMTP_PASSWORD=
+
+# RESEND
+RESEND_API_KEY=
+
+# TWILIO SMS
+TWILIO_ACCOUNT_SID=AC668734744ce27846303d6cc3f58b754e
+TWILIO_AUTH_TOKEN=9488f2416855f08570dffbb78271e794
+TWILIO_FROM_NUMBER=+33939035391
+
+# VAPID PUSH NOTIFICATIONS
+VAPID_PUBLIC_KEY=BBm_Z2AMWybXAkTUpGGMdb4_hWLiNKNbozGmNBpY1PBEycJ9df2d-YppyjRkTRsO18IjhTsasstwVhATOpAHLdU
+VITE_VAPID_PUBLIC_KEY=BBm_Z2AMWybXAkTUpGGMdb4_hWLiNKNbozGmNBpY1PBEycJ9df2d-YppyjRkTRsO18IjhTsasstwVhATOpAHLdU
+VAPID_PRIVATE_KEY=
+
+# N8N
+N8N_WEBHOOK_CB_VALIDEE=https://djeydejy.app.n8n.cloud/webhook/garantie-nouvelle-resa
+N8N_MASTER_API_KEY=
+
+# OPENAI
+AI_INTEGRATIONS_OPENAI_BASE_URL=https://api.openai.com/v1
+AI_INTEGRATIONS_OPENAI_API_KEY=
+
+
+Pour chaque champ vide, récupérez la valeur adéquate depuis vos dashboards (Neon/Supabase/Railway pour la base, Stripe pour les clés, Twilio pour la clé privée, Resend pour les e‑mails, etc.) et complétez‑la dans le fichier. Assurez‑vous que chaque valeur est correctement copiée et qu’il n’y a pas d’espaces superflus.
+
+3. Configuration de la base de données
+
+Vous avez deux possibilités :
+
+Nouvelle base : créez un nouvel espace de base de données PostgreSQL sur Neon
+, Supabase ou Railway. Copiez la DATABASE_URL et mettez à jour les variables PGHOST, PGUSER, PGPASSWORD, PGDATABASE. Ensuite exécutez :
+
+npm run db:push
+
+
+Cela synchronisera le schéma Drizzle avec la base.
+
+Base existante Replit : si vous avez déjà une base de données fournie par Replit, ouvrez l’onglet “Secrets” dans Replit, récupérez les valeurs PGHOST, PGUSER, PGPASSWORD et PGDATABASE, puis mettez‑les dans votre .env.
+
+4. Lancement de l’application
+
+Une fois les dépendances installées et la base de données configurée, démarrez l’environnement de développement :
+
+npm run dev
+
+
+L’application sera accessible via http://localhost:5000.
+
+5. Vérifications
+
+Vérifiez que le fichier .env est bien listé dans votre .gitignore.
+
+Assurez‑vous que les clés et tokens renseignés sont corrects.
+
+Si vous prévoyez de tester les webhooks Stripe localement, préparez un tunnel avec ngrok pour recevoir les notifications de paiement.
+
+Ainsi configurée, la plateforme pourra gérer l’authentification, les abonnements, l’envoi d’e‑mails et de SMS, les intégrations (HubSpot/Stripe), et toutes les autres fonctionnalités prévues. N’hésitez pas à me communiquer les valeurs spécifiques si vous avez besoin d’aide pour les insérer dans le fichier .env.
