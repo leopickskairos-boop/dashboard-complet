@@ -34,6 +34,7 @@ import {
   n8nLogSchema,
   n8nLogFiltersSchema,
   n8nCallWebhookSchema,
+  insertReviewAutomationSchema,
 } from "@shared/schema";
 import { z } from "zod";
 import {
@@ -6609,6 +6610,92 @@ Format: Utilise des bullet points et reste concis (max 200 mots).`;
       });
     } catch (error: any) {
       console.error("[ReviewSources] Sync-all error:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // ===== REVIEW AUTOMATIONS ROUTES =====
+
+  // Get all automations for user
+  app.get("/api/reviews/automations", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const automations = await storage.getReviewAutomations(userId);
+      res.json(automations);
+    } catch (error: any) {
+      console.error("[ReviewAutomations] Error fetching automations:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // Create automation
+  app.post("/api/reviews/automations", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const data = insertReviewAutomationSchema.parse({
+        ...req.body,
+        userId,
+      });
+      
+      const automation = await storage.createReviewAutomation(data);
+      res.json(automation);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Données invalides", errors: error.errors });
+      }
+      console.error("[ReviewAutomations] Error creating automation:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // Update automation
+  app.put("/api/reviews/automations/:id", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { id } = req.params;
+      
+      const automation = await storage.updateReviewAutomation(id, userId, req.body);
+      
+      if (!automation) {
+        return res.status(404).json({ message: "Automation non trouvée" });
+      }
+      
+      res.json(automation);
+    } catch (error: any) {
+      console.error("[ReviewAutomations] Error updating automation:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // Delete automation
+  app.delete("/api/reviews/automations/:id", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { id } = req.params;
+      
+      await storage.deleteReviewAutomation(id, userId);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("[ReviewAutomations] Error deleting automation:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
+  // Toggle automation active status
+  app.post("/api/reviews/automations/:id/toggle", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { id } = req.params;
+      
+      const automation = await storage.toggleReviewAutomation(id, userId);
+      
+      if (!automation) {
+        return res.status(404).json({ message: "Automation non trouvée" });
+      }
+      
+      res.json(automation);
+    } catch (error: any) {
+      console.error("[ReviewAutomations] Error toggling automation:", error);
       res.status(500).json({ message: "Erreur serveur" });
     }
   });
