@@ -67,7 +67,7 @@ Plateforme: ${review.platform}
 Note: ${rating}/5
 Sentiment détecté: ${sentiment}
 Nom du client: ${reviewerName}
-Contenu de l'avis: "${review.reviewText || "Pas de commentaire"}"
+Contenu de l'avis: "${review.content || "Pas de commentaire"}"
 
 Réponds au format JSON avec deux champs:
 - "response": la réponse à publier (max ${maxLength} caractères)
@@ -131,7 +131,7 @@ Règles importantes:
 
 Note: ${rating}/5
 Nom du client: ${reviewerName}
-Contenu de l'avis: "${review.reviewText || "Pas de commentaire"}"
+Contenu de l'avis: "${review.content || "Pas de commentaire"}"
 ${previousResponse ? `\nRéponse précédente (à éviter de reproduire): "${previousResponse}"` : ""}
 
 Réponds uniquement avec la nouvelle réponse, sans formatage JSON.`;
