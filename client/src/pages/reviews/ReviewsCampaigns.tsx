@@ -56,8 +56,8 @@ export default function ReviewsCampaigns() {
   
   // États pour la sélection automatique
   const [autoFilters, setAutoFilters] = useState({
-    segmentId: "",
-    source: "",
+    segmentId: "_all",
+    source: "_all",
     optInEmail: false,
     optInSms: false,
   });
@@ -78,8 +78,8 @@ export default function ReviewsCampaigns() {
   // Construire l'URL avec les filtres
   const buildEligibleContactsUrl = () => {
     const params = new URLSearchParams();
-    if (autoFilters.segmentId) params.append('segmentId', autoFilters.segmentId);
-    if (autoFilters.source) params.append('source', autoFilters.source);
+    if (autoFilters.segmentId && autoFilters.segmentId !== "_all") params.append('segmentId', autoFilters.segmentId);
+    if (autoFilters.source && autoFilters.source !== "_all") params.append('source', autoFilters.source);
     if (autoFilters.optInEmail) params.append('optInEmail', 'true');
     if (autoFilters.optInSms) params.append('optInSms', 'true');
     return `/api/reviews/requests/eligible-contacts?${params.toString()}`;
@@ -311,7 +311,7 @@ export default function ReviewsCampaigns() {
                           <SelectValue placeholder="Tous les contacts" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Tous les contacts</SelectItem>
+                          <SelectItem value="_all">Tous les contacts</SelectItem>
                           {segments?.map((seg) => (
                             <SelectItem key={seg.id} value={seg.id}>
                               {seg.name} ({seg.contactCount || 0})
@@ -330,7 +330,7 @@ export default function ReviewsCampaigns() {
                           <SelectValue placeholder="Toutes les sources" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Toutes les sources</SelectItem>
+                          <SelectItem value="_all">Toutes les sources</SelectItem>
                           <SelectItem value="speedai">SpeedAI</SelectItem>
                           <SelectItem value="crm">CRM</SelectItem>
                           <SelectItem value="import">Import CSV</SelectItem>

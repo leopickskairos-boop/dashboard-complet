@@ -429,14 +429,14 @@ export default function MarketingSegments() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Source</FormLabel>
-                      <Select value={field.value || ''} onValueChange={(v) => field.onChange(v || undefined)}>
+                      <Select value={field.value || '_all'} onValueChange={(v) => field.onChange(v === '_all' ? undefined : v)}>
                         <FormControl>
                           <SelectTrigger data-testid="select-source">
                             <SelectValue placeholder="Toutes les sources" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">Toutes</SelectItem>
+                          <SelectItem value="_all">Toutes</SelectItem>
                           <SelectItem value="import">Import CSV</SelectItem>
                           <SelectItem value="manual">Saisie manuelle</SelectItem>
                           <SelectItem value="speedai">SpeedAI</SelectItem>

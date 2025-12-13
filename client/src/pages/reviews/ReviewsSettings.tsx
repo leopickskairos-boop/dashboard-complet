@@ -569,7 +569,7 @@ function AutomationsSection() {
     daysAfter: 3,
     sendTime: "10:00",
     sendMethod: "both",
-    incentiveId: "",
+    incentiveId: "_none",
     isActive: false,
   });
 
@@ -644,7 +644,7 @@ function AutomationsSection() {
       daysAfter: 3,
       sendTime: "10:00",
       sendMethod: "both",
-      incentiveId: "",
+      incentiveId: "_none",
       isActive: false,
     });
     setEditingAutomation(null);
@@ -660,7 +660,7 @@ function AutomationsSection() {
       daysAfter: triggerConfig?.daysAfter || 3,
       sendTime: triggerConfig?.sendTime || "10:00",
       sendMethod: automation.sendMethod,
-      incentiveId: automation.incentiveId || "",
+      incentiveId: automation.incentiveId || "_none",
       isActive: automation.isActive,
     });
     setShowDialog(true);
@@ -677,7 +677,7 @@ function AutomationsSection() {
         sendTime: formData.sendTime,
       } : null,
       sendMethod: formData.sendMethod,
-      incentiveId: formData.incentiveId || null,
+      incentiveId: formData.incentiveId && formData.incentiveId !== "_none" ? formData.incentiveId : null,
       isActive: formData.isActive,
     };
 
@@ -937,7 +937,7 @@ function AutomationsSection() {
                         <SelectValue placeholder="Aucune incitation" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Aucune</SelectItem>
+                        <SelectItem value="_none">Aucune</SelectItem>
                         {incentives.filter(i => i.isActive).map((incentive) => (
                           <SelectItem key={incentive.id} value={incentive.id}>
                             {incentive.displayMessage || incentive.type}
