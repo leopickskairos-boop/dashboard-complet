@@ -6980,10 +6980,7 @@ Réponds en JSON avec ce format exact:
   // Google OAuth - Initiate connection
   app.get("/api/reviews/oauth/google/connect", requireAuth, async (req, res) => {
     try {
-      const userId = req.session?.userId;
-      if (!userId) {
-        return res.status(401).json({ message: "Non authentifié" });
-      }
+      const userId = req.user!.id;
 
       // Check if OAuth is configured
       if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
@@ -7118,10 +7115,7 @@ Réponds en JSON avec ce format exact:
   // Facebook OAuth - Initiate connection
   app.get("/api/reviews/oauth/facebook/connect", requireAuth, async (req, res) => {
     try {
-      const userId = req.session?.userId;
-      if (!userId) {
-        return res.status(401).json({ message: "Non authentifié" });
-      }
+      const userId = req.user!.id;
 
       // Check if OAuth is configured
       if (!process.env.FACEBOOK_APP_ID || !process.env.FACEBOOK_APP_SECRET) {
