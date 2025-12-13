@@ -1,0 +1,53 @@
+~/workspace$ git fetch origin
+error: cannot lock ref 'refs/remotes/origin/HEAD': Unable to create '/home/runner/workspace/.git/refs/remotes/origin/HEAD.lock': File exists.
+
+Another git process seems to be running in this repository, e.g.
+an editor opened by 'git commit'. Please make sure all processes
+are terminated then try again. If it still fails, a git process
+may have crashed in this repository earlier:
+remove the file manually to continue.
+~/workspace$ git pull origin main --allow-unrelated-histories
+From https://github.com/leopickskairos-boop/dashboard-complet
+ * branch            main       -> FETCH_HEAD
+Already up to date.
+~/workspace$ git push origin main
+Enumerating objects: 673, done.
+Counting objects: 100% (673/673), done.
+Delta compression using up to 8 threads
+Compressing objects: 100% (625/625), done.
+Writing objects: 100% (637/637), 5.73 MiB | 8.48 MiB/s, done.
+Total 637 (delta 540), reused 0 (delta 0), pack-reused 0 (from 0)
+remote: Resolving deltas: 100% (540/540), completed with 31 local objects.
+remote: error: GH013: Repository rule violations found for refs/heads/main.
+remote: 
+remote: - GITHUB PUSH PROTECTION
+remote:   —————————————————————————————————————————
+remote:     Resolve the following violations before pushing again
+remote: 
+remote:     - Push cannot contain secrets
+remote: 
+remote:     
+remote:      (?) Learn how to resolve a blocked push
+remote:      https://docs.github.com/code-security/secret-scanning/working-with-secret-scanning-and-push-protection/working-with-push-protection-from-the-command-line#resolving-a-blocked-push
+remote:     
+remote:     
+remote:       —— Twilio Account String Identifier ——————————————————
+remote:        locations:
+remote:          - commit: 4a75a95d1fe65b4c26de0e514cb35dd84b1b16d6
+remote:            path: .replit:50
+remote:          - commit: 87d66bff318304b774946d7e3e8cd87891c4cf31
+remote:            path: .replit:50
+remote:          - commit: 6fb5bfbded3553d058ab68bd13eafcebf4f69908
+remote:            path: .replit:50
+remote:          - commit: 90b97499f5d0800f9874f8bf02d621de2b5b2d86
+remote:            path: .replit:110
+remote:     
+remote:        (?) To push, remove secret from commit(s) or follow this URL to allow the secret.
+remote:        https://github.com/leopickskairos-boop/dashboard-complet/security/secret-scanning/unblock-secret/36npPZGUpI6OrgUMFiOBA96J6d6
+remote:     
+remote: 
+remote: 
+To https://github.com/leopickskairos-boop/dashboard-complet.git
+ ! [remote rejected] main -> main (push declined due to repository rule violations)
+error: failed to push some refs to 'https://github.com/leopickskairos-boop/dashboard-complet.git'
+~/workspace$ 
