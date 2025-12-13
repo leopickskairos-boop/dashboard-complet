@@ -1545,6 +1545,38 @@ export type InitiateGoogleOAuth = z.infer<typeof initiateGoogleOAuthSchema>;
 export type InitiateFacebookOAuth = z.infer<typeof initiateFacebookOAuthSchema>;
 export type TriggerSync = z.infer<typeof triggerSyncSchema>;
 
+// ===== USER OAUTH CONFIG =====
+
+// User OAuth config table - stores encrypted OAuth credentials per user
+// This allows each client to use their own Google/Facebook OAuth app credentials
+export const userOAuthConfig = pgTable("user_oauth_config", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  provider: text("provider").notNull(), // 'google' or 'facebook'
+  
+  // Client credentials (clientId is not encrypted, clientSecret is encrypted)
+  clientId: text("client_id").notNull(),
+  encryptedClientSecret: text("encrypted_client_secret").notNull(),
+  
+  // Metadata
+  label: text("label"), // Optional friendly name
+  
+  // Timestamps
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Insert schema for user_oauth_config
+export const insertUserOAuthConfigSchema = createInsertSchema(userOAuthConfig).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Types for user_oauth_config
+export type InsertUserOAuthConfig = z.infer<typeof insertUserOAuthConfigSchema>;
+export type UserOAuthConfig = typeof userOAuthConfig.$inferSelect;
+
 // ===== MARKETING MODULE =====
 
 // Marketing channel enum
