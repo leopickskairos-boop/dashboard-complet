@@ -5934,11 +5934,18 @@ Format: Utilise des bullet points et reste concis (max 200 mots).`;
         return res.status(404).json({ message: "Lien invalide" });
       }
       
+      // Track link click and platform selection
       if (!request.linkClickedAt) {
+        // First visit - mark as clicked
         await storage.updateReviewRequest(request.id, {
           linkClickedAt: new Date(),
-          platformClicked: platform as string,
+          platformClicked: platform as string || undefined,
           status: 'clicked',
+        });
+      } else if (platform && platform !== request.platformClicked) {
+        // Subsequent visit with platform selection - update platformClicked
+        await storage.updateReviewRequest(request.id, {
+          platformClicked: platform as string,
         });
       }
       

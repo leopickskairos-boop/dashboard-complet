@@ -56,8 +56,11 @@ export default function ReviewPage() {
     }
   }, [params.token]);
 
-  const handlePlatformClick = async (platform: string, url: string) => {
+  const handlePlatformClick = (platform: string, url: string) => {
     setSelectedPlatform(platform);
+    // Fire-and-forget tracking call to avoid popup blockers
+    fetch(`/api/reviews/public/track/${params.token}?platform=${platform}`).catch(() => {});
+    // Open immediately within user gesture to avoid popup blockers
     window.open(url, "_blank");
   };
 
