@@ -997,6 +997,10 @@ export default function ReviewsSettings() {
   const [localSmsMessage, setLocalSmsMessage] = useState("");
   const [localEmailSubject, setLocalEmailSubject] = useState("");
   const [localEmailMessage, setLocalEmailMessage] = useState("");
+  const [localGoogleUrl, setLocalGoogleUrl] = useState("");
+  const [localTripadvisorUrl, setLocalTripadvisorUrl] = useState("");
+  const [localFacebookUrl, setLocalFacebookUrl] = useState("");
+  const [localYelpUrl, setLocalYelpUrl] = useState("");
   const [newIncentive, setNewIncentive] = useState({
     type: "percentage",
     percentageValue: 10,
@@ -1021,6 +1025,10 @@ export default function ReviewsSettings() {
       setLocalSmsMessage(config.smsMessage || "");
       setLocalEmailSubject(config.emailSubject || "");
       setLocalEmailMessage(config.emailMessage || "");
+      setLocalGoogleUrl(config.googleReviewUrl || "");
+      setLocalTripadvisorUrl(config.tripadvisorUrl || "");
+      setLocalFacebookUrl(config.facebookPageUrl || "");
+      setLocalYelpUrl(config.yelpUrl || "");
     }
   }, [config]);
 
@@ -1356,6 +1364,96 @@ export default function ReviewsSettings() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Platform Links Section */}
+      <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-2 text-base font-semibold">
+            <div className="p-1.5 rounded-lg bg-[#C8B88A]/10">
+              <ExternalLink className="h-4 w-4 text-[#C8B88A]" />
+            </div>
+            Liens des plateformes d'avis
+          </CardTitle>
+          <CardDescription className="text-xs">
+            Configurez les URL de vos pages d'avis pour rediriger vos clients
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4 pt-0">
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <SiGoogle className="h-4 w-4 text-red-500" />
+                Google Business
+              </Label>
+              <Input
+                value={localGoogleUrl}
+                onChange={(e) => setLocalGoogleUrl(e.target.value)}
+                onBlur={() => {
+                  if (localGoogleUrl !== (config?.googleReviewUrl || "")) {
+                    handleSaveSettings("googleReviewUrl", localGoogleUrl);
+                  }
+                }}
+                placeholder="https://g.page/r/..."
+                data-testid="input-google-review-url"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <SiTripadvisor className="h-4 w-4 text-green-600" />
+                TripAdvisor
+              </Label>
+              <Input
+                value={localTripadvisorUrl}
+                onChange={(e) => setLocalTripadvisorUrl(e.target.value)}
+                onBlur={() => {
+                  if (localTripadvisorUrl !== (config?.tripadvisorUrl || "")) {
+                    handleSaveSettings("tripadvisorUrl", localTripadvisorUrl);
+                  }
+                }}
+                placeholder="https://www.tripadvisor.fr/..."
+                data-testid="input-tripadvisor-url"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <SiFacebook className="h-4 w-4 text-blue-600" />
+                Facebook
+              </Label>
+              <Input
+                value={localFacebookUrl}
+                onChange={(e) => setLocalFacebookUrl(e.target.value)}
+                onBlur={() => {
+                  if (localFacebookUrl !== (config?.facebookPageUrl || "")) {
+                    handleSaveSettings("facebookPageUrl", localFacebookUrl);
+                  }
+                }}
+                placeholder="https://www.facebook.com/..."
+                data-testid="input-facebook-url"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <SiYelp className="h-4 w-4 text-red-600" />
+                Yelp
+              </Label>
+              <Input
+                value={localYelpUrl}
+                onChange={(e) => setLocalYelpUrl(e.target.value)}
+                onBlur={() => {
+                  if (localYelpUrl !== (config?.yelpUrl || "")) {
+                    handleSaveSettings("yelpUrl", localYelpUrl);
+                  }
+                }}
+                placeholder="https://www.yelp.fr/biz/..."
+                data-testid="input-yelp-url"
+              />
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Ces liens seront proposés à vos clients pour laisser leur avis après leur visite.
+          </p>
+        </CardContent>
+      </Card>
 
       {/* Incentives Section */}
       <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">

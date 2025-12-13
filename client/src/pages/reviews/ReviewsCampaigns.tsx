@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Send, Plus, Loader2, Mail, Phone, CheckCircle2, Clock, Eye, MousePointer, Ticket, Euro, Users, Filter, Database, FileText } from "lucide-react";
+import { Send, Loader2, Mail, Phone, CheckCircle2, Clock, Eye, MousePointer, Ticket, Euro, Users, Filter, Database, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import type { ReviewRequest, ReviewIncentive, MarketingSegment } from "@shared/schema";
@@ -31,14 +31,6 @@ type EligibleContact = {
 
 export default function ReviewsCampaigns() {
   const { toast } = useToast();
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [newRequest, setNewRequest] = useState({
-    customerName: "",
-    customerEmail: "",
-    customerPhone: "",
-    sendMethod: "both",
-    incentiveId: "",
-  });
   
   // État pour le dialog "marquer utilisé"
   const [usePromoOpen, setUsePromoOpen] = useState(false);
@@ -110,35 +102,6 @@ export default function ReviewsCampaigns() {
     revenueGenerated: number;
   }>({
     queryKey: ["/api/reviews/requests/stats"],
-  });
-
-  const createMutation = useMutation({
-    mutationFn: async (data: typeof newRequest) => {
-      return await apiRequest("POST", "/api/reviews/requests", data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/reviews/requests"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/reviews/requests/stats"] });
-      toast({
-        title: "Demande créée",
-        description: "La demande d'avis a été créée avec succès.",
-      });
-      setIsCreateOpen(false);
-      setNewRequest({
-        customerName: "",
-        customerEmail: "",
-        customerPhone: "",
-        sendMethod: "both",
-        incentiveId: "",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Erreur",
-        description: "Impossible de créer la demande.",
-        variant: "destructive",
-      });
-    },
   });
 
   const sendMutation = useMutation({
@@ -514,103 +477,6 @@ Pierre Bernard, , +33698765432`}
               </DialogFooter>
             </DialogContent>
           </Dialog>
-
-          {/* Bouton nouvelle demande */}
-          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-[#C8B88A] hover:bg-[#C8B88A]/90 text-black" data-testid="button-new-request">
-                <Plus className="h-4 w-4 mr-2" />
-                Nouvelle demande
-              </Button>
-            </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Nouvelle demande d'avis</DialogTitle>
-              <DialogDescription>
-                Créez une demande d'avis pour un client
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Nom du client *</Label>
-                <Input
-                  value={newRequest.customerName}
-                  onChange={(e) => setNewRequest({ ...newRequest, customerName: e.target.value })}
-                  placeholder="Jean Dupont"
-                  data-testid="input-customer-name"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Email</Label>
-                <Input
-                  type="email"
-                  value={newRequest.customerEmail}
-                  onChange={(e) => setNewRequest({ ...newRequest, customerEmail: e.target.value })}
-                  placeholder="jean@exemple.fr"
-                  data-testid="input-customer-email"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Téléphone</Label>
-                <Input
-                  value={newRequest.customerPhone}
-                  onChange={(e) => setNewRequest({ ...newRequest, customerPhone: e.target.value })}
-                  placeholder="+33 6 12 34 56 78"
-                  data-testid="input-customer-phone"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Méthode d'envoi</Label>
-                <Select
-                  value={newRequest.sendMethod}
-                  onValueChange={(value) => setNewRequest({ ...newRequest, sendMethod: value })}
-                >
-                  <SelectTrigger data-testid="select-send-method">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="email">Email uniquement</SelectItem>
-                    <SelectItem value="sms">SMS uniquement</SelectItem>
-                    <SelectItem value="both">Email et SMS</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              {incentives && incentives.length > 0 && (
-                <div className="space-y-2">
-                  <Label>Incitation (optionnel)</Label>
-                  <Select
-                    value={newRequest.incentiveId}
-                    onValueChange={(value) => setNewRequest({ ...newRequest, incentiveId: value })}
-                  >
-                    <SelectTrigger data-testid="select-incentive">
-                      <SelectValue placeholder="Sélectionner une incitation" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {incentives.map((inc) => (
-                        <SelectItem key={inc.id} value={inc.id}>
-                          {inc.displayMessage || inc.type}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsCreateOpen(false)} data-testid="button-cancel-request">
-                Annuler
-              </Button>
-              <Button
-                onClick={() => createMutation.mutate(newRequest)}
-                disabled={!newRequest.customerName || (!newRequest.customerEmail && !newRequest.customerPhone)}
-                className="bg-[#C8B88A] hover:bg-[#C8B88A]/90 text-black"
-                data-testid="button-create-request"
-              >
-                {createMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Créer"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
         </div>
 
         {/* Dialog pour marquer un code promo comme utilisé */}
