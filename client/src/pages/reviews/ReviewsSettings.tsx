@@ -566,8 +566,12 @@ function AutomationsSection() {
     name: "",
     description: "",
     triggerType: "post_visit",
+    timingMode: "fixed_delay",
     daysAfter: 3,
     sendTime: "10:00",
+    sendWindowStart: "10:00",
+    sendWindowEnd: "20:00",
+    avoidWeekends: false,
     sendMethod: "both",
     incentiveId: "_none",
     isActive: false,
@@ -641,8 +645,12 @@ function AutomationsSection() {
       name: "",
       description: "",
       triggerType: "post_visit",
+      timingMode: "fixed_delay",
       daysAfter: 3,
       sendTime: "10:00",
+      sendWindowStart: "10:00",
+      sendWindowEnd: "20:00",
+      avoidWeekends: false,
       sendMethod: "both",
       incentiveId: "_none",
       isActive: false,
@@ -651,14 +659,24 @@ function AutomationsSection() {
   };
 
   const openEditDialog = (automation: ReviewAutomation) => {
-    const triggerConfig = automation.triggerConfig as { daysAfter?: number; sendTime?: string } | null;
+    const triggerConfig = automation.triggerConfig as { 
+      daysAfter?: number; 
+      sendTime?: string;
+      sendWindowStart?: string;
+      sendWindowEnd?: string;
+      avoidWeekends?: boolean;
+    } | null;
     setEditingAutomation(automation);
     setFormData({
       name: automation.name,
       description: automation.description || "",
       triggerType: automation.triggerType,
+      timingMode: "fixed_delay",
       daysAfter: triggerConfig?.daysAfter || 3,
       sendTime: triggerConfig?.sendTime || "10:00",
+      sendWindowStart: triggerConfig?.sendWindowStart || "10:00",
+      sendWindowEnd: triggerConfig?.sendWindowEnd || "20:00",
+      avoidWeekends: triggerConfig?.avoidWeekends || false,
       sendMethod: automation.sendMethod,
       incentiveId: automation.incentiveId || "_none",
       isActive: automation.isActive,
@@ -675,6 +693,9 @@ function AutomationsSection() {
       triggerConfig: needsTimingConfig ? {
         daysAfter: formData.daysAfter,
         sendTime: formData.sendTime,
+        sendWindowStart: formData.sendWindowStart,
+        sendWindowEnd: formData.sendWindowEnd,
+        avoidWeekends: formData.avoidWeekends,
       } : null,
       sendMethod: formData.sendMethod,
       incentiveId: formData.incentiveId && formData.incentiveId !== "_none" ? formData.incentiveId : null,
@@ -881,28 +902,68 @@ function AutomationsSection() {
                   </div>
 
                   {(formData.triggerType === "post_visit" || formData.triggerType === "post_reservation" || formData.triggerType === "days_after_visit") && (
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-2">
-                        <Label>Délai (jours)</Label>
-                        <Input
-                          type="number"
-                          min={1}
-                          max={30}
-                          value={formData.daysAfter}
-                          onChange={(e) => setFormData({ ...formData, daysAfter: parseInt(e.target.value) || 1 })}
-                          data-testid="input-automation-days"
+                    <>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-2">
+                          <Label>Délai (jours)</Label>
+                          <Input
+                            type="number"
+                            min={1}
+                            max={30}
+                            value={formData.daysAfter}
+                            onChange={(e) => setFormData({ ...formData, daysAfter: parseInt(e.target.value) || 1 })}
+                            data-testid="input-automation-days"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Heure d'envoi</Label>
+                          <Input
+                            type="time"
+                            value={formData.sendTime}
+                            onChange={(e) => setFormData({ ...formData, sendTime: e.target.value })}
+                            data-testid="input-automation-time"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-2">
+                          <Label>Fenêtre début</Label>
+                          <Input
+                            type="time"
+                            value={formData.sendWindowStart}
+                            onChange={(e) => setFormData({ ...formData, sendWindowStart: e.target.value })}
+                            data-testid="input-automation-window-start"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Fenêtre fin</Label>
+                          <Input
+                            type="time"
+                            value={formData.sendWindowEnd}
+                            onChange={(e) => setFormData({ ...formData, sendWindowEnd: e.target.value })}
+                            data-testid="input-automation-window-end"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-muted/20">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-muted">
+                            <Clock className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">Éviter les week-ends</p>
+                            <p className="text-xs text-muted-foreground">Ne pas envoyer le samedi et dimanche</p>
+                          </div>
+                        </div>
+                        <Switch
+                          checked={formData.avoidWeekends}
+                          onCheckedChange={(value) => setFormData({ ...formData, avoidWeekends: value })}
+                          data-testid="switch-automation-avoid-weekends"
                         />
                       </div>
-                      <div className="space-y-2">
-                        <Label>Heure d'envoi</Label>
-                        <Input
-                          type="time"
-                          value={formData.sendTime}
-                          onChange={(e) => setFormData({ ...formData, sendTime: e.target.value })}
-                          data-testid="input-automation-time"
-                        />
-                      </div>
-                    </div>
+                    </>
                   )}
 
                   <div className="space-y-2">
@@ -1209,95 +1270,6 @@ export default function ReviewsSettings() {
       </div>
 
       <div className="grid gap-5 md:grid-cols-2">
-        <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
-          <CardHeader className="pb-4">
-            <CardTitle className="flex items-center gap-2 text-base font-semibold">
-              <div className="p-1.5 rounded-lg bg-[#C8B88A]/10">
-                <Clock className="h-4 w-4 text-[#C8B88A]" />
-              </div>
-              Timing d'envoi
-            </CardTitle>
-            <CardDescription className="text-xs">
-              Définissez le meilleur moment pour solliciter vos clients
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4 pt-0">
-            <div className="space-y-2">
-              <Label>Mode de timing</Label>
-              <Select
-                value={config?.timingMode || "smart"}
-                onValueChange={(value) => handleSaveSettings("timingMode", value)}
-                data-testid="select-timing-mode"
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="smart">Intelligent (IA)</SelectItem>
-                  <SelectItem value="fixed_delay">Délai fixe après RDV</SelectItem>
-                  <SelectItem value="fixed_time">Heure fixe quotidienne</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {config?.timingMode === "fixed_delay" && (
-              <div className="space-y-2">
-                <Label>Délai après RDV (heures)</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={168}
-                  value={config?.fixedDelayHours || 24}
-                  onChange={(e) => handleSaveSettings("fixedDelayHours", parseInt(e.target.value))}
-                  data-testid="input-fixed-delay"
-                />
-              </div>
-            )}
-
-            {config?.timingMode === "fixed_time" && (
-              <div className="space-y-2">
-                <Label>Heure d'envoi</Label>
-                <Input
-                  type="time"
-                  value={config?.fixedTime || "18:00"}
-                  onChange={(e) => handleSaveSettings("fixedTime", e.target.value)}
-                  data-testid="input-fixed-time"
-                />
-              </div>
-            )}
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Fenêtre début</Label>
-                <Input
-                  type="time"
-                  value={config?.sendWindowStart || "10:00"}
-                  onChange={(e) => handleSaveSettings("sendWindowStart", e.target.value)}
-                  data-testid="input-window-start"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Fenêtre fin</Label>
-                <Input
-                  type="time"
-                  value={config?.sendWindowEnd || "20:00"}
-                  onChange={(e) => handleSaveSettings("sendWindowEnd", e.target.value)}
-                  data-testid="input-window-end"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <Label>Éviter les week-ends</Label>
-              <Switch
-                checked={config?.avoidWeekends || false}
-                onCheckedChange={(value) => handleSaveSettings("avoidWeekends", value)}
-                data-testid="switch-avoid-weekends"
-              />
-            </div>
-          </CardContent>
-        </Card>
-
         <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
           <CardHeader className="pb-4">
             <CardTitle className="flex items-center gap-2 text-base font-semibold">
