@@ -13,9 +13,9 @@ import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Settings, Clock, MessageSquare, Globe, Loader2, Save, ExternalLink, AlertCircle, Gift, Plus, Trash2, Star, Percent, Coffee, Tag, RefreshCw, Link2, Unlink, CheckCircle2, XCircle, Wifi, ChevronDown } from "lucide-react";
+import { Settings, Clock, MessageSquare, Globe, Loader2, Save, ExternalLink, AlertCircle, Gift, Plus, Trash2, Star, Percent, Coffee, Tag, RefreshCw, Link2, Unlink, CheckCircle2, XCircle, Wifi, ChevronDown, Zap, Mail, Phone, Edit2, Power } from "lucide-react";
 import { SiGoogle, SiFacebook, SiTripadvisor, SiYelp } from "react-icons/si";
-import type { ReviewConfig, ReviewIncentive, ReviewSource, ReviewSyncLog } from "@shared/schema";
+import type { ReviewConfig, ReviewIncentive, ReviewSource, ReviewSyncLog, ReviewAutomation } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -542,6 +542,451 @@ const INCENTIVE_TYPES = [
   { value: "loyalty_points", label: "Points fidélité", icon: Star },
   { value: "other", label: "Autre", icon: Gift },
 ];
+
+const TRIGGER_TYPES = [
+  { value: "new_client", label: "Nouveau client", description: "Envoi automatique à chaque nouveau client" },
+  { value: "post_visit", label: "Après visite", description: "Envoi X jours après la visite" },
+  { value: "post_reservation", label: "Après réservation", description: "Envoi X jours après la réservation" },
+  { value: "days_after_visit", label: "Délai personnalisé", description: "Définir un délai précis" },
+  { value: "manual", label: "Manuel", description: "Déclenché manuellement" },
+];
+
+const SEND_METHODS = [
+  { value: "email", label: "Email", icon: Mail },
+  { value: "sms", label: "SMS", icon: Phone },
+  { value: "both", label: "Email + SMS", icon: MessageSquare },
+];
+
+function AutomationsSection() {
+  const { toast } = useToast();
+  const [isOpen, setIsOpen] = useState(false);
+  const [showDialog, setShowDialog] = useState(false);
+  const [editingAutomation, setEditingAutomation] = useState<ReviewAutomation | null>(null);
+  const [formData, setFormData] = useState({
+    name: "",
+    description: "",
+    triggerType: "post_visit",
+    daysAfter: 3,
+    sendTime: "10:00",
+    sendMethod: "both",
+    incentiveId: "",
+    isActive: false,
+  });
+
+  const { data: automations = [], isLoading } = useQuery<ReviewAutomation[]>({
+    queryKey: ["/api/reviews/automations"],
+  });
+
+  const { data: incentives = [] } = useQuery<ReviewIncentive[]>({
+    queryKey: ["/api/reviews/incentives"],
+  });
+
+  const createMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return await apiRequest("POST", "/api/reviews/automations", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/reviews/automations"] });
+      toast({ title: "Automation créée", description: "L'automation a été créée avec succès." });
+      resetForm();
+      setShowDialog(false);
+    },
+    onError: () => {
+      toast({ title: "Erreur", description: "Impossible de créer l'automation", variant: "destructive" });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      return await apiRequest("PUT", `/api/reviews/automations/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/reviews/automations"] });
+      toast({ title: "Automation mise à jour", description: "L'automation a été modifiée." });
+      resetForm();
+      setShowDialog(false);
+    },
+    onError: () => {
+      toast({ title: "Erreur", description: "Impossible de mettre à jour l'automation", variant: "destructive" });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest("DELETE", `/api/reviews/automations/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/reviews/automations"] });
+      toast({ title: "Automation supprimée" });
+    },
+    onError: () => {
+      toast({ title: "Erreur", description: "Impossible de supprimer l'automation", variant: "destructive" });
+    },
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest("POST", `/api/reviews/automations/${id}/toggle`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/reviews/automations"] });
+    },
+    onError: () => {
+      toast({ title: "Erreur", description: "Impossible de modifier le statut", variant: "destructive" });
+    },
+  });
+
+  const resetForm = () => {
+    setFormData({
+      name: "",
+      description: "",
+      triggerType: "post_visit",
+      daysAfter: 3,
+      sendTime: "10:00",
+      sendMethod: "both",
+      incentiveId: "",
+      isActive: false,
+    });
+    setEditingAutomation(null);
+  };
+
+  const openEditDialog = (automation: ReviewAutomation) => {
+    const triggerConfig = automation.triggerConfig as { daysAfter?: number; sendTime?: string } | null;
+    setEditingAutomation(automation);
+    setFormData({
+      name: automation.name,
+      description: automation.description || "",
+      triggerType: automation.triggerType,
+      daysAfter: triggerConfig?.daysAfter || 3,
+      sendTime: triggerConfig?.sendTime || "10:00",
+      sendMethod: automation.sendMethod,
+      incentiveId: automation.incentiveId || "",
+      isActive: automation.isActive,
+    });
+    setShowDialog(true);
+  };
+
+  const handleSubmit = () => {
+    const needsTimingConfig = ["post_visit", "post_reservation", "days_after_visit"].includes(formData.triggerType);
+    const payload = {
+      name: formData.name,
+      description: formData.description || null,
+      triggerType: formData.triggerType,
+      triggerConfig: needsTimingConfig ? {
+        daysAfter: formData.daysAfter,
+        sendTime: formData.sendTime,
+      } : null,
+      sendMethod: formData.sendMethod,
+      incentiveId: formData.incentiveId || null,
+      isActive: formData.isActive,
+    };
+
+    if (editingAutomation) {
+      updateMutation.mutate({ id: editingAutomation.id, data: payload });
+    } else {
+      createMutation.mutate(payload);
+    }
+  };
+
+  const activeCount = automations.filter(a => a.isActive).length;
+
+  return (
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] md:col-span-2">
+        <CollapsibleTrigger asChild>
+          <CardHeader className="pb-4 cursor-pointer hover:bg-white/[0.02] transition-colors rounded-t-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                    <div className="p-1.5 rounded-lg bg-amber-500/10">
+                      <Zap className="h-4 w-4 text-amber-500" />
+                    </div>
+                    Automations d'Avis
+                  </CardTitle>
+                  <CardDescription className="text-xs mt-1">
+                    Configurez des envois automatiques de demandes d'avis
+                  </CardDescription>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {activeCount > 0 && (
+                  <Badge className="bg-amber-500/10 text-amber-500 border-amber-500/20 text-[10px]">
+                    {activeCount} active{activeCount > 1 ? "s" : ""}
+                  </Badge>
+                )}
+                <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
+              </div>
+            </div>
+          </CardHeader>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <CardContent className="space-y-4 pt-0">
+            <div className="flex justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  resetForm();
+                  setShowDialog(true);
+                }}
+                data-testid="button-new-automation"
+              >
+                <Plus className="h-3.5 w-3.5 mr-1.5" />
+                Nouvelle automation
+              </Button>
+            </div>
+
+            {isLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : automations.length === 0 ? (
+              <div className="p-6 bg-muted/30 rounded-lg border border-border/30 text-center">
+                <Zap className="h-8 w-8 text-muted-foreground/50 mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">
+                  Aucune automation configurée
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Créez votre première automation pour envoyer automatiquement des demandes d'avis
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {automations.map((automation) => {
+                  const triggerInfo = TRIGGER_TYPES.find(t => t.value === automation.triggerType);
+                  const methodInfo = SEND_METHODS.find(m => m.value === automation.sendMethod);
+                  const triggerConfig = automation.triggerConfig as { daysAfter?: number; sendTime?: string } | null;
+                  
+                  return (
+                    <div
+                      key={automation.id}
+                      className="p-4 rounded-xl border border-border/40 bg-muted/10 hover:bg-muted/15 transition-colors"
+                      data-testid={`automation-item-${automation.id}`}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h4 className="text-sm font-medium truncate">{automation.name}</h4>
+                            <Badge variant={automation.isActive ? "default" : "secondary"} className="text-[10px]">
+                              {automation.isActive ? "Active" : "Inactive"}
+                            </Badge>
+                          </div>
+                          {automation.description && (
+                            <p className="text-xs text-muted-foreground mb-2 truncate">{automation.description}</p>
+                          )}
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {triggerInfo?.label || automation.triggerType}
+                              {triggerConfig?.daysAfter && ` (${triggerConfig.daysAfter}j)`}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              {methodInfo?.icon && <methodInfo.icon className="h-3 w-3" />}
+                              {methodInfo?.label || automation.sendMethod}
+                            </span>
+                            {automation.totalSent !== null && automation.totalSent !== undefined && automation.totalSent > 0 && (
+                              <span className="text-[10px]">
+                                {automation.totalSent} envoyés
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => toggleMutation.mutate(automation.id)}
+                            disabled={toggleMutation.isPending}
+                            data-testid={`button-toggle-automation-${automation.id}`}
+                          >
+                            <Power className={`h-4 w-4 ${automation.isActive ? "text-[#4CEFAD]" : "text-muted-foreground"}`} />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openEditDialog(automation)}
+                            data-testid={`button-edit-automation-${automation.id}`}
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => deleteMutation.mutate(automation.id)}
+                            disabled={deleteMutation.isPending}
+                            data-testid={`button-delete-automation-${automation.id}`}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <Dialog open={showDialog} onOpenChange={setShowDialog}>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <Zap className="h-5 w-5 text-amber-500" />
+                    {editingAutomation ? "Modifier l'automation" : "Nouvelle automation"}
+                  </DialogTitle>
+                  <DialogDescription>
+                    Configurez les paramètres d'envoi automatique
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label>Nom de l'automation</Label>
+                    <Input
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      placeholder="Ex: Demande après visite"
+                      data-testid="input-automation-name"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Description (optionnel)</Label>
+                    <Textarea
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      placeholder="Description de l'automation..."
+                      className="resize-none"
+                      rows={2}
+                      data-testid="input-automation-description"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Déclencheur</Label>
+                    <Select
+                      value={formData.triggerType}
+                      onValueChange={(value) => setFormData({ ...formData, triggerType: value })}
+                    >
+                      <SelectTrigger data-testid="select-automation-trigger">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {TRIGGER_TYPES.map((trigger) => (
+                          <SelectItem key={trigger.value} value={trigger.value}>
+                            {trigger.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {(formData.triggerType === "post_visit" || formData.triggerType === "post_reservation" || formData.triggerType === "days_after_visit") && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <Label>Délai (jours)</Label>
+                        <Input
+                          type="number"
+                          min={1}
+                          max={30}
+                          value={formData.daysAfter}
+                          onChange={(e) => setFormData({ ...formData, daysAfter: parseInt(e.target.value) || 1 })}
+                          data-testid="input-automation-days"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Heure d'envoi</Label>
+                        <Input
+                          type="time"
+                          value={formData.sendTime}
+                          onChange={(e) => setFormData({ ...formData, sendTime: e.target.value })}
+                          data-testid="input-automation-time"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <Label>Méthode d'envoi</Label>
+                    <Select
+                      value={formData.sendMethod}
+                      onValueChange={(value) => setFormData({ ...formData, sendMethod: value })}
+                    >
+                      <SelectTrigger data-testid="select-automation-method">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SEND_METHODS.map((method) => (
+                          <SelectItem key={method.value} value={method.value}>
+                            <span className="flex items-center gap-2">
+                              <method.icon className="h-4 w-4" />
+                              {method.label}
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Incitation (optionnel)</Label>
+                    <Select
+                      value={formData.incentiveId}
+                      onValueChange={(value) => setFormData({ ...formData, incentiveId: value })}
+                    >
+                      <SelectTrigger data-testid="select-automation-incentive">
+                        <SelectValue placeholder="Aucune incitation" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Aucune</SelectItem>
+                        {incentives.filter(i => i.isActive).map((incentive) => (
+                          <SelectItem key={incentive.id} value={incentive.id}>
+                            {incentive.displayMessage || incentive.type}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-muted/20">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-amber-500/10">
+                        <Power className="h-4 w-4 text-amber-500" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">Activer l'automation</p>
+                        <p className="text-xs text-muted-foreground">L'automation démarrera dès l'activation</p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={formData.isActive}
+                      onCheckedChange={(value) => setFormData({ ...formData, isActive: value })}
+                      data-testid="switch-automation-active"
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setShowDialog(false)}>
+                    Annuler
+                  </Button>
+                  <Button
+                    onClick={handleSubmit}
+                    disabled={!formData.name || createMutation.isPending || updateMutation.isPending}
+                    data-testid="button-save-automation"
+                  >
+                    {(createMutation.isPending || updateMutation.isPending) && (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    )}
+                    {editingAutomation ? "Mettre à jour" : "Créer"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </CardContent>
+        </CollapsibleContent>
+      </Card>
+    </Collapsible>
+  );
+}
 
 export default function ReviewsSettings() {
   const { toast } = useToast();
@@ -1532,6 +1977,7 @@ export default function ReviewsSettings() {
       </Collapsible>
 
       <PlatformConnectionsSection />
+      <AutomationsSection />
     </div>
   );
 }
