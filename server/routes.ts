@@ -5637,6 +5637,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get review stats - MUST be before /api/reviews/:id to avoid "stats" being treated as an ID
+  app.get("/api/reviews/stats", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { period } = req.query;
+      
+      const stats = await storage.getReviewStats(
+        userId, 
+        period as 'week' | 'month' | 'year' | 'all'
+      );
+      
+      res.json(stats);
+    } catch (error: any) {
+      console.error("[Reviews] Error fetching stats:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
   // Get single review
   app.get("/api/reviews/:id", requireAuth, async (req, res) => {
     try {
@@ -5949,24 +5967,6 @@ Réponds en JSON avec ce format exact:
     } catch (error: any) {
       console.error("[AI] Error generating review message:", error);
       res.status(500).json({ message: "Erreur lors de la génération du message" });
-    }
-  });
-
-  // Get review stats
-  app.get("/api/reviews/stats", requireAuth, async (req, res) => {
-    try {
-      const userId = req.user!.id;
-      const { period } = req.query;
-      
-      const stats = await storage.getReviewStats(
-        userId, 
-        period as 'week' | 'month' | 'year' | 'all'
-      );
-      
-      res.json(stats);
-    } catch (error: any) {
-      console.error("[Reviews] Error fetching stats:", error);
-      res.status(500).json({ message: "Erreur serveur" });
     }
   });
 
