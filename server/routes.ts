@@ -5428,6 +5428,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get eligible contacts from marketing database for bulk review campaigns
+  app.get("/api/reviews/requests/eligible-contacts", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { segmentId, source, optInEmail, optInSms } = req.query;
+      
+      // Parse boolean filters
+      const optInEmailBool = optInEmail === 'true' ? true : undefined;
+      const optInSmsBool = optInSms === 'true' ? true : undefined;
+      const sourceStr = source && source !== '' ? source as string : undefined;
+      
+      let contacts;
+      
+      // If segmentId is provided, get contacts from segment filters
+      if (segmentId && typeof segmentId === 'string' && segmentId !== '') {
+        const segment = await storage.getMarketingSegmentById(segmentId, userId);
+        if (!segment) {
+          return res.status(404).json({ message: "Segment non trouvé" });
+        }
+        contacts = await storage.getMarketingContactsBySegmentFilters(userId, segment.filters as any || {});
+      } else {
+        // Get all contacts then apply filters
+        contacts = await storage.getMarketingContacts(userId, {
+          source: sourceStr,
+          optInEmail: optInEmailBool,
+          optInSms: optInSmsBool,
+        });
+      }
+      
+      // Apply additional filters if segment was used
+      if (segmentId && sourceStr) {
+        contacts = contacts.filter(c => c.source === sourceStr);
+      }
+      if (segmentId && optInEmailBool) {
+        contacts = contacts.filter(c => c.optInEmail === true);
+      }
+      if (segmentId && optInSmsBool) {
+        contacts = contacts.filter(c => c.optInSms === true);
+      }
+      
+      // Filter and format contacts for review campaigns (must have email or phone)
+      const eligibleContacts = contacts
+        .filter(c => c.email || c.phone)
+        .map(c => ({
+          id: c.id,
+          name: [c.firstName, c.lastName].filter(Boolean).join(' ') || c.email || c.phone || 'Contact sans nom',
+          email: c.email,
+          phone: c.phone,
+          source: c.source,
+          optInEmail: c.optInEmail,
+          optInSms: c.optInSms,
+          tags: c.tags || [],
+        }));
+      
+      res.json({
+        contacts: eligibleContacts,
+        total: eligibleContacts.length,
+      });
+    } catch (error: any) {
+      console.error("[Reviews] Error fetching eligible contacts:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
   // Use a promo code (for N8N/external integrations)
   app.post("/api/reviews/promo/use", async (req, res) => {
     try {

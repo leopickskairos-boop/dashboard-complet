@@ -1,20 +1,33 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Send, Plus, Loader2, Mail, Phone, CheckCircle2, Clock, Eye, MousePointer, Ticket, Euro, Users } from "lucide-react";
+import { Send, Plus, Loader2, Mail, Phone, CheckCircle2, Clock, Eye, MousePointer, Ticket, Euro, Users, Filter, Database, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import type { ReviewRequest, ReviewIncentive } from "@shared/schema";
+import type { ReviewRequest, ReviewIncentive, MarketingSegment } from "@shared/schema";
+
+type EligibleContact = {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  source: string;
+  optInEmail: boolean;
+  optInSms: boolean;
+  tags: string[];
+};
 
 export default function ReviewsCampaigns() {
   const { toast } = useToast();
@@ -34,11 +47,21 @@ export default function ReviewsCampaigns() {
 
   // État pour la campagne de masse
   const [isBulkOpen, setIsBulkOpen] = useState(false);
+  const [bulkTab, setBulkTab] = useState<"auto" | "manual">("auto");
   const [bulkData, setBulkData] = useState({
     contactsCsv: "",
     sendMethod: "both",
     incentiveId: "",
   });
+  
+  // États pour la sélection automatique
+  const [autoFilters, setAutoFilters] = useState({
+    segmentId: "",
+    source: "",
+    optInEmail: false,
+    optInSms: false,
+  });
+  const [selectedContacts, setSelectedContacts] = useState<EligibleContact[]>([]);
 
   const { data: requests, isLoading: requestsLoading } = useQuery<ReviewRequest[]>({
     queryKey: ["/api/reviews/requests"],
@@ -47,6 +70,34 @@ export default function ReviewsCampaigns() {
   const { data: incentives } = useQuery<ReviewIncentive[]>({
     queryKey: ["/api/reviews/incentives"],
   });
+
+  const { data: segments } = useQuery<MarketingSegment[]>({
+    queryKey: ["/api/marketing/segments"],
+  });
+
+  // Construire l'URL avec les filtres
+  const buildEligibleContactsUrl = () => {
+    const params = new URLSearchParams();
+    if (autoFilters.segmentId) params.append('segmentId', autoFilters.segmentId);
+    if (autoFilters.source) params.append('source', autoFilters.source);
+    if (autoFilters.optInEmail) params.append('optInEmail', 'true');
+    if (autoFilters.optInSms) params.append('optInSms', 'true');
+    return `/api/reviews/requests/eligible-contacts?${params.toString()}`;
+  };
+
+  const eligibleUrl = buildEligibleContactsUrl();
+  
+  const { data: eligibleData, isLoading: eligibleLoading, refetch: refetchEligible } = useQuery<{ contacts: EligibleContact[]; total: number }>({
+    queryKey: [eligibleUrl],
+    enabled: isBulkOpen && bulkTab === "auto",
+  });
+
+  // Mettre à jour les contacts sélectionnés quand les données changent
+  useEffect(() => {
+    if (eligibleData?.contacts) {
+      setSelectedContacts(eligibleData.contacts);
+    }
+  }, [eligibleData]);
 
   const { data: stats } = useQuery<{
     requestsSent: number;
@@ -228,88 +279,233 @@ export default function ReviewsCampaigns() {
                 Campagne de masse
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-lg">
+            <DialogContent className="max-w-2xl">
               <DialogHeader>
                 <DialogTitle>Campagne de masse</DialogTitle>
                 <DialogDescription>
                   Envoyez des demandes d'avis à plusieurs clients en une seule fois
                 </DialogDescription>
               </DialogHeader>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Contacts (format CSV) *</Label>
-                  <Textarea
-                    value={bulkData.contactsCsv}
-                    onChange={(e) => setBulkData({ ...bulkData, contactsCsv: e.target.value })}
-                    placeholder={`Jean Dupont, jean@exemple.fr, +33612345678
+              
+              <Tabs value={bulkTab} onValueChange={(v) => setBulkTab(v as "auto" | "manual")} className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="auto" className="flex items-center gap-2" data-testid="tab-auto-select">
+                    <Database className="h-4 w-4" />
+                    Sélection auto
+                  </TabsTrigger>
+                  <TabsTrigger value="manual" className="flex items-center gap-2" data-testid="tab-manual-csv">
+                    <FileText className="h-4 w-4" />
+                    Saisie manuelle
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="auto" className="space-y-4 mt-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Segment</Label>
+                      <Select
+                        value={autoFilters.segmentId}
+                        onValueChange={(value) => setAutoFilters({ ...autoFilters, segmentId: value })}
+                      >
+                        <SelectTrigger data-testid="select-segment">
+                          <SelectValue placeholder="Tous les contacts" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">Tous les contacts</SelectItem>
+                          {segments?.map((seg) => (
+                            <SelectItem key={seg.id} value={seg.id}>
+                              {seg.name} ({seg.contactCount || 0})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Source</Label>
+                      <Select
+                        value={autoFilters.source}
+                        onValueChange={(value) => setAutoFilters({ ...autoFilters, source: value })}
+                      >
+                        <SelectTrigger data-testid="select-source">
+                          <SelectValue placeholder="Toutes les sources" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">Toutes les sources</SelectItem>
+                          <SelectItem value="speedai">SpeedAI</SelectItem>
+                          <SelectItem value="crm">CRM</SelectItem>
+                          <SelectItem value="import">Import CSV</SelectItem>
+                          <SelectItem value="manual">Saisie manuelle</SelectItem>
+                          <SelectItem value="website">Site web</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="optInEmail"
+                        checked={autoFilters.optInEmail}
+                        onCheckedChange={(checked) => setAutoFilters({ ...autoFilters, optInEmail: !!checked })}
+                        data-testid="checkbox-optin-email"
+                      />
+                      <Label htmlFor="optInEmail" className="text-sm cursor-pointer">Opt-in Email</Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="optInSms"
+                        checked={autoFilters.optInSms}
+                        onCheckedChange={(checked) => setAutoFilters({ ...autoFilters, optInSms: !!checked })}
+                        data-testid="checkbox-optin-sms"
+                      />
+                      <Label htmlFor="optInSms" className="text-sm cursor-pointer">Opt-in SMS</Label>
+                    </div>
+                  </div>
+
+                  <div className="bg-muted/30 rounded-lg p-4">
+                    {eligibleLoading ? (
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span className="text-sm text-muted-foreground">Chargement des contacts...</span>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm">
+                            <span className="font-semibold text-foreground">{selectedContacts.length}</span> contacts sélectionnés
+                          </p>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => refetchEligible()}
+                            data-testid="button-refresh-contacts"
+                          >
+                            <Filter className="h-4 w-4 mr-1" />
+                            Actualiser
+                          </Button>
+                        </div>
+                        {selectedContacts.length > 0 && (
+                          <div className="max-h-32 overflow-y-auto space-y-1">
+                            {selectedContacts.slice(0, 5).map((c) => (
+                              <div key={c.id} className="text-xs text-muted-foreground flex items-center gap-2">
+                                <span className="font-medium text-foreground">{c.name}</span>
+                                {c.email && <Mail className="h-3 w-3" />}
+                                {c.phone && <Phone className="h-3 w-3" />}
+                              </div>
+                            ))}
+                            {selectedContacts.length > 5 && (
+                              <p className="text-xs text-muted-foreground">... et {selectedContacts.length - 5} autres</p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="manual" className="space-y-4 mt-4">
+                  <div className="space-y-2">
+                    <Label>Contacts (format CSV) *</Label>
+                    <Textarea
+                      value={bulkData.contactsCsv}
+                      onChange={(e) => setBulkData({ ...bulkData, contactsCsv: e.target.value })}
+                      placeholder={`Jean Dupont, jean@exemple.fr, +33612345678
 Marie Martin, marie@exemple.fr
 Pierre Bernard, , +33698765432`}
-                    rows={6}
-                    className="font-mono text-xs"
-                    data-testid="textarea-bulk-contacts"
-                  />
-                  <p className="text-[10px] text-muted-foreground">
-                    Format: Nom, Email, Téléphone (un contact par ligne)
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label>Méthode d'envoi</Label>
-                  <Select
-                    value={bulkData.sendMethod}
-                    onValueChange={(value) => setBulkData({ ...bulkData, sendMethod: value })}
-                  >
-                    <SelectTrigger data-testid="select-bulk-send-method">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="email">Email uniquement</SelectItem>
-                      <SelectItem value="sms">SMS uniquement</SelectItem>
-                      <SelectItem value="both">Email et SMS</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                {incentives && incentives.length > 0 && (
+                      rows={6}
+                      className="font-mono text-xs"
+                      data-testid="textarea-bulk-contacts"
+                    />
+                    <p className="text-[10px] text-muted-foreground">
+                      Format: Nom, Email, Téléphone (un contact par ligne)
+                    </p>
+                  </div>
+                  <div className="bg-muted/30 rounded-lg p-3">
+                    <p className="text-xs text-muted-foreground">
+                      <span className="font-medium text-foreground">{parseCsvContacts(bulkData.contactsCsv, bulkData.sendMethod).length}</span> contacts valides détectés
+                    </p>
+                  </div>
+                </TabsContent>
+              </Tabs>
+
+              <div className="space-y-4 border-t pt-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Incitation (optionnel)</Label>
+                    <Label>Méthode d'envoi</Label>
                     <Select
-                      value={bulkData.incentiveId}
-                      onValueChange={(value) => setBulkData({ ...bulkData, incentiveId: value })}
+                      value={bulkData.sendMethod}
+                      onValueChange={(value) => setBulkData({ ...bulkData, sendMethod: value })}
                     >
-                      <SelectTrigger data-testid="select-bulk-incentive">
-                        <SelectValue placeholder="Sélectionner une incitation" />
+                      <SelectTrigger data-testid="select-bulk-send-method">
+                        <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {incentives.map((inc) => (
-                          <SelectItem key={inc.id} value={inc.id}>
-                            {inc.displayMessage || inc.type}
-                          </SelectItem>
-                        ))}
+                        <SelectItem value="email">Email uniquement</SelectItem>
+                        <SelectItem value="sms">SMS uniquement</SelectItem>
+                        <SelectItem value="both">Email et SMS</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-                )}
-                <div className="bg-muted/30 rounded-lg p-3">
-                  <p className="text-xs text-muted-foreground">
-                    <span className="font-medium text-foreground">{parseCsvContacts(bulkData.contactsCsv, bulkData.sendMethod).length}</span> contacts valides détectés
-                  </p>
+                  {incentives && incentives.length > 0 && (
+                    <div className="space-y-2">
+                      <Label>Incitation (optionnel)</Label>
+                      <Select
+                        value={bulkData.incentiveId}
+                        onValueChange={(value) => setBulkData({ ...bulkData, incentiveId: value })}
+                      >
+                        <SelectTrigger data-testid="select-bulk-incentive">
+                          <SelectValue placeholder="Sélectionner une incitation" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {incentives.map((inc) => (
+                            <SelectItem key={inc.id} value={inc.id}>
+                              {inc.displayMessage || inc.type}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                 </div>
               </div>
+
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsBulkOpen(false)} data-testid="button-cancel-bulk">
                   Annuler
                 </Button>
                 <Button
                   onClick={() => {
-                    const contacts = parseCsvContacts(bulkData.contactsCsv, bulkData.sendMethod);
-                    if (contacts.length > 0) {
-                      bulkMutation.mutate({
-                        contacts,
-                        sendMethod: bulkData.sendMethod,
-                        incentiveId: bulkData.incentiveId || undefined,
-                      });
+                    if (bulkTab === "auto") {
+                      // Utiliser les contacts sélectionnés automatiquement
+                      const contacts = selectedContacts.map(c => ({
+                        name: c.name,
+                        email: c.email || "",
+                        phone: c.phone || "",
+                      }));
+                      if (contacts.length > 0) {
+                        bulkMutation.mutate({
+                          contacts,
+                          sendMethod: bulkData.sendMethod,
+                          incentiveId: bulkData.incentiveId || undefined,
+                        });
+                      }
+                    } else {
+                      // Utiliser les contacts CSV
+                      const contacts = parseCsvContacts(bulkData.contactsCsv, bulkData.sendMethod);
+                      if (contacts.length > 0) {
+                        bulkMutation.mutate({
+                          contacts,
+                          sendMethod: bulkData.sendMethod,
+                          incentiveId: bulkData.incentiveId || undefined,
+                        });
+                      }
                     }
                   }}
-                  disabled={parseCsvContacts(bulkData.contactsCsv, bulkData.sendMethod).length === 0 || bulkMutation.isPending}
+                  disabled={
+                    (bulkTab === "auto" && selectedContacts.length === 0) ||
+                    (bulkTab === "manual" && parseCsvContacts(bulkData.contactsCsv, bulkData.sendMethod).length === 0) ||
+                    bulkMutation.isPending
+                  }
                   className="bg-[#C8B88A] hover:bg-[#C8B88A]/90 text-black"
                   data-testid="button-launch-bulk"
                 >
