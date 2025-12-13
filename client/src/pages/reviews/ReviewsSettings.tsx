@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { 
   Settings, Clock, MessageSquare, Loader2, Save, AlertCircle, Gift, Plus, Trash2, Star, Percent, Coffee, Tag, 
-  Zap, Mail, Phone, Power, Sparkles, CheckCircle2, Calendar, Info, Send
+  Zap, Mail, Phone, Power, Sparkles, CheckCircle2, Calendar, Info, Send, Bot
 } from "lucide-react";
 import type { ReviewConfig, ReviewIncentive } from "@shared/schema";
 
@@ -44,6 +44,21 @@ const INCENTIVE_TYPES = [
   { value: "other", label: "Autre", icon: Gift },
 ];
 
+const AI_RESPONSE_TONES = [
+  { value: "professional", label: "Professionnel", description: "Courtois et business" },
+  { value: "friendly", label: "Amical", description: "Chaleureux et personnel" },
+  { value: "formal", label: "Formel", description: "Respectueux et soutenu" },
+  { value: "casual", label: "Décontracté", description: "Accessible et naturel" },
+];
+
+const AI_RESPONSE_LANGUAGES = [
+  { value: "fr", label: "Français" },
+  { value: "en", label: "Anglais" },
+  { value: "es", label: "Espagnol" },
+  { value: "de", label: "Allemand" },
+  { value: "it", label: "Italien" },
+];
+
 export default function ReviewsSettings() {
   const { toast } = useToast();
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
@@ -64,6 +79,13 @@ export default function ReviewsSettings() {
     emailSubject: "",
     emailMessage: "",
     selectedIncentiveId: "",
+    // AI Response settings
+    aiResponseEnabled: false,
+    aiResponseTone: "professional",
+    aiResponseLanguage: "fr",
+    aiMaxLength: 300,
+    aiAutoGenerate: true,
+    aiIncludeCompanyName: true,
   });
 
   const [newIncentive, setNewIncentive] = useState({
@@ -103,6 +125,13 @@ export default function ReviewsSettings() {
         emailSubject: config.emailSubject || "",
         emailMessage: config.emailMessage || "",
         selectedIncentiveId: config.defaultIncentiveId || "",
+        // AI Response settings
+        aiResponseEnabled: config.aiResponseEnabled || false,
+        aiResponseTone: config.aiResponseTone || "professional",
+        aiResponseLanguage: config.aiResponseLanguage || "fr",
+        aiMaxLength: config.aiMaxLength || 300,
+        aiAutoGenerate: config.aiAutoGenerate ?? true,
+        aiIncludeCompanyName: config.aiIncludeCompanyName ?? true,
       }));
     }
   }, [config]);
@@ -185,6 +214,12 @@ export default function ReviewsSettings() {
       emailSubject: localConfig.emailSubject,
       emailMessage: localConfig.emailMessage,
       defaultIncentiveId: localConfig.selectedIncentiveId || null,
+      aiResponseEnabled: localConfig.aiResponseEnabled,
+      aiResponseTone: localConfig.aiResponseTone,
+      aiResponseLanguage: localConfig.aiResponseLanguage,
+      aiMaxLength: localConfig.aiMaxLength,
+      aiAutoGenerate: localConfig.aiAutoGenerate,
+      aiIncludeCompanyName: localConfig.aiIncludeCompanyName,
     });
   };
 
@@ -818,7 +853,119 @@ export default function ReviewsSettings() {
 
               <Separator className="bg-border/30" />
 
-              {/* Section 7: Résumé visuel */}
+              {/* Section 7: Réponses IA aux avis */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 rounded-xl border border-border/40 bg-muted/20">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-violet-500/10">
+                      <Bot className="h-5 w-5 text-violet-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">Réponses IA aux avis</p>
+                      <p className="text-xs text-muted-foreground">Génération automatique de réponses personnalisées</p>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={localConfig.aiResponseEnabled}
+                    onCheckedChange={(value) => setLocalConfig(prev => ({ ...prev, aiResponseEnabled: value }))}
+                    data-testid="switch-ai-response-enabled"
+                  />
+                </div>
+
+                {localConfig.aiResponseEnabled && (
+                  <div className="space-y-4 pl-4 border-l-2 border-violet-500/30 ml-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-xs">Ton des réponses</Label>
+                        <Select
+                          value={localConfig.aiResponseTone}
+                          onValueChange={(value) => setLocalConfig(prev => ({ ...prev, aiResponseTone: value }))}
+                        >
+                          <SelectTrigger data-testid="select-ai-tone">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {AI_RESPONSE_TONES.map((tone) => (
+                              <SelectItem key={tone.value} value={tone.value}>
+                                <div>
+                                  <span>{tone.label}</span>
+                                  <span className="text-xs text-muted-foreground ml-2">- {tone.description}</span>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-xs">Langue des réponses</Label>
+                        <Select
+                          value={localConfig.aiResponseLanguage}
+                          onValueChange={(value) => setLocalConfig(prev => ({ ...prev, aiResponseLanguage: value }))}
+                        >
+                          <SelectTrigger data-testid="select-ai-language">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {AI_RESPONSE_LANGUAGES.map((lang) => (
+                              <SelectItem key={lang.value} value={lang.value}>
+                                {lang.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-xs">Longueur maximale des réponses (caractères)</Label>
+                      <Input
+                        type="number"
+                        min={50}
+                        max={500}
+                        value={localConfig.aiMaxLength}
+                        onChange={(e) => setLocalConfig(prev => ({ ...prev, aiMaxLength: parseInt(e.target.value) || 300 }))}
+                        data-testid="input-ai-max-length"
+                      />
+                      <p className="text-xs text-muted-foreground">Entre 50 et 500 caractères</p>
+                    </div>
+
+                    <div className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-muted/10">
+                      <div className="flex items-center gap-3">
+                        <Sparkles className="h-4 w-4 text-violet-400" />
+                        <div>
+                          <p className="text-sm">Génération automatique</p>
+                          <p className="text-xs text-muted-foreground">Générer automatiquement les réponses pour les nouveaux avis</p>
+                        </div>
+                      </div>
+                      <Switch
+                        checked={localConfig.aiAutoGenerate}
+                        onCheckedChange={(value) => setLocalConfig(prev => ({ ...prev, aiAutoGenerate: value }))}
+                        data-testid="switch-ai-auto-generate"
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-muted/10">
+                      <div className="flex items-center gap-3">
+                        <Tag className="h-4 w-4 text-violet-400" />
+                        <div>
+                          <p className="text-sm">Inclure le nom de l'entreprise</p>
+                          <p className="text-xs text-muted-foreground">Mentionner le nom de votre entreprise dans les réponses</p>
+                        </div>
+                      </div>
+                      <Switch
+                        checked={localConfig.aiIncludeCompanyName}
+                        onCheckedChange={(value) => setLocalConfig(prev => ({ ...prev, aiIncludeCompanyName: value }))}
+                        data-testid="switch-ai-include-company"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <Separator className="bg-border/30" />
+
+              {/* Section 8: Résumé visuel */}
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <div className="p-1.5 rounded-lg bg-[#4CEFAD]/10">
