@@ -53,6 +53,12 @@ The project utilizes a modern web stack for a responsive and professional user i
         -   SMS with short links for mobile validation
         -   Configurable notification toggles per client (smsEnabled, autoSend toggles)
         -   N8N calendar booking trigger on successful card validation
+    -   **Appointment Reminder SMS System**:
+        -   Automated SMS reminders for all appointment types (not just CB Guarantee)
+        -   3 sources supported: CB Guarantee sessions, calls with appointmentDate, external orders with reservationDate
+        -   Configurable reminder timing (appointmentReminderHours in clientGuaranteeConfig)
+        -   Cron job runs every 15 minutes to process all sources
+        -   Tracking via appointmentReminderSent/appointmentReminderSentAt columns in calls and external_orders tables
 -   **Marketing Module**: Complete marketing automation system with:
     -   8-table architecture (marketing_contacts, marketing_consent_history, marketing_segments, marketing_templates, marketing_campaigns, marketing_sends, marketing_automations, marketing_automation_logs)
     -   Contact management with CSV import, SpeedAI sync, tags, and RGPD-compliant consent tracking
