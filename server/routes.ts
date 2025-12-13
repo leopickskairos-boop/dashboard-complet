@@ -6977,6 +6977,30 @@ Réponds en JSON avec ce format exact:
     }
   });
 
+  // OAuth Status - Check which platforms are configured
+  app.get("/api/reviews/oauth/status", requireAuth, async (req, res) => {
+    try {
+      const googleConfigured = !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+      const facebookConfigured = !!(process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET);
+
+      res.json({
+        google: {
+          configured: googleConfigured,
+          requiredSecrets: ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'],
+          setupUrl: 'https://console.cloud.google.com/apis/credentials'
+        },
+        facebook: {
+          configured: facebookConfigured,
+          requiredSecrets: ['FACEBOOK_APP_ID', 'FACEBOOK_APP_SECRET'],
+          setupUrl: 'https://developers.facebook.com/apps/'
+        }
+      });
+    } catch (error: any) {
+      console.error("[OAuthStatus] Error:", error);
+      res.status(500).json({ message: "Erreur serveur" });
+    }
+  });
+
   // Google OAuth - Initiate connection
   app.get("/api/reviews/oauth/google/connect", requireAuth, async (req, res) => {
     try {

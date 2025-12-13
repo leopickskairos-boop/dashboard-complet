@@ -119,6 +119,20 @@ export default function ReviewsSettings() {
     queryKey: ["/api/reviews/sources"],
   });
 
+  // OAuth status query
+  interface OAuthPlatformStatus {
+    configured: boolean;
+    requiredSecrets: string[];
+    setupUrl: string;
+  }
+  interface OAuthStatus {
+    google: OAuthPlatformStatus;
+    facebook: OAuthPlatformStatus;
+  }
+  const { data: oauthStatus } = useQuery<OAuthStatus>({
+    queryKey: ["/api/reviews/oauth/status"],
+  });
+
   const [tripadvisorUrl, setTripadvisorUrl] = useState("");
   const [tripadvisorName, setTripadvisorName] = useState("");
   const [connectingPlatform, setConnectingPlatform] = useState<string | null>(null);
@@ -1233,10 +1247,82 @@ export default function ReviewsSettings() {
                         Connectez vos profils professionnels pour récupérer vos avis existants et y répondre depuis SpeedAI. Ces connexions ne sont pas utilisées pour envoyer des liens aux clients.
                       </p>
 
+                      {/* Configuration Alert Banner */}
+                      {oauthStatus && (!oauthStatus.google.configured || !oauthStatus.facebook.configured) && (
+                        <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30">
+                          <div className="flex items-start gap-3">
+                            <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5 shrink-0" />
+                            <div className="space-y-2">
+                              <p className="text-sm font-medium text-amber-500">Configuration requise</p>
+                              <p className="text-xs text-muted-foreground">
+                                Pour connecter vos comptes Google ou Facebook, vous devez configurer les clés API dans les <strong>Secrets</strong> de Replit.
+                              </p>
+                              <div className="space-y-2 mt-3">
+                                {!oauthStatus.google.configured && (
+                                  <div className="p-3 rounded-lg bg-muted/20 border border-border/40">
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <SiGoogle className="h-4 w-4 text-[#4285F4]" />
+                                      <span className="text-xs font-medium">Google Business Profile</span>
+                                    </div>
+                                    <p className="text-[11px] text-muted-foreground mb-2">
+                                      Ajoutez ces secrets dans l'onglet "Secrets" de Replit :
+                                    </p>
+                                    <div className="flex flex-wrap gap-1">
+                                      {oauthStatus.google.requiredSecrets.map(secret => (
+                                        <Badge key={secret} variant="outline" className="text-[10px] font-mono">
+                                          {secret}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                    <a 
+                                      href={oauthStatus.google.setupUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-1 text-[11px] text-blue-400 hover:underline mt-2"
+                                    >
+                                      Obtenir les clés Google Cloud Console
+                                      <ExternalLink className="h-3 w-3" />
+                                    </a>
+                                  </div>
+                                )}
+                                {!oauthStatus.facebook.configured && (
+                                  <div className="p-3 rounded-lg bg-muted/20 border border-border/40">
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <SiFacebook className="h-4 w-4 text-[#1877F2]" />
+                                      <span className="text-xs font-medium">Facebook</span>
+                                    </div>
+                                    <p className="text-[11px] text-muted-foreground mb-2">
+                                      Ajoutez ces secrets dans l'onglet "Secrets" de Replit :
+                                    </p>
+                                    <div className="flex flex-wrap gap-1">
+                                      {oauthStatus.facebook.requiredSecrets.map(secret => (
+                                        <Badge key={secret} variant="outline" className="text-[10px] font-mono">
+                                          {secret}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                    <a 
+                                      href={oauthStatus.facebook.setupUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-1 text-[11px] text-blue-400 hover:underline mt-2"
+                                    >
+                                      Créer une app Facebook Developers
+                                      <ExternalLink className="h-3 w-3" />
+                                    </a>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
                       <div className="grid gap-4">
                   {/* Google Business Profile */}
                   {(() => {
                     const googleSource = getSourceByPlatform("google");
+                    const googleConfigured = oauthStatus?.google.configured ?? false;
                     return (
                       <div className="p-4 rounded-xl border border-border/40 bg-muted/10">
                         <div className="flex items-center justify-between">
@@ -1255,6 +1341,10 @@ export default function ReviewsSettings() {
                                     {googleSource.displayName}
                                   </span>
                                 </div>
+                              ) : !googleConfigured ? (
+                                <Badge variant="outline" className="text-[10px] bg-amber-500/10 text-amber-500 border-amber-500/30">
+                                  Configuration requise
+                                </Badge>
                               ) : (
                                 <p className="text-xs text-muted-foreground">Non connecté</p>
                               )}
@@ -1291,7 +1381,7 @@ export default function ReviewsSettings() {
                                 variant="outline"
                                 size="sm"
                                 onClick={handleConnectGoogle}
-                                disabled={connectingPlatform === "google"}
+                                disabled={connectingPlatform === "google" || !googleConfigured}
                                 data-testid="button-connect-google"
                               >
                                 {connectingPlatform === "google" ? (
@@ -1299,7 +1389,7 @@ export default function ReviewsSettings() {
                                 ) : (
                                   <Link2 className="h-4 w-4 mr-2" />
                                 )}
-                                Connecter
+                                {googleConfigured ? "Connecter" : "Non configuré"}
                               </Button>
                             )}
                           </div>
@@ -1317,6 +1407,7 @@ export default function ReviewsSettings() {
                   {/* Facebook */}
                   {(() => {
                     const facebookSource = getSourceByPlatform("facebook");
+                    const facebookConfigured = oauthStatus?.facebook.configured ?? false;
                     return (
                       <div className="p-4 rounded-xl border border-border/40 bg-muted/10">
                         <div className="flex items-center justify-between">
@@ -1335,6 +1426,10 @@ export default function ReviewsSettings() {
                                     {facebookSource.displayName}
                                   </span>
                                 </div>
+                              ) : !facebookConfigured ? (
+                                <Badge variant="outline" className="text-[10px] bg-amber-500/10 text-amber-500 border-amber-500/30">
+                                  Configuration requise
+                                </Badge>
                               ) : (
                                 <p className="text-xs text-muted-foreground">Non connecté</p>
                               )}
@@ -1371,7 +1466,7 @@ export default function ReviewsSettings() {
                                 variant="outline"
                                 size="sm"
                                 onClick={handleConnectFacebook}
-                                disabled={connectingPlatform === "facebook"}
+                                disabled={connectingPlatform === "facebook" || !facebookConfigured}
                                 data-testid="button-connect-facebook"
                               >
                                 {connectingPlatform === "facebook" ? (
@@ -1379,7 +1474,7 @@ export default function ReviewsSettings() {
                                 ) : (
                                   <Link2 className="h-4 w-4 mr-2" />
                                 )}
-                                Connecter
+                                {facebookConfigured ? "Connecter" : "Non configuré"}
                               </Button>
                             )}
                           </div>
