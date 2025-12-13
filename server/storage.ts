@@ -159,6 +159,7 @@ export interface IStorage {
     timeFilter?: 'hour' | 'today' | 'two_days' | 'week';
     statusFilter?: string;
     appointmentsOnly?: boolean;
+    hidePastAppointments?: boolean;
     page?: number;
     limit?: number;
   }): Promise<{ calls: Call[]; total: number; page: number; totalPages: number }>;
@@ -875,6 +876,7 @@ export class DatabaseStorage implements IStorage {
     timeFilter?: 'hour' | 'today' | 'two_days' | 'week';
     statusFilter?: string;
     appointmentsOnly?: boolean;
+    hidePastAppointments?: boolean;
     page?: number;
     limit?: number;
   }): Promise<{ calls: Call[]; total: number; page: number; totalPages: number }> {
@@ -894,6 +896,17 @@ export class DatabaseStorage implements IStorage {
     // Filter for calls with appointment dates only
     if (filters?.appointmentsOnly) {
       conditions.push(isNotNull(calls.appointmentDate));
+    }
+    
+    // Hide calls with past appointment dates (completed RDVs)
+    if (filters?.hidePastAppointments) {
+      const now = new Date();
+      conditions.push(
+        or(
+          isNull(calls.appointmentDate),
+          gte(calls.appointmentDate, now)
+        )!
+      );
     }
     
     // Get total count

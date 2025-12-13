@@ -1414,6 +1414,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           | undefined;
         const statusFilter = req.query.statusFilter as string | undefined;
         const appointmentsOnly = req.query.appointmentsOnly === "true";
+        const hidePastAppointments = req.query.hidePastAppointments !== "false"; // Default to true
         const page = req.query.page ? parseInt(req.query.page as string, 10) : 1;
         const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 20;
 
@@ -1421,6 +1422,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           timeFilter,
           statusFilter,
           appointmentsOnly,
+          hidePastAppointments,
           page,
           limit,
         });
