@@ -11,9 +11,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Send, Loader2, Mail, Phone, CheckCircle2, Clock, Eye, MousePointer, Ticket, Euro, Users, Filter, Database, FileText } from "lucide-react";
+import { Send, Loader2, Mail, Phone, CheckCircle2, Clock, Eye, MousePointer, Ticket, Euro, Users, Filter, Database, FileText, Sparkles, MessageSquare, Gift, AlertCircle, Info } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import type { ReviewRequest, ReviewIncentive, MarketingSegment } from "@shared/schema";
@@ -40,10 +41,14 @@ export default function ReviewsCampaigns() {
   // État pour la campagne de masse
   const [isBulkOpen, setIsBulkOpen] = useState(false);
   const [bulkTab, setBulkTab] = useState<"auto" | "manual">("auto");
+  const [currentStep, setCurrentStep] = useState(1);
   const [bulkData, setBulkData] = useState({
     contactsCsv: "",
     sendMethod: "both",
     incentiveId: "",
+    smsMessage: "",
+    emailSubject: "",
+    emailBody: "",
   });
   
   // États pour la sélection automatique
@@ -54,6 +59,7 @@ export default function ReviewsCampaigns() {
     optInSms: false,
   });
   const [selectedContacts, setSelectedContacts] = useState<EligibleContact[]>([]);
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
 
   const { data: requests, isLoading: requestsLoading } = useQuery<ReviewRequest[]>({
     queryKey: ["/api/reviews/requests"],
@@ -90,6 +96,13 @@ export default function ReviewsCampaigns() {
       setSelectedContacts(eligibleData.contacts);
     }
   }, [eligibleData]);
+
+  // Reset step when dialog closes
+  useEffect(() => {
+    if (!isBulkOpen) {
+      setCurrentStep(1);
+    }
+  }, [isBulkOpen]);
 
   const { data: stats } = useQuery<{
     requestsSent: number;
@@ -171,7 +184,14 @@ export default function ReviewsCampaigns() {
   };
 
   const bulkMutation = useMutation({
-    mutationFn: async (data: { contacts: Array<{ name: string; email: string; phone: string }>; sendMethod: string; incentiveId?: string }) => {
+    mutationFn: async (data: { 
+      contacts: Array<{ name: string; email: string; phone: string }>; 
+      sendMethod: string; 
+      incentiveId?: string;
+      smsMessage?: string;
+      emailSubject?: string;
+      emailBody?: string;
+    }) => {
       return await apiRequest("POST", "/api/reviews/requests/bulk", data);
     },
     onSuccess: (result: any) => {
@@ -186,7 +206,11 @@ export default function ReviewsCampaigns() {
         contactsCsv: "",
         sendMethod: "both",
         incentiveId: "",
+        smsMessage: "",
+        emailSubject: "",
+        emailBody: "",
       });
+      setCurrentStep(1);
     },
     onError: (error: any) => {
       toast({
@@ -196,6 +220,41 @@ export default function ReviewsCampaigns() {
       });
     },
   });
+
+  // Générer message IA
+  const handleGenerateAI = async () => {
+    setIsGeneratingAI(true);
+    try {
+      const response = await apiRequest("POST", "/api/ai/generate-review-message", {
+        sendMethod: bulkData.sendMethod,
+        incentiveId: bulkData.incentiveId,
+      });
+      const data = await response.json();
+      
+      if (data.smsMessage) {
+        setBulkData(prev => ({ ...prev, smsMessage: data.smsMessage }));
+      }
+      if (data.emailSubject) {
+        setBulkData(prev => ({ ...prev, emailSubject: data.emailSubject }));
+      }
+      if (data.emailBody) {
+        setBulkData(prev => ({ ...prev, emailBody: data.emailBody }));
+      }
+      
+      toast({
+        title: "Message généré",
+        description: "Le contenu a été généré par l'IA.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de générer le message.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingAI(false);
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     const baseClasses = "text-[10px] px-2 py-0.5 font-medium border-0";
@@ -217,6 +276,27 @@ export default function ReviewsCampaigns() {
     }
   };
 
+  const getContactCount = () => {
+    if (bulkTab === "auto") {
+      return selectedContacts.length;
+    }
+    return parseCsvContacts(bulkData.contactsCsv, bulkData.sendMethod).length;
+  };
+
+  const getSendMethodLabel = (method: string) => {
+    switch (method) {
+      case "email": return "Email uniquement";
+      case "sms": return "SMS uniquement";
+      case "both": return "Email + SMS";
+      default: return method;
+    }
+  };
+
+  const getSelectedIncentive = () => {
+    if (!bulkData.incentiveId) return null;
+    return incentives?.find(i => i.id === bulkData.incentiveId);
+  };
+
   if (requestsLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -227,11 +307,11 @@ export default function ReviewsCampaigns() {
 
   return (
     <div className="space-y-5 pb-8">
-      {/* Header */}
+      {/* Header avec UX Copy */}
       <div className="flex items-center justify-between pl-1">
         <div>
           <h1 className="text-lg font-semibold text-foreground">Campagnes d'avis</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">Gérez vos demandes d'avis clients</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Envoyez des demandes d'avis ponctuelles à vos clients</p>
         </div>
         <div className="flex items-center gap-2">
           {/* Bouton campagne de masse */}
@@ -239,162 +319,276 @@ export default function ReviewsCampaigns() {
             <DialogTrigger asChild>
               <Button variant="outline" data-testid="button-bulk-campaign">
                 <Users className="h-4 w-4 mr-2" />
-                Campagne de masse
+                Nouvelle campagne
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Campagne de masse</DialogTitle>
+                <DialogTitle>Nouvelle campagne de demandes d'avis</DialogTitle>
                 <DialogDescription>
-                  Envoyez des demandes d'avis à plusieurs clients en une seule fois
+                  Les campagnes sont des envois ponctuels. Pour les envois automatiques, configurez les automatisations dans la section Configuration.
                 </DialogDescription>
               </DialogHeader>
+
+              {/* Progress Steps */}
+              <div className="flex items-center justify-between px-4 py-3 bg-muted/20 rounded-lg mb-4">
+                {[
+                  { num: 1, label: "Contacts" },
+                  { num: 2, label: "Message" },
+                  { num: 3, label: "Options" },
+                  { num: 4, label: "Résumé" },
+                ].map((step, idx) => (
+                  <div key={step.num} className="flex items-center">
+                    <div 
+                      className={`flex items-center justify-center w-7 h-7 rounded-full text-xs font-medium transition-colors ${
+                        currentStep >= step.num 
+                          ? "bg-[#C8B88A] text-black" 
+                          : "bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      {step.num}
+                    </div>
+                    <span className={`ml-2 text-xs ${currentStep >= step.num ? "text-foreground" : "text-muted-foreground"}`}>
+                      {step.label}
+                    </span>
+                    {idx < 3 && <div className="w-8 h-px bg-border mx-3" />}
+                  </div>
+                ))}
+              </div>
               
-              <Tabs value={bulkTab} onValueChange={(v) => setBulkTab(v as "auto" | "manual")} className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="auto" className="flex items-center gap-2" data-testid="tab-auto-select">
-                    <Database className="h-4 w-4" />
-                    Sélection auto
-                  </TabsTrigger>
-                  <TabsTrigger value="manual" className="flex items-center gap-2" data-testid="tab-manual-csv">
-                    <FileText className="h-4 w-4" />
-                    Saisie manuelle
-                  </TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="auto" className="space-y-4 mt-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Segment</Label>
-                      <Select
-                        value={autoFilters.segmentId}
-                        onValueChange={(value) => setAutoFilters({ ...autoFilters, segmentId: value })}
-                      >
-                        <SelectTrigger data-testid="select-segment">
-                          <SelectValue placeholder="Tous les contacts" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="_all">Tous les contacts</SelectItem>
-                          {segments?.map((seg) => (
-                            <SelectItem key={seg.id} value={seg.id}>
-                              {seg.name} ({seg.contactCount || 0})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Source</Label>
-                      <Select
-                        value={autoFilters.source}
-                        onValueChange={(value) => setAutoFilters({ ...autoFilters, source: value })}
-                      >
-                        <SelectTrigger data-testid="select-source">
-                          <SelectValue placeholder="Toutes les sources" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="_all">Toutes les sources</SelectItem>
-                          <SelectItem value="speedai">SpeedAI</SelectItem>
-                          <SelectItem value="crm">CRM</SelectItem>
-                          <SelectItem value="import">Import CSV</SelectItem>
-                          <SelectItem value="manual">Saisie manuelle</SelectItem>
-                          <SelectItem value="website">Site web</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-6">
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        id="optInEmail"
-                        checked={autoFilters.optInEmail}
-                        onCheckedChange={(checked) => setAutoFilters({ ...autoFilters, optInEmail: !!checked })}
-                        data-testid="checkbox-optin-email"
-                      />
-                      <Label htmlFor="optInEmail" className="text-sm cursor-pointer">Opt-in Email</Label>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        id="optInSms"
-                        checked={autoFilters.optInSms}
-                        onCheckedChange={(checked) => setAutoFilters({ ...autoFilters, optInSms: !!checked })}
-                        data-testid="checkbox-optin-sms"
-                      />
-                      <Label htmlFor="optInSms" className="text-sm cursor-pointer">Opt-in SMS</Label>
-                    </div>
+              {/* Step 1: Contacts */}
+              {currentStep === 1 && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Users className="h-4 w-4 text-[#C8B88A]" />
+                    <h3 className="font-medium">Sélection des contacts</h3>
                   </div>
 
-                  <div className="bg-muted/30 rounded-lg p-4">
-                    {eligibleLoading ? (
-                      <div className="flex items-center gap-2">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        <span className="text-sm text-muted-foreground">Chargement des contacts...</span>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm">
-                            <span className="font-semibold text-foreground">{selectedContacts.length}</span> contacts sélectionnés
-                          </p>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => refetchEligible()}
-                            data-testid="button-refresh-contacts"
+                  <Tabs value={bulkTab} onValueChange={(v) => setBulkTab(v as "auto" | "manual")} className="w-full">
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="auto" className="flex items-center gap-2" data-testid="tab-auto-select">
+                        <Database className="h-4 w-4" />
+                        Depuis mes contacts
+                      </TabsTrigger>
+                      <TabsTrigger value="manual" className="flex items-center gap-2" data-testid="tab-manual-csv">
+                        <FileText className="h-4 w-4" />
+                        Saisie manuelle
+                      </TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="auto" className="space-y-4 mt-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Segment</Label>
+                          <Select
+                            value={autoFilters.segmentId}
+                            onValueChange={(value) => setAutoFilters({ ...autoFilters, segmentId: value })}
                           >
-                            <Filter className="h-4 w-4 mr-1" />
-                            Actualiser
-                          </Button>
+                            <SelectTrigger data-testid="select-segment">
+                              <SelectValue placeholder="Tous les contacts" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="_all">Tous les contacts</SelectItem>
+                              {segments?.map((seg) => (
+                                <SelectItem key={seg.id} value={seg.id}>
+                                  {seg.name} ({seg.contactCount || 0})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
-                        {selectedContacts.length > 0 && (
-                          <div className="max-h-32 overflow-y-auto space-y-1">
-                            {selectedContacts.slice(0, 5).map((c) => (
-                              <div key={c.id} className="text-xs text-muted-foreground flex items-center gap-2">
-                                <span className="font-medium text-foreground">{c.name}</span>
-                                {c.email && <Mail className="h-3 w-3" />}
-                                {c.phone && <Phone className="h-3 w-3" />}
+                        <div className="space-y-2">
+                          <Label>Source</Label>
+                          <Select
+                            value={autoFilters.source}
+                            onValueChange={(value) => setAutoFilters({ ...autoFilters, source: value })}
+                          >
+                            <SelectTrigger data-testid="select-source">
+                              <SelectValue placeholder="Toutes les sources" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="_all">Toutes les sources</SelectItem>
+                              <SelectItem value="speedai">SpeedAI</SelectItem>
+                              <SelectItem value="crm">CRM</SelectItem>
+                              <SelectItem value="import">Import CSV</SelectItem>
+                              <SelectItem value="manual">Saisie manuelle</SelectItem>
+                              <SelectItem value="website">Site web</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-6">
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            id="optInEmail"
+                            checked={autoFilters.optInEmail}
+                            onCheckedChange={(checked) => setAutoFilters({ ...autoFilters, optInEmail: !!checked })}
+                            data-testid="checkbox-optin-email"
+                          />
+                          <Label htmlFor="optInEmail" className="text-sm cursor-pointer">Opt-in Email</Label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            id="optInSms"
+                            checked={autoFilters.optInSms}
+                            onCheckedChange={(checked) => setAutoFilters({ ...autoFilters, optInSms: !!checked })}
+                            data-testid="checkbox-optin-sms"
+                          />
+                          <Label htmlFor="optInSms" className="text-sm cursor-pointer">Opt-in SMS</Label>
+                        </div>
+                      </div>
+
+                      <div className="bg-muted/30 rounded-lg p-4">
+                        {eligibleLoading ? (
+                          <div className="flex items-center gap-2">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <span className="text-sm text-muted-foreground">Chargement des contacts...</span>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <p className="text-sm">
+                                <span className="font-semibold text-foreground">{selectedContacts.length}</span> contacts sélectionnés
+                              </p>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => refetchEligible()}
+                                data-testid="button-refresh-contacts"
+                              >
+                                <Filter className="h-4 w-4 mr-1" />
+                                Actualiser
+                              </Button>
+                            </div>
+                            {selectedContacts.length > 0 && (
+                              <div className="max-h-32 overflow-y-auto space-y-1">
+                                {selectedContacts.slice(0, 5).map((c) => (
+                                  <div key={c.id} className="text-xs text-muted-foreground flex items-center gap-2">
+                                    <span className="font-medium text-foreground">{c.name}</span>
+                                    {c.email && <Mail className="h-3 w-3" />}
+                                    {c.phone && <Phone className="h-3 w-3" />}
+                                  </div>
+                                ))}
+                                {selectedContacts.length > 5 && (
+                                  <p className="text-xs text-muted-foreground">... et {selectedContacts.length - 5} autres</p>
+                                )}
                               </div>
-                            ))}
-                            {selectedContacts.length > 5 && (
-                              <p className="text-xs text-muted-foreground">... et {selectedContacts.length - 5} autres</p>
                             )}
                           </div>
                         )}
                       </div>
-                    )}
-                  </div>
-                </TabsContent>
+                    </TabsContent>
 
-                <TabsContent value="manual" className="space-y-4 mt-4">
-                  <div className="space-y-2">
-                    <Label>Contacts (format CSV) *</Label>
-                    <Textarea
-                      value={bulkData.contactsCsv}
-                      onChange={(e) => setBulkData({ ...bulkData, contactsCsv: e.target.value })}
-                      placeholder={`Jean Dupont, jean@exemple.fr, +33612345678
+                    <TabsContent value="manual" className="space-y-4 mt-4">
+                      <div className="space-y-2">
+                        <Label>Contacts (format CSV) *</Label>
+                        <Textarea
+                          value={bulkData.contactsCsv}
+                          onChange={(e) => setBulkData({ ...bulkData, contactsCsv: e.target.value })}
+                          placeholder={`Jean Dupont, jean@exemple.fr, +33612345678
 Marie Martin, marie@exemple.fr
 Pierre Bernard, , +33698765432`}
-                      rows={6}
-                      className="font-mono text-xs"
-                      data-testid="textarea-bulk-contacts"
-                    />
-                    <p className="text-[10px] text-muted-foreground">
-                      Format: Nom, Email, Téléphone (un contact par ligne)
-                    </p>
-                  </div>
-                  <div className="bg-muted/30 rounded-lg p-3">
-                    <p className="text-xs text-muted-foreground">
-                      <span className="font-medium text-foreground">{parseCsvContacts(bulkData.contactsCsv, bulkData.sendMethod).length}</span> contacts valides détectés
-                    </p>
-                  </div>
-                </TabsContent>
-              </Tabs>
+                          rows={6}
+                          className="font-mono text-xs"
+                          data-testid="textarea-bulk-contacts"
+                        />
+                        <p className="text-[10px] text-muted-foreground">
+                          Format: Nom, Email, Téléphone (un contact par ligne)
+                        </p>
+                      </div>
+                      <div className="bg-muted/30 rounded-lg p-3">
+                        <p className="text-xs text-muted-foreground">
+                          <span className="font-medium text-foreground">{parseCsvContacts(bulkData.contactsCsv, bulkData.sendMethod).length}</span> contacts valides détectés
+                        </p>
+                      </div>
+                    </TabsContent>
+                  </Tabs>
+                </div>
+              )}
 
-              <div className="space-y-4 border-t pt-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Méthode d'envoi</Label>
+              {/* Step 2: Message */}
+              {currentStep === 2 && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <MessageSquare className="h-4 w-4 text-[#C8B88A]" />
+                      <h3 className="font-medium">Contenu du message</h3>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleGenerateAI}
+                      disabled={isGeneratingAI}
+                      data-testid="button-generate-ai"
+                    >
+                      {isGeneratingAI ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Sparkles className="h-4 w-4 mr-2" />
+                      )}
+                      Générer avec l'IA
+                    </Button>
+                  </div>
+
+                  <p className="text-xs text-muted-foreground bg-muted/30 p-3 rounded-lg flex items-start gap-2">
+                    <Info className="h-4 w-4 mt-0.5 shrink-0" />
+                    Laissez vide pour utiliser les messages par défaut configurés dans la section Configuration.
+                  </p>
+
+                  {(bulkData.sendMethod === "sms" || bulkData.sendMethod === "both") && (
+                    <div className="space-y-2">
+                      <Label>Message SMS (160 caractères max)</Label>
+                      <Textarea
+                        value={bulkData.smsMessage}
+                        onChange={(e) => setBulkData({ ...bulkData, smsMessage: e.target.value })}
+                        placeholder="Ex: Bonjour {prenom}, merci pour votre visite ! Partagez votre avis et recevez une offre spéciale..."
+                        maxLength={160}
+                        className="resize-none"
+                        data-testid="textarea-sms-message"
+                      />
+                      <p className="text-xs text-muted-foreground text-right">
+                        {bulkData.smsMessage.length}/160
+                      </p>
+                    </div>
+                  )}
+
+                  {(bulkData.sendMethod === "email" || bulkData.sendMethod === "both") && (
+                    <>
+                      <div className="space-y-2">
+                        <Label>Objet de l'email</Label>
+                        <Input
+                          value={bulkData.emailSubject}
+                          onChange={(e) => setBulkData({ ...bulkData, emailSubject: e.target.value })}
+                          placeholder="Ex: Donnez-nous votre avis et recevez une récompense"
+                          data-testid="input-email-subject"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Corps de l'email</Label>
+                        <Textarea
+                          value={bulkData.emailBody}
+                          onChange={(e) => setBulkData({ ...bulkData, emailBody: e.target.value })}
+                          placeholder="Ex: Bonjour {prenom},&#10;&#10;Merci d'avoir choisi notre établissement. Votre avis compte beaucoup pour nous..."
+                          rows={5}
+                          className="resize-none"
+                          data-testid="textarea-email-body"
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* Step 3: Options (Méthode + Offre) */}
+              {currentStep === 3 && (
+                <div className="space-y-6">
+                  {/* Méthode d'envoi */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Send className="h-4 w-4 text-[#C8B88A]" />
+                      <h3 className="font-medium">Méthode d'envoi</h3>
+                    </div>
                     <Select
                       value={bulkData.sendMethod}
                       onValueChange={(value) => setBulkData({ ...bulkData, sendMethod: value })}
@@ -403,77 +597,236 @@ Pierre Bernard, , +33698765432`}
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="email">Email uniquement</SelectItem>
-                        <SelectItem value="sms">SMS uniquement</SelectItem>
-                        <SelectItem value="both">Email et SMS</SelectItem>
+                        <SelectItem value="email">
+                          <span className="flex items-center gap-2">
+                            <Mail className="h-4 w-4" />
+                            Email uniquement
+                          </span>
+                        </SelectItem>
+                        <SelectItem value="sms">
+                          <span className="flex items-center gap-2">
+                            <Phone className="h-4 w-4" />
+                            SMS uniquement
+                          </span>
+                        </SelectItem>
+                        <SelectItem value="both">
+                          <span className="flex items-center gap-2">
+                            <MessageSquare className="h-4 w-4" />
+                            Email et SMS
+                          </span>
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-                  {incentives && incentives.length > 0 && (
-                    <div className="space-y-2">
-                      <Label>Incitation (optionnel)</Label>
-                      <Select
-                        value={bulkData.incentiveId}
-                        onValueChange={(value) => setBulkData({ ...bulkData, incentiveId: value })}
+
+                  <Separator />
+
+                  {/* Offre incitative */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Gift className="h-4 w-4 text-[#C8B88A]" />
+                      <h3 className="font-medium">Offre incitative (optionnel)</h3>
+                    </div>
+                    
+                    {incentives && incentives.length > 0 ? (
+                      <div className="space-y-3">
+                        <Select
+                          value={bulkData.incentiveId || "_none"}
+                          onValueChange={(value) => setBulkData({ ...bulkData, incentiveId: value === "_none" ? "" : value })}
+                        >
+                          <SelectTrigger data-testid="select-bulk-incentive">
+                            <SelectValue placeholder="Aucune offre" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="_none">Aucune offre</SelectItem>
+                            {incentives.map((inc) => (
+                              <SelectItem key={inc.id} value={inc.id}>
+                                {inc.displayMessage || inc.type}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+
+                        {getSelectedIncentive() && (
+                          <div className="bg-[#C8B88A]/10 border border-[#C8B88A]/20 rounded-lg p-3">
+                            <p className="text-sm font-medium text-[#C8B88A]">
+                              {getSelectedIncentive()?.displayMessage}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Cette offre sera mentionnée dans le message et un code promo sera généré après confirmation.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="bg-muted/30 rounded-lg p-4 text-center">
+                        <p className="text-sm text-muted-foreground">
+                          Aucune offre configurée. Créez des offres dans la section Configuration.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Step 4: Résumé */}
+              {currentStep === 4 && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <CheckCircle2 className="h-4 w-4 text-[#C8B88A]" />
+                    <h3 className="font-medium">Résumé de la campagne</h3>
+                  </div>
+
+                  <div className="bg-muted/20 rounded-lg divide-y divide-border">
+                    {/* Contacts */}
+                    <div className="p-4 flex items-start justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-blue-500/10">
+                          <Users className="h-4 w-4 text-blue-400" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">Contacts ciblés</p>
+                          <p className="text-xs text-muted-foreground">
+                            {bulkTab === "auto" ? "Sélection automatique" : "Saisie manuelle"}
+                          </p>
+                        </div>
+                      </div>
+                      <Badge variant="secondary" className="text-sm">
+                        {getContactCount()} contact{getContactCount() > 1 ? "s" : ""}
+                      </Badge>
+                    </div>
+
+                    {/* Canal */}
+                    <div className="p-4 flex items-start justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-purple-500/10">
+                          <Send className="h-4 w-4 text-purple-400" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">Canal d'envoi</p>
+                          <p className="text-xs text-muted-foreground">Méthode de communication</p>
+                        </div>
+                      </div>
+                      <Badge variant="secondary" className="text-sm">
+                        {getSendMethodLabel(bulkData.sendMethod)}
+                      </Badge>
+                    </div>
+
+                    {/* Message personnalisé */}
+                    <div className="p-4">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 rounded-lg bg-amber-500/10">
+                          <MessageSquare className="h-4 w-4 text-amber-400" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">Message</p>
+                          <p className="text-xs text-muted-foreground">
+                            {(bulkData.smsMessage || bulkData.emailSubject || bulkData.emailBody) 
+                              ? "Message personnalisé" 
+                              : "Message par défaut (configuration)"}
+                          </p>
+                        </div>
+                      </div>
+                      {bulkData.smsMessage && (
+                        <div className="ml-11 mt-2 p-2 bg-muted/30 rounded text-xs">
+                          <span className="text-muted-foreground">SMS:</span> {bulkData.smsMessage.slice(0, 50)}...
+                        </div>
+                      )}
+                      {bulkData.emailSubject && (
+                        <div className="ml-11 mt-2 p-2 bg-muted/30 rounded text-xs">
+                          <span className="text-muted-foreground">Email:</span> {bulkData.emailSubject}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Offre */}
+                    <div className="p-4 flex items-start justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-[#C8B88A]/10">
+                          <Gift className="h-4 w-4 text-[#C8B88A]" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">Offre incitative</p>
+                          <p className="text-xs text-muted-foreground">Récompense pour l'avis</p>
+                        </div>
+                      </div>
+                      <Badge 
+                        variant={getSelectedIncentive() ? "default" : "secondary"} 
+                        className={getSelectedIncentive() ? "bg-[#C8B88A]/20 text-[#C8B88A] border-[#C8B88A]/30" : ""}
                       >
-                        <SelectTrigger data-testid="select-bulk-incentive">
-                          <SelectValue placeholder="Sélectionner une incitation" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {incentives.map((inc) => (
-                            <SelectItem key={inc.id} value={inc.id}>
-                              {inc.displayMessage || inc.type}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        {getSelectedIncentive()?.displayMessage || "Aucune"}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  {getContactCount() === 0 && (
+                    <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                      <AlertCircle className="h-4 w-4 text-red-400" />
+                      <p className="text-sm text-red-400">Aucun contact sélectionné. Retournez à l'étape 1.</p>
                     </div>
                   )}
                 </div>
-              </div>
+              )}
 
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsBulkOpen(false)} data-testid="button-cancel-bulk">
-                  Annuler
-                </Button>
-                <Button
-                  onClick={() => {
-                    if (bulkTab === "auto") {
-                      // Utiliser les contacts sélectionnés automatiquement
-                      const contacts = selectedContacts.map(c => ({
-                        name: c.name,
-                        email: c.email || "",
-                        phone: c.phone || "",
-                      }));
-                      if (contacts.length > 0) {
-                        bulkMutation.mutate({
-                          contacts,
-                          sendMethod: bulkData.sendMethod,
-                          incentiveId: bulkData.incentiveId || undefined,
-                        });
-                      }
-                    } else {
-                      // Utiliser les contacts CSV
-                      const contacts = parseCsvContacts(bulkData.contactsCsv, bulkData.sendMethod);
-                      if (contacts.length > 0) {
-                        bulkMutation.mutate({
-                          contacts,
-                          sendMethod: bulkData.sendMethod,
-                          incentiveId: bulkData.incentiveId || undefined,
-                        });
-                      }
-                    }
-                  }}
-                  disabled={
-                    (bulkTab === "auto" && selectedContacts.length === 0) ||
-                    (bulkTab === "manual" && parseCsvContacts(bulkData.contactsCsv, bulkData.sendMethod).length === 0) ||
-                    bulkMutation.isPending
-                  }
-                  className="bg-[#C8B88A] hover:bg-[#C8B88A]/90 text-black"
-                  data-testid="button-launch-bulk"
-                >
-                  {bulkMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Lancer la campagne"}
-                </Button>
+              <DialogFooter className="flex items-center justify-between pt-4 border-t">
+                <div>
+                  {currentStep > 1 && (
+                    <Button 
+                      variant="ghost" 
+                      onClick={() => setCurrentStep(prev => prev - 1)}
+                      data-testid="button-prev-step"
+                    >
+                      Précédent
+                    </Button>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" onClick={() => setIsBulkOpen(false)} data-testid="button-cancel-bulk">
+                    Annuler
+                  </Button>
+                  
+                  {currentStep < 4 ? (
+                    <Button
+                      onClick={() => setCurrentStep(prev => prev + 1)}
+                      disabled={currentStep === 1 && getContactCount() === 0}
+                      className="bg-[#C8B88A] hover:bg-[#C8B88A]/90 text-black"
+                      data-testid="button-next-step"
+                    >
+                      Suivant
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={() => {
+                        const contacts = bulkTab === "auto"
+                          ? selectedContacts.map(c => ({ name: c.name, email: c.email || "", phone: c.phone || "" }))
+                          : parseCsvContacts(bulkData.contactsCsv, bulkData.sendMethod);
+                        
+                        if (contacts.length > 0) {
+                          bulkMutation.mutate({
+                            contacts,
+                            sendMethod: bulkData.sendMethod,
+                            incentiveId: bulkData.incentiveId || undefined,
+                            smsMessage: bulkData.smsMessage || undefined,
+                            emailSubject: bulkData.emailSubject || undefined,
+                            emailBody: bulkData.emailBody || undefined,
+                          });
+                        }
+                      }}
+                      disabled={getContactCount() === 0 || bulkMutation.isPending}
+                      className="bg-[#C8B88A] hover:bg-[#C8B88A]/90 text-black"
+                      data-testid="button-launch-bulk"
+                    >
+                      {bulkMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <>
+                          <Send className="h-4 w-4 mr-2" />
+                          Lancer la campagne
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </div>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -524,6 +877,14 @@ Pierre Bernard, , +33698765432`}
         </Dialog>
       </div>
 
+      {/* Info banner */}
+      <div className="flex items-center gap-3 p-3 bg-blue-500/5 border border-blue-500/20 rounded-lg">
+        <Info className="h-4 w-4 text-blue-400 shrink-0" />
+        <p className="text-xs text-muted-foreground">
+          Les campagnes permettent d'envoyer des demandes d'avis ponctuelles. Pour configurer des envois automatiques après chaque visite, rendez-vous dans <span className="font-medium text-foreground">Configuration → Automatisations</span>.
+        </p>
+      </div>
+
       {/* KPI Cards */}
       <div className="grid gap-4 md:grid-cols-5">
         <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
@@ -534,10 +895,9 @@ Pierre Bernard, , +33698765432`}
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats?.requestsSent || 0}</p>
-                <p className="text-xs text-muted-foreground">Demandes envoyées</p>
+                <p className="text-xs text-muted-foreground">Envoyées</p>
               </div>
             </div>
-            <p className="text-[10px] text-muted-foreground/70 mt-2">Total des sollicitations envoyées</p>
           </CardContent>
         </Card>
 
@@ -548,11 +908,10 @@ Pierre Bernard, , +33698765432`}
                 <MousePointer className="h-5 w-5 text-[#C8B88A]" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{stats?.clickRate || 0}%</p>
-                <p className="text-xs text-muted-foreground">Taux de clic</p>
+                <p className="text-2xl font-bold">{stats?.linkClicks || 0}</p>
+                <p className="text-xs text-muted-foreground">Clics ({stats?.clickRate?.toFixed(1) || 0}%)</p>
               </div>
             </div>
-            <p className="text-[10px] text-muted-foreground/70 mt-2">Clients ayant cliqué sur le lien</p>
           </CardContent>
         </Card>
 
@@ -563,11 +922,10 @@ Pierre Bernard, , +33698765432`}
                 <CheckCircle2 className="h-5 w-5 text-[#4CEFAD]" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{stats?.conversionRate || 0}%</p>
-                <p className="text-xs text-muted-foreground">Taux de conversion</p>
+                <p className="text-2xl font-bold">{stats?.reviewsConfirmed || 0}</p>
+                <p className="text-xs text-muted-foreground">Avis ({stats?.conversionRate?.toFixed(1) || 0}%)</p>
               </div>
             </div>
-            <p className="text-[10px] text-muted-foreground/70 mt-2">Avis effectivement laissés</p>
           </CardContent>
         </Card>
 
@@ -579,136 +937,119 @@ Pierre Bernard, , +33698765432`}
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats?.promosUsed || 0}/{stats?.promosGenerated || 0}</p>
-                <p className="text-xs text-muted-foreground">Promos utilisées</p>
+                <p className="text-xs text-muted-foreground">Codes utilisés</p>
               </div>
             </div>
-            <p className="text-[10px] text-muted-foreground/70 mt-2">Codes promo utilisés / générés</p>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-emerald-500/10">
-                <Euro className="h-5 w-5 text-emerald-400" />
+              <div className="p-2.5 rounded-xl bg-green-500/10">
+                <Euro className="h-5 w-5 text-green-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{((stats?.revenueGenerated ?? 0) / 100).toFixed(2)}€</p>
+                <p className="text-2xl font-bold">{((stats?.revenueGenerated || 0) / 100).toFixed(0)}€</p>
                 <p className="text-xs text-muted-foreground">CA généré</p>
               </div>
             </div>
-            <p className="text-[10px] text-muted-foreground/70 mt-2">Revenus liés aux codes promo</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Requests Table */}
       <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
-        <CardHeader className="pb-4">
+        <CardHeader className="pb-3">
           <CardTitle className="text-base font-semibold">Historique des demandes</CardTitle>
           <CardDescription className="text-xs">
-            Suivi détaillé de toutes vos sollicitations d'avis
+            Toutes les demandes d'avis envoyées à vos clients
           </CardDescription>
         </CardHeader>
-        <CardContent className="pt-0">
+        <CardContent>
           {requests && requests.length > 0 ? (
-            <div className="rounded-xl border border-border/40 overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/30 hover:bg-muted/30">
-                    <TableHead className="text-xs font-medium">Client</TableHead>
-                    <TableHead className="text-xs font-medium">Contact</TableHead>
-                    <TableHead className="text-xs font-medium">Statut</TableHead>
-                    <TableHead className="text-xs font-medium">Date d'envoi</TableHead>
-                    <TableHead className="text-xs font-medium">Code promo</TableHead>
-                    <TableHead className="text-xs font-medium text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {requests.map((request) => (
-                    <TableRow key={request.id} className="hover:bg-muted/20" data-testid={`row-request-${request.id}`}>
-                      <TableCell className="font-medium text-sm">{request.customerName}</TableCell>
-                      <TableCell>
-                        <div className="flex flex-col gap-0.5 text-xs text-muted-foreground">
-                          {request.customerEmail && (
-                            <span className="flex items-center gap-1.5">
-                              <Mail className="h-3 w-3" />
-                              {request.customerEmail}
-                            </span>
-                          )}
-                          {request.customerPhone && (
-                            <span className="flex items-center gap-1.5">
-                              <Phone className="h-3 w-3" />
-                              {request.customerPhone}
-                            </span>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-xs">Client</TableHead>
+                  <TableHead className="text-xs">Canal</TableHead>
+                  <TableHead className="text-xs">Statut</TableHead>
+                  <TableHead className="text-xs">Code promo</TableHead>
+                  <TableHead className="text-xs">Date</TableHead>
+                  <TableHead className="text-xs text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {requests.slice(0, 20).map((request) => (
+                  <TableRow key={request.id}>
+                    <TableCell className="font-medium text-sm">{request.customerName}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        {request.channel === "email" && <Mail className="h-3.5 w-3.5 text-muted-foreground" />}
+                        {request.channel === "sms" && <Phone className="h-3.5 w-3.5 text-muted-foreground" />}
+                        {request.channel === "both" && (
+                          <>
+                            <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                            <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                          </>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>{getStatusBadge(request.status)}</TableCell>
+                    <TableCell>
+                      {request.promoCode ? (
+                        <div className="flex items-center gap-2">
+                          <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{request.promoCode}</code>
+                          {request.promoUsedAt ? (
+                            <Badge className="text-[10px] bg-[#4CEFAD]/15 text-[#4CEFAD]">Utilisé</Badge>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 px-2 text-xs"
+                              onClick={() => {
+                                setSelectedPromoCode(request.promoCode || "");
+                                setUsePromoOpen(true);
+                              }}
+                              data-testid={`button-use-promo-${request.id}`}
+                            >
+                              Marquer utilisé
+                            </Button>
                           )}
                         </div>
-                      </TableCell>
-                      <TableCell>{getStatusBadge(request.status)}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {request.sentAt ? format(new Date(request.sentAt), "dd/MM/yyyy HH:mm", { locale: fr }) : "-"}
-                      </TableCell>
-                      <TableCell>
-                        {request.promoCode ? (
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="font-mono text-[10px] px-1.5 py-0 border-border/50">
-                              {request.promoCode}
-                            </Badge>
-                            {request.promoCodeUsedAt ? (
-                              <Badge className="text-[10px] px-1.5 py-0 bg-[#4CEFAD]/15 text-[#4CEFAD] border-0">
-                                Utilisé
-                              </Badge>
-                            ) : (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 px-2 text-[10px] text-[#C8B88A] hover:text-[#C8B88A] hover:bg-[#C8B88A]/10"
-                                onClick={() => {
-                                  setSelectedPromoCode(request.promoCode!);
-                                  setUsePromoOpen(true);
-                                }}
-                                data-testid={`button-use-promo-${request.id}`}
-                              >
-                                Utiliser
-                              </Button>
-                            )}
-                          </div>
-                        ) : <span className="text-xs text-muted-foreground">-</span>}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {request.status === "pending" && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => sendMutation.mutate(request.id)}
-                            disabled={sendMutation.isPending}
-                            className="h-7 text-xs"
-                            data-testid={`button-send-${request.id}`}
-                          >
-                            {sendMutation.isPending ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            ) : (
-                              <>
-                                <Send className="h-3.5 w-3.5 mr-1" />
-                                Envoyer
-                              </>
-                            )}
-                          </Button>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {request.sentAt 
+                        ? format(new Date(request.sentAt), "dd/MM/yyyy HH:mm", { locale: fr })
+                        : format(new Date(request.createdAt), "dd/MM/yyyy HH:mm", { locale: fr })}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {request.status === "pending" && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => sendMutation.mutate(request.id)}
+                          disabled={sendMutation.isPending}
+                          data-testid={`button-send-${request.id}`}
+                        >
+                          <Send className="h-3.5 w-3.5 mr-1" />
+                          Envoyer
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           ) : (
-            <div className="flex flex-col items-center justify-center py-12 px-6 rounded-xl border border-dashed border-border/60 bg-muted/20">
-              <div className="p-3 rounded-full bg-blue-500/10 mb-4">
-                <Send className="h-6 w-6 text-blue-400/60" />
-              </div>
-              <p className="text-sm font-medium text-foreground/80">Aucune demande d'avis</p>
-              <p className="text-xs text-muted-foreground mt-1 text-center max-w-xs">
-                Créez votre première demande pour solliciter un avis client
+            <div className="text-center py-8">
+              <Send className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
+              <p className="text-sm text-muted-foreground">Aucune demande d'avis envoyée</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Lancez votre première campagne pour commencer
               </p>
             </div>
           )}
