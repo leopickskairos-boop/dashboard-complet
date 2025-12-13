@@ -5843,6 +5843,114 @@ Format: Utilise des bullet points et reste concis (max 200 mots).`;
     }
   });
 
+  // Generate AI message for review request campaigns
+  app.post("/api/ai/generate-review-message", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { sendMethod, incentiveId } = req.body;
+
+      // Get user's company info from review config
+      const config = await storage.getReviewConfig(userId);
+      const companyName = config?.companyName || "notre établissement";
+
+      // Get incentive details if provided
+      let incentiveText = "";
+      if (incentiveId) {
+        const incentive = await storage.getReviewIncentiveById(incentiveId, userId);
+        if (incentive) {
+          switch (incentive.type) {
+            case "percentage":
+              incentiveText = `${incentive.percentageValue}% de réduction`;
+              break;
+            case "fixed_amount":
+              incentiveText = `${incentive.fixedAmountValue}€ offerts`;
+              break;
+            case "free_item":
+              incentiveText = incentive.freeItemName || "un cadeau offert";
+              break;
+            case "lottery":
+              incentiveText = incentive.lotteryPrize || "participation à un tirage au sort";
+              break;
+            case "loyalty_points":
+              incentiveText = `${incentive.loyaltyPointsValue} points fidélité`;
+              break;
+            default:
+              incentiveText = incentive.customDescription || "une offre spéciale";
+          }
+        }
+      }
+
+      const OpenAI = (await import('openai')).default;
+      const openai = new OpenAI({
+        baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+        apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+      });
+
+      const result: { smsMessage?: string; emailSubject?: string; emailBody?: string } = {};
+
+      // Generate SMS if needed
+      if (sendMethod === "sms" || sendMethod === "both") {
+        const smsPrompt = `Tu es un expert en marketing. Génère un SMS de demande d'avis client pour "${companyName}".
+${incentiveText ? `Le client recevra en retour: ${incentiveText}.` : ""}
+Le SMS doit:
+- Faire exactement 160 caractères maximum
+- Être chaleureux et personnalisé (utilise {prenom} comme variable)
+- Inciter à laisser un avis
+- Mentionner la récompense si elle existe
+
+Réponds UNIQUEMENT avec le texte du SMS, sans guillemets ni explication.`;
+
+        const smsCompletion = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [{ role: "user", content: smsPrompt }],
+          temperature: 0.7,
+          max_tokens: 100,
+        });
+        result.smsMessage = smsCompletion.choices[0]?.message?.content?.trim() || "";
+      }
+
+      // Generate Email if needed
+      if (sendMethod === "email" || sendMethod === "both") {
+        const emailPrompt = `Tu es un expert en marketing. Génère un email de demande d'avis client pour "${companyName}".
+${incentiveText ? `Le client recevra en retour: ${incentiveText}.` : ""}
+
+L'email doit:
+- Avoir un objet accrocheur (max 50 caractères)
+- Être chaleureux et professionnel
+- Utiliser {prenom} comme variable pour le prénom
+- Inciter à laisser un avis en expliquant pourquoi c'est important
+- Mentionner la récompense si elle existe
+- Faire environ 100 mots
+
+Réponds en JSON avec ce format exact:
+{"subject": "Objet de l'email", "body": "Corps de l'email"}`;
+
+        const emailCompletion = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [{ role: "user", content: emailPrompt }],
+          temperature: 0.7,
+          max_tokens: 300,
+        });
+
+        const emailContent = emailCompletion.choices[0]?.message?.content?.trim() || "{}";
+        try {
+          const parsed = JSON.parse(emailContent);
+          result.emailSubject = parsed.subject || "";
+          result.emailBody = parsed.body || "";
+        } catch {
+          // If JSON parsing fails, use the content as body
+          result.emailSubject = "Votre avis compte pour nous !";
+          result.emailBody = emailContent;
+        }
+      }
+
+      res.json(result);
+    } catch (error: any) {
+      console.error("[AI] Error generating review message:", error);
+      res.status(500).json({ message: "Erreur lors de la génération du message" });
+    }
+  });
+
   // Get review stats
   app.get("/api/reviews/stats", requireAuth, async (req, res) => {
     try {
