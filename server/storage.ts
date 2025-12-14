@@ -237,10 +237,16 @@ export interface IStorage {
   
   // CB Guarantee management
   getGuaranteeConfig(userId: string): Promise<ClientGuaranteeConfig | undefined>;
+  getGuaranteeConfigByOwner(owner: { userId?: string; tenantId?: string }): Promise<ClientGuaranteeConfig | undefined>;
   upsertGuaranteeConfig(userId: string, config: Partial<InsertClientGuaranteeConfig>): Promise<ClientGuaranteeConfig>;
+  upsertGuaranteeConfigByOwner(owner: { userId?: string; tenantId?: string }, config: Partial<InsertClientGuaranteeConfig>): Promise<ClientGuaranteeConfig>;
   
   // Guarantee sessions
   getGuaranteeSessions(userId: string, filters?: {
+    status?: string;
+    period?: 'today' | 'week' | 'month';
+  }): Promise<GuaranteeSession[]>;
+  getGuaranteeSessionsByOwner(owner: { userId?: string; tenantId?: string }, filters?: {
     status?: string;
     period?: 'today' | 'week' | 'month';
   }): Promise<GuaranteeSession[]>;
@@ -1570,6 +1576,23 @@ export class DatabaseStorage implements IStorage {
     return config || undefined;
   }
 
+  async getGuaranteeConfigByOwner(owner: { userId?: string; tenantId?: string }): Promise<ClientGuaranteeConfig | undefined> {
+    const conditions = [];
+    if (owner.tenantId) {
+      conditions.push(eq(clientGuaranteeConfig.tenantId, owner.tenantId));
+    }
+    if (owner.userId) {
+      conditions.push(eq(clientGuaranteeConfig.userId, owner.userId));
+    }
+    if (conditions.length === 0) return undefined;
+    
+    const [config] = await db
+      .select()
+      .from(clientGuaranteeConfig)
+      .where(conditions.length === 1 ? conditions[0] : or(...conditions));
+    return config || undefined;
+  }
+
   async upsertGuaranteeConfig(userId: string, config: Partial<InsertClientGuaranteeConfig>): Promise<ClientGuaranteeConfig> {
     const existing = await this.getGuaranteeConfig(userId);
     
@@ -1595,6 +1618,45 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
 
+  async upsertGuaranteeConfigByOwner(owner: { userId?: string; tenantId?: string }, config: Partial<InsertClientGuaranteeConfig>): Promise<ClientGuaranteeConfig> {
+    const existing = await this.getGuaranteeConfigByOwner(owner);
+    
+    if (existing) {
+      const conditions = [];
+      if (owner.tenantId) {
+        conditions.push(eq(clientGuaranteeConfig.tenantId, owner.tenantId));
+      }
+      if (owner.userId) {
+        conditions.push(eq(clientGuaranteeConfig.userId, owner.userId));
+      }
+      
+      const [updated] = await db
+        .update(clientGuaranteeConfig)
+        .set({
+          ...config,
+          tenantId: owner.tenantId || existing.tenantId,
+          updatedAt: new Date(),
+        })
+        .where(conditions.length === 1 ? conditions[0] : or(...conditions))
+        .returning();
+      return updated;
+    }
+    
+    if (!owner.userId) {
+      throw new Error('userId is required to create a new guarantee config');
+    }
+    
+    const [created] = await db
+      .insert(clientGuaranteeConfig)
+      .values({
+        userId: owner.userId,
+        tenantId: owner.tenantId,
+        ...config,
+      })
+      .returning();
+    return created;
+  }
+
   // ===== Guarantee Sessions =====
   
   async getGuaranteeSessions(userId: string, filters?: {
@@ -1602,6 +1664,51 @@ export class DatabaseStorage implements IStorage {
     period?: 'today' | 'week' | 'month';
   }): Promise<GuaranteeSession[]> {
     const conditions = [eq(guaranteeSessions.userId, userId)];
+    
+    if (filters?.status) {
+      conditions.push(eq(guaranteeSessions.status, filters.status));
+    }
+    
+    if (filters?.period) {
+      const now = new Date();
+      let startDate: Date;
+      
+      switch (filters.period) {
+        case 'today':
+          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          break;
+        case 'week':
+          startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case 'month':
+          startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          break;
+      }
+      
+      conditions.push(gte(guaranteeSessions.reservationDate, startDate));
+    }
+    
+    return await db
+      .select()
+      .from(guaranteeSessions)
+      .where(and(...conditions))
+      .orderBy(desc(guaranteeSessions.reservationDate));
+  }
+
+  async getGuaranteeSessionsByOwner(owner: { userId?: string; tenantId?: string }, filters?: {
+    status?: string;
+    period?: 'today' | 'week' | 'month';
+  }): Promise<GuaranteeSession[]> {
+    const ownerConditions = [];
+    if (owner.tenantId) {
+      ownerConditions.push(eq(guaranteeSessions.tenantId, owner.tenantId));
+    }
+    if (owner.userId) {
+      ownerConditions.push(eq(guaranteeSessions.userId, owner.userId));
+    }
+    if (ownerConditions.length === 0) return [];
+    
+    const conditions = [ownerConditions.length === 1 ? ownerConditions[0] : or(...ownerConditions)];
     
     if (filters?.status) {
       conditions.push(eq(guaranteeSessions.status, filters.status));
