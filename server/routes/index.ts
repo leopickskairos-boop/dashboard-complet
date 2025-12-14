@@ -14,6 +14,7 @@ import reviewsN8nRouter from "./reviews-n8n.routes";
 import shortLinksRouter from "./short-links.routes";
 import n8nRouter from "./n8n.routes";
 import adminRouter from "./admin.routes";
+import tenantRouter from "./tenant.routes";
 
 // Import other existing routes that will be integrated separately
 import { registerMarketingRoutes } from "../marketing-routes";
@@ -54,6 +55,9 @@ export async function registerModularRoutes(app: Express): Promise<Server> {
   
   // ===== ADMIN ROUTES =====
   app.use("/api/admin", adminRouter);
+  
+  // ===== TENANT ROUTES (Multi-tenant) =====
+  app.use("/api/tenants", tenantRouter);
   
   // ===== MARKETING ROUTES (existing module) =====
   registerMarketingRoutes(app);
