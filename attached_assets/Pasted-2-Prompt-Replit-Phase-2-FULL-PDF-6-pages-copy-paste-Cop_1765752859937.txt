@@ -1,0 +1,100 @@
+2) Prompt Replit — Phase 2 “FULL PDF 6 pages” (copy/paste)
+
+Copie-colle exactement :
+
+⸻
+
+Tu es un senior engineer. Le socle multi-tenant est en place (tenants + tenant_settings + tenant_features + tenant_id partout). Ta mission : implémenter un module Reporting Mensuel “FULL 6 pages” sans casser l’existant.
+
+Objectif fonctionnel
+
+Chaque fin de mois, pour chaque tenant actif :
+	1.	Calculer un snapshot metrics_json structuré (voir schéma ci-dessous)
+	2.	Stocker en base dans monthly_reports
+	3.	Générer un PDF A4 multi-pages à partir d’un template HTML/CSS
+	4.	Stocker le PDF en local (ex: /public/reports/<tenantId>/<YYYY-MM>.pdf)
+	5.	Exposer dans le dashboard (liste + download)
+	6.	Générer du texte “Insights IA” via un provider LLM (Claude/OpenAI) optionnel : si la clé n’existe pas, le reporting doit quand même sortir sans les insights.
+
+Data model
+
+Créer table monthly_reports :
+	•	id uuid pk
+	•	tenant_id uuid fk
+	•	period_start date
+	•	period_end date
+	•	metrics_json jsonb
+	•	insights_md text nullable
+	•	pdf_path text nullable
+	•	pdf_url text nullable
+	•	status enum(‘pending’,‘computed’,‘pdf_generated’,‘sent’,‘failed’)
+	•	generated_at timestamp
+	•	error_message text nullable
+Indexes: (tenant_id, period_start), (tenant_id, generated_at)
+
+Ajouter dans tenant_settings un bloc reporting_inputs (si absent) :
+	•	avg_ticket_eur
+	•	avg_party_size
+	•	no_show_value_eur
+	•	hourly_admin_cost_eur
+	•	speedai_monthly_cost_eur
+	•	currency
+	•	locale
+
+Schéma metrics_json
+
+Implémenter un builder qui produit exactement un JSON mbr_v1 (structure fournie dans ce prompt). Le builder doit :
+	•	remplir ce qui est calculable
+	•	mettre null quand la donnée n’existe pas
+	•	renseigner meta.data_completeness + meta.warnings
+	•	marquer les estimations via champs computed:false / method:"estimate"
+
+Compute (jobs)
+
+Créer server/jobs/monthly/ :
+	•	compute-metrics.ts : calcule CORE (calls, reservations si existant, reviews si existant) + finance via inputs
+	•	compute-score.ts : calcule performance_score avec règles simples et tolérantes aux nulls
+	•	generate-ai-insights.ts : optionnel, produit insights_md + ai_insights (discoveries, alerts, actions)
+	•	render-pdf.ts : génère PDF via Playwright (Chromium) à partir d’un template HTML
+	•	run-monthly.ts : orchestrateur (compute -> ai -> pdf -> save)
+
+PDF rendering
+
+Créer server/templates/monthly-report/ :
+	•	index.html (6 pages via CSS page-break)
+	•	styles.css
+	•	render.ts (injecte metrics_json + branding)
+Utiliser Playwright pour rendre le HTML en PDF A4.
+Le PDF doit gérer les blocs manquants :
+	•	afficher “Non disponible (module non activé)” si CRM désactivé
+	•	afficher “Estimé” si finance/impact réputation sont estimés
+
+Scheduler & endpoints
+
+Créer :
+	•	Cron mensuel (si crons internes existants) OU endpoint manuel + doc.
+Endpoints :
+	•	POST /api/reports/monthly/run (super admin)
+	•	POST /api/reports/monthly/:tenantId/run (super admin)
+	•	GET /api/reports/monthly/latest (tenant)
+	•	GET /api/reports/monthly?period=YYYY-MM (tenant)
+	•	GET /api/reports/monthly/:id/download (tenant)
+
+Dashboard UI
+
+Ajouter un onglet “Rapports” :
+	•	liste des rapports
+	•	statut
+	•	bouton télécharger
+	•	bouton “générer maintenant” pour tenant_admin
+Respecter tenant_features.reporting_monthly (feature flag).
+
+Contraintes strictes
+	•	Ne pas refactor globalement
+	•	Isolation maximale (jobs/templates/routes séparés)
+	•	Multi-tenant strict
+	•	Snapshot figé (pas de recalcul en lecture)
+	•	Pas d’IA pour calculer les chiffres
+	•	Le module doit fonctionner même sans clés IA
+
+Livrables : code + migrations + template PDF + endpoints + UI.

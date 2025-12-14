@@ -3,6 +3,15 @@ import { pgTable, text, varchar, timestamp, boolean, integer, pgEnum, jsonb, dec
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Monthly report status enum
+export const monthlyReportStatusEnum = pgEnum('monthly_report_status', [
+  'pending',
+  'computed', 
+  'pdf_generated',
+  'sent',
+  'failed'
+]);
+
 // Notification type enum
 export const notificationTypeEnum = pgEnum('notification_type', [
   'daily_summary',
@@ -418,17 +427,26 @@ export const insertNotificationPreferencesSchema = createInsertSchema(notificati
 export type InsertNotificationPreferences = z.infer<typeof insertNotificationPreferencesSchema>;
 export type NotificationPreferences = typeof notificationPreferences.$inferSelect;
 
-// Monthly reports table for storing generated PDF reports
+// Monthly reports table for storing generated PDF reports (mbr_v1 format)
 export const monthlyReports = pgTable("monthly_reports", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
   tenantId: varchar("tenant_id").references(() => tenants.id, { onDelete: 'cascade' }), // Phase 2: Multi-tenant
   periodStart: timestamp("period_start").notNull(),
   periodEnd: timestamp("period_end").notNull(),
-  subscriptionRenewalAt: timestamp("subscription_renewal_at").notNull(),
-  metrics: text("metrics").notNull(), // JSON string with all KPIs and aggregated data
-  pdfPath: text("pdf_path").notNull(),
+  subscriptionRenewalAt: timestamp("subscription_renewal_at"),
+  // mbr_v1 format
+  metricsJson: jsonb("metrics_json"), // Full mbr_v1 JSON structure
+  metrics: text("metrics"), // Legacy JSON string (backward compat)
+  insightsMd: text("insights_md"), // AI-generated insights markdown
+  // PDF generation
+  pdfPath: text("pdf_path"),
+  pdfUrl: text("pdf_url"),
   pdfChecksum: text("pdf_checksum"),
+  // Status tracking
+  status: monthlyReportStatusEnum("status").notNull().default('pending'),
+  errorMessage: text("error_message"),
+  // Timestamps
   generatedAt: timestamp("generated_at").notNull().defaultNow(),
   emailedAt: timestamp("emailed_at"),
   notificationId: varchar("notification_id").references(() => notifications.id, { onDelete: 'set null' }),
@@ -439,9 +457,7 @@ export const monthlyReports = pgTable("monthly_reports", {
 export const insertMonthlyReportSchema = createInsertSchema(monthlyReports, {
   periodStart: z.date(),
   periodEnd: z.date(),
-  subscriptionRenewalAt: z.date(),
-  metrics: z.string().min(1, "Metrics data required"),
-  pdfPath: z.string().min(1, "PDF path required"),
+  subscriptionRenewalAt: z.date().optional(),
 }).omit({
   id: true,
   generatedAt: true,
@@ -2754,6 +2770,9 @@ export const tenantSettings = pgTable("tenant_settings", {
   guaranteeRules: jsonb("guarantee_rules"), // { penalty_amount, cancellation_delay, etc. }
   reviewsConfig: jsonb("reviews_config"), // { auto_request_delay, platforms, etc. }
   marketingConfig: jsonb("marketing_config"), // { default_sender, templates, etc. }
+  
+  // Reporting inputs for monthly reports (mbr_v1)
+  reportingInputs: jsonb("reporting_inputs"), // { avg_ticket_eur, avg_party_size, no_show_value_eur, hourly_admin_cost_eur, speedai_monthly_cost_eur, currency, locale }
   
   // UI/Branding
   ui: jsonb("ui"), // { theme, primary_color, logo_url, favicon_url, etc. }
