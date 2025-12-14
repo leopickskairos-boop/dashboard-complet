@@ -4656,6 +4656,77 @@ export class DatabaseStorage implements IStorage {
       .set({ isDefault: true })
       .where(and(eq(tenantUserRoles.userId, userId), eq(tenantUserRoles.tenantId, tenantId)));
   }
+
+  /**
+   * Phase 2 Multi-Tenant: Dual-key resolution helper
+   * Resolves tenant_id from multiple sources in priority order:
+   * 1. Direct tenantId if provided
+   * 2. From agentId (N8N webhooks use agentId)
+   * 3. From userId's default tenant role
+   * 
+   * This enables backward compatibility during migration:
+   * - Old data can still be accessed via userId
+   * - New data uses tenantId directly
+   * - N8N webhooks can use agentId mapping
+   */
+  async getEffectiveTenantId(params: {
+    tenantId?: string | null;
+    agentId?: string | null;
+    userId?: string | null;
+  }): Promise<string | null> {
+    const { tenantId, agentId, userId } = params;
+
+    // Priority 1: Direct tenantId
+    if (tenantId) {
+      return tenantId;
+    }
+
+    // Priority 2: Resolve from agentId (N8N webhooks)
+    if (agentId) {
+      const tenant = await this.getTenantByAgentId(agentId);
+      if (tenant) {
+        return tenant.id;
+      }
+      // Fallback: check externalId in tenants table
+      const [tenantByExternalId] = await db.select()
+        .from(tenants)
+        .where(eq(tenants.externalId, agentId));
+      if (tenantByExternalId) {
+        return tenantByExternalId.id;
+      }
+    }
+
+    // Priority 3: Resolve from userId's default tenant
+    if (userId) {
+      const defaultRole = await this.getDefaultTenantRoleForUser(userId);
+      if (defaultRole) {
+        return defaultRole.tenantId;
+      }
+      // Fallback: get first tenant role for user
+      const roles = await this.getUserTenantRoles(userId);
+      if (roles.length > 0) {
+        return roles[0].tenantId;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Get tenant context for a request - used by routes
+   * Returns both tenantId and legacy userId for backward compatibility
+   */
+  async getTenantContext(params: {
+    tenantId?: string | null;
+    agentId?: string | null;
+    userId?: string | null;
+  }): Promise<{ tenantId: string | null; userId: string | null }> {
+    const effectiveTenantId = await this.getEffectiveTenantId(params);
+    return {
+      tenantId: effectiveTenantId,
+      userId: params.userId || null
+    };
+  }
 }
 
 export const storage = new DatabaseStorage();
