@@ -322,6 +322,9 @@ export interface IStorage {
     totalReviews: number;
     newReviewsPeriod: number;
     responseRate: number;
+    unansweredReviews: number;
+    clickThroughRate: number;
+    clickThroughRateDataAvailable: boolean;
     platforms: Record<string, { score: number; count: number }>;
     ratingDistribution: Record<number, number>;
     sentimentDistribution: Record<string, number>;
@@ -329,6 +332,9 @@ export interface IStorage {
     avgResponseTimeHours: number | null;
     sentimentTrend: Array<{ date: string; positive: number; neutral: number; negative: number }>;
     platformComparison: Array<{ platform: string; score: number; count: number; trend: number }>;
+    reviewsTrend30d: Array<{ date: string; count: number }>;
+    ratingTrend30d: Array<{ date: string; avgRating: number }>;
+    ctrTrend30d: Array<{ date: string; ctr: number }>;
   }>;
   
   // Review alerts
@@ -2292,6 +2298,9 @@ export class DatabaseStorage implements IStorage {
     totalReviews: number;
     newReviewsPeriod: number;
     responseRate: number;
+    unansweredReviews: number;
+    clickThroughRate: number;
+    clickThroughRateDataAvailable: boolean;
     platforms: Record<string, { score: number; count: number }>;
     ratingDistribution: Record<number, number>;
     sentimentDistribution: Record<string, number>;
@@ -2299,6 +2308,9 @@ export class DatabaseStorage implements IStorage {
     avgResponseTimeHours: number | null;
     sentimentTrend: Array<{ date: string; positive: number; neutral: number; negative: number }>;
     platformComparison: Array<{ platform: string; score: number; count: number; trend: number }>;
+    reviewsTrend30d: Array<{ date: string; count: number }>;
+    ratingTrend30d: Array<{ date: string; avgRating: number }>;
+    ctrTrend30d: Array<{ date: string; ctr: number }>;
   }> {
     const conditions = [eq(reviews.userId, userId)];
     

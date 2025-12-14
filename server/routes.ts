@@ -754,7 +754,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const config = await storage.getGuaranteeConfig(guaranteeSession.userId);
               
               // Send confirmation email if enabled
-              if (config && config.autoSendEmailOnValidation !== false && guaranteeSession.customerEmail && isEmailConfigured(config)) {
+              if (config && config.autoSendEmailOnValidation !== false && guaranteeSession.customerEmail && isEmailConfigured()) {
                 try {
                   const emailResult = await sendConfirmationEmail({
                     config,
@@ -846,7 +846,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     type_service: guaranteeSession.typeService,
                     
                     // Notification settings (for N8N to know if emails/SMS are enabled)
-                    email_enabled: config ? isEmailConfigured(config) && config.autoSendEmailOnValidation !== false : false,
+                    email_enabled: config ? isEmailConfigured() && config.autoSendEmailOnValidation !== false : false,
                     sms_enabled: config ? isSmsConfigured() && config.autoSendSmsOnValidation === true : false,
                     
                     // Timestamp
@@ -4042,7 +4042,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const shortValidationUrl = `${frontendUrl}/guarantee/validate/${session.id}`;
       
       // Send email if configured and enabled
-      if (config.autoSendEmailOnCreate !== false && data.customer_email && isEmailConfigured(config)) {
+      if (config.autoSendEmailOnCreate !== false && data.customer_email && isEmailConfigured()) {
         try {
           const emailResult = await sendCardRequestEmail({
             config,

@@ -1,0 +1,69 @@
+PROMPT REPLIT – STRUCTURATION, SCALABILITÉ & NETTOYAGE GLOBAL
+
+Tu es un ingénieur logiciel senior chargé de restructurer et nettoyer l’architecture complète d’un projet SaaS (dashboard + backend) afin de le rendre scalable, maintenable et optimisé en coût, sans casser l’existant fonctionnel.
+
+Objectifs principaux
+	1.	Structurer correctement l’architecture pour supporter une montée en charge (augmentation du nombre de clients).
+	2.	Nettoyer et optimiser la base de données (schémas, tables, relations).
+	3.	Nettoyer et rationaliser les fichiers du projet (serveurs, admins, autos, routes, services, etc.).
+	4.	Réduire les coûts (requêtes inutiles, données redondantes, logique superflue).
+	5.	Faciliter la lecture, la maintenance et les évolutions futures du dashboard.
+
+⸻
+
+Périmètre d’action
+
+Tu dois intervenir sur :
+	•	Le code de la base de données (schémas, modèles, relations, index, normalisation).
+	•	Le code backend (serveurs, routes, services, logique métier).
+	•	La structure des fichiers du projet (organisation claire et cohérente).
+	•	Le code de création et gestion des données utilisées par le dashboard.
+	•	Les fichiers liés aux rôles (admin, client, auto, etc.).
+
+⸻
+
+Contraintes importantes
+	•	❌ Ne pas casser les fonctionnalités existantes.
+	•	❌ Ne pas supprimer de logique métier utile.
+	•	✅ Identifier et supprimer :
+	•	Les lignes de code inutiles ou redondantes
+	•	Les requêtes non optimales
+	•	Les champs de base de données jamais utilisés
+	•	✅ Clarifier la séparation des responsabilités :
+	•	DB / Services / Controllers / Routes
+	•	Admin vs Client vs Système
+	•	✅ Préparer une architecture future-proof pour :
+	•	filtrer les données par client
+	•	éviter les conflits multi-tenant
+	•	faciliter le tri, la recherche et l’agrégation des données
+
+⸻
+
+Travail attendu
+	1.	Audit rapide du projet
+	•	Identifier les problèmes de structure
+	•	Repérer les fichiers inutiles ou mal organisés
+	2.	Proposition d’une architecture cible
+	•	Organisation claire des dossiers
+	•	Bonne séparation des couches
+	3.	Refactor contrôlé
+	•	Nettoyage du code
+	•	Simplification des logiques
+	•	Amélioration des performances DB
+	4.	Optimisation base de données
+	•	Relations propres
+	•	Index pertinents
+	•	Champs strictement nécessaires
+	5.	Résultat lisible
+	•	Code plus clair
+	•	Structure cohérente
+	•	Base prête pour scaler sans douleur
+
+⸻
+
+Règle absolue
+
+Agis comme si ce projet devait passer de quelques clients à plusieurs dizaines, sans refonte majeure plus tard.
+Chaque décision doit aller dans le sens de la scalabilité, de la clarté et de la réduction des coûts.
+
+Commence par analyser le projet existant, puis applique les modifications nécessaires de manière progressive et sécurisée.
