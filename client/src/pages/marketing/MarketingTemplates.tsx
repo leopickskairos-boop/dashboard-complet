@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -76,6 +77,7 @@ const categoryIcons: Record<string, any> = {
 export default function MarketingTemplates() {
   const { toast } = useToast();
   const queryClientInst = useQueryClient();
+  const [location, setLocation] = useLocation();
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -84,6 +86,16 @@ export default function MarketingTemplates() {
   const [previewTemplate, setPreviewTemplate] = useState<any>(null);
   const [editingTemplate, setEditingTemplate] = useState<any>(null);
   const [generatedTemplate, setGeneratedTemplate] = useState<any>(null);
+
+  // Vérifier si on doit ouvrir le dialog de génération IA depuis l'URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('generate') === 'true') {
+      setIsAIGenerateOpen(true);
+      // Nettoyer l'URL
+      setLocation('/marketing/templates', { replace: true });
+    }
+  }, [setLocation]);
 
   const { data: templates, isLoading } = useQuery<any[]>({
     queryKey: [`/api/marketing/templates?category=${categoryFilter}`],

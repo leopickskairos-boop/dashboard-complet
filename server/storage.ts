@@ -2478,11 +2478,76 @@ export class DatabaseStorage implements IStorage {
       };
     });
     
+    // Calculate unanswered reviews
+    const reviewsWithoutResponse = allReviews.filter(r => r.responseStatus === 'none' || !r.responseStatus).length;
+    
+    // Generate 30-day trends for sparklines
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const reviewsLast30d = allReviews.filter(r => r.reviewDate && r.reviewDate >= thirtyDaysAgo);
+    
+    // Reviews trend (30 days) for sparkline
+    const reviewsTrendMap30d = new Map<string, number>();
+    reviewsLast30d.forEach(r => {
+      if (r.reviewDate) {
+        const dateKey = r.reviewDate.toISOString().split('T')[0];
+        reviewsTrendMap30d.set(dateKey, (reviewsTrendMap30d.get(dateKey) || 0) + 1);
+      }
+    });
+    const reviewsTrend30d = Array.from(reviewsTrendMap30d.entries())
+      .map(([date, count]) => ({ date, count }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+    
+    // Rating trend (30 days) for sparkline
+    const ratingTrendMap30d = new Map<string, { total: number; count: number }>();
+    reviewsLast30d.forEach(r => {
+      if (r.reviewDate) {
+        const dateKey = r.reviewDate.toISOString().split('T')[0];
+        const existing = ratingTrendMap30d.get(dateKey) || { total: 0, count: 0 };
+        ratingTrendMap30d.set(dateKey, { total: existing.total + r.rating, count: existing.count + 1 });
+      }
+    });
+    const ratingTrend30d = Array.from(ratingTrendMap30d.entries())
+      .map(([date, data]) => ({ date, avgRating: data.count > 0 ? Math.round((data.total / data.count) * 10) / 10 : 0 }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+    
+    // CTR trend (30 days) - from review requests
+    const allRequests = await db
+      .select()
+      .from(reviewRequests)
+      .where(eq(reviewRequests.userId, userId));
+    
+    const ctrTrendMap30d = new Map<string, { sent: number; clicked: number }>();
+    const requestsLast30d = allRequests.filter(r => {
+      const date = r.sentAt || r.createdAt;
+      return date && date >= thirtyDaysAgo;
+    });
+    
+    requestsLast30d.forEach(r => {
+      if (r.sentAt) {
+        const dateKey = r.sentAt.toISOString().split('T')[0];
+        const existing = ctrTrendMap30d.get(dateKey) || { sent: 0, clicked: 0 };
+        existing.sent++;
+        if (r.linkClickedAt) existing.clicked++;
+        ctrTrendMap30d.set(dateKey, existing);
+      }
+    });
+    const ctrTrend30d = Array.from(ctrTrendMap30d.entries())
+      .map(([date, data]) => ({ date, ctr: data.sent > 0 ? Math.round((data.clicked / data.sent) * 100) : 0 }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+    
+    // Calculate CTR
+    const requestStats = await this.getReviewRequestStats(userId);
+    const clickThroughRate = requestStats.clickRate || 0;
+    const clickThroughRateDataAvailable = requestStats.requestsSent >= 10;
+    
     return {
       globalScore,
       totalReviews,
       newReviewsPeriod,
       responseRate,
+      unansweredReviews: reviewsWithoutResponse,
+      clickThroughRate,
+      clickThroughRateDataAvailable,
       platforms,
       ratingDistribution,
       sentimentDistribution,
@@ -2490,6 +2555,9 @@ export class DatabaseStorage implements IStorage {
       avgResponseTimeHours,
       sentimentTrend,
       platformComparison,
+      reviewsTrend30d,
+      ratingTrend30d,
+      ctrTrend30d,
     };
   }
 

@@ -1,3 +1,11 @@
+/**
+ * MarketingAutomations - Page Automations Marketing (REFONTE COMPLÈTE)
+ * 
+ * Architecture en 3 zones :
+ * 1. Zone A — Compréhension & valeur (bloc explicatif simple)
+ * 2. Zone B — Automations existantes (liste améliorée visuellement)
+ * 3. Zone C — Création & scénarios (3 cards guidant la création)
+ */
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +22,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { apiRequest } from "@/lib/queryClient";
+import { useLocation } from "wouter";
 import {
   Workflow,
   Plus,
@@ -24,17 +33,19 @@ import {
   Eye,
   RefreshCw,
   Play,
-  Pause,
   Zap,
   Mail,
   MessageSquare,
   Clock,
-  Calendar,
   Users,
   Gift,
   UserPlus,
   UserMinus,
   Star,
+  ArrowRight,
+  Sparkles,
+  Calendar,
+  RotateCcw,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -43,6 +54,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 
 const automationFormSchema = z.object({
   name: z.string().min(1, "Nom requis"),
@@ -88,6 +100,7 @@ const actionOptions = [
 export default function MarketingAutomations() {
   const { toast } = useToast();
   const queryClientInst = useQueryClient();
+  const [, setLocation] = useLocation();
   const [search, setSearch] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingAutomation, setEditingAutomation] = useState<any>(null);
@@ -191,91 +204,132 @@ export default function MarketingAutomations() {
     return true;
   });
 
+  const handleCreateFromScenario = (scenario: 'welcome' | 'reengagement' | 'event') => {
+    form.reset();
+    if (scenario === 'welcome') {
+      form.setValue('triggerType', 'new_contact');
+      form.setValue('actionType', 'send_email');
+      form.setValue('name', 'Message de bienvenue');
+    } else if (scenario === 'reengagement') {
+      form.setValue('triggerType', 'inactive');
+      form.setValue('actionType', 'send_email');
+      form.setValue('name', 'Relance automatique');
+      form.setValue('triggerConfig', { inactiveDays: 30 });
+    } else if (scenario === 'event') {
+      form.setValue('triggerType', 'birthday');
+      form.setValue('actionType', 'send_email');
+      form.setValue('name', 'Message événementiel');
+      form.setValue('triggerConfig', { daysBeforeBirthday: 0 });
+    }
+    setIsCreateOpen(true);
+  };
+
   return (
-    <div className="min-h-screen p-6 space-y-6">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
+    <div className="space-y-6 pb-8">
+      {/* Header */}
+      <div className="flex items-center justify-between pl-1">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Automations</h1>
-          <p className="text-muted-foreground">
-            Automatisez vos communications marketing
-          </p>
+          <h1 className="text-lg font-semibold text-foreground">Automations</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">Automatisez vos communications marketing</p>
         </div>
-        <Button onClick={() => setIsCreateOpen(true)} data-testid="button-new-automation">
-          <Plus className="h-4 w-4 mr-2" />
-          Nouvelle automation
-        </Button>
       </div>
 
-      <Card>
-        <CardContent className="p-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Rechercher une automation..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-10"
-              data-testid="input-search"
-            />
+      {/* ZONE A — COMPRÉHENSION & VALEUR */}
+      <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
+        <CardContent className="p-8">
+          <div className="max-w-2xl mx-auto text-center space-y-4">
+            <div className="inline-flex items-center justify-center p-4 rounded-full bg-[#4CEFAD]/10 mb-2">
+              <Workflow className="h-10 w-10 text-[#4CEFAD]" />
+            </div>
+            <h2 className="text-2xl font-semibold text-foreground">
+              Automatisez votre communication
+            </h2>
+            <p className="text-base text-muted-foreground leading-relaxed">
+              Envoyez automatiquement le bon message, au bon moment,
+              sans avoir à intervenir.
+            </p>
           </div>
         </CardContent>
       </Card>
 
-      {isLoading ? (
-        <div className="grid gap-4">
-          {[...Array(3)].map((_, i) => (
-            <Card key={i}>
-              <CardContent className="p-6">
-                <div className="flex items-center gap-4">
-                  <Skeleton className="h-12 w-12 rounded-lg" />
-                  <div className="flex-1">
-                    <Skeleton className="h-5 w-48 mb-2" />
-                    <Skeleton className="h-4 w-32" />
-                  </div>
-                  <Skeleton className="h-8 w-16" />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : filteredAutomations && filteredAutomations.length > 0 ? (
-        <div className="grid gap-4">
-          {filteredAutomations.map((automation: any) => {
-            const trigger = triggerOptions.find(t => t.value === automation.triggerType);
-            const action = actionOptions.find(a => a.value === automation.actionType);
-            const TriggerIcon = trigger?.icon || Zap;
-            const ActionIcon = action?.icon || Mail;
+      {/* ZONE B — AUTOMATIONS EXISTANTES */}
+      <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-base font-semibold">Mes automations</CardTitle>
+              <CardDescription className="text-xs">Gérez vos communications automatiques</CardDescription>
+            </div>
+            <div className="relative flex-1 max-w-[300px] ml-4">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Rechercher une automation..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-10 h-9 text-xs"
+              />
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-0">
+          {isLoading ? (
+            <div className="space-y-4">
+              {[...Array(3)].map((_, i) => (
+                <Skeleton key={i} className="h-24 w-full" />
+              ))}
+            </div>
+          ) : filteredAutomations && filteredAutomations.length > 0 ? (
+            <div className="space-y-3">
+              {filteredAutomations.map((automation: any) => {
+                const trigger = triggerOptions.find(t => t.value === automation.triggerType);
+                const action = actionOptions.find(a => a.value === automation.actionType);
+                const TriggerIcon = trigger?.icon || Zap;
+                const ActionIcon = action?.icon || Mail;
 
-            return (
-              <Card key={automation.id} className="hover-elevate" data-testid={`card-automation-${automation.id}`}>
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-4">
-                    <div className={`p-3 rounded-lg ${automation.isActive ? 'bg-[#4CEFAD]/10' : 'bg-muted'}`}>
-                      <Workflow className={`h-6 w-6 ${automation.isActive ? 'text-[#4CEFAD]' : 'text-muted-foreground'}`} />
+                return (
+                  <div
+                    key={automation.id}
+                    className="flex items-center gap-4 p-4 rounded-lg border border-border/40 bg-background/50 hover:bg-muted/20 transition-colors group"
+                  >
+                    <div className={cn(
+                      "p-3 rounded-lg",
+                      automation.isActive ? 'bg-[#4CEFAD]/10' : 'bg-muted/50'
+                    )}>
+                      <Workflow className={cn(
+                        "h-5 w-5",
+                        automation.isActive ? 'text-[#4CEFAD]' : 'text-muted-foreground'
+                      )} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold truncate">{automation.name}</h3>
-                        <Badge variant={automation.isActive ? "default" : "secondary"}>
-                          {automation.isActive ? 'Active' : 'Inactive'}
+                      <div className="flex items-center gap-2 mb-2">
+                        <h3 className="font-semibold text-sm truncate">{automation.name}</h3>
+                        <Badge
+                          className={cn(
+                            "text-[10px] border-0",
+                            automation.isActive
+                              ? "bg-[#4CEFAD]/10 text-[#4CEFAD]"
+                              : "bg-gray-500/10 text-gray-400"
+                          )}
+                        >
+                          {automation.isActive ? 'Active' : 'Désactivée'}
                         </Badge>
                       </div>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <TriggerIcon className="h-4 w-4" />
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1.5">
+                          <TriggerIcon className="h-3.5 w-3.5" />
                           {trigger?.label}
                         </span>
-                        <span>→</span>
-                        <span className="flex items-center gap-1">
-                          <ActionIcon className="h-4 w-4" />
+                        <span className="text-muted-foreground/50">→</span>
+                        <span className="flex items-center gap-1.5">
+                          <ActionIcon className="h-3.5 w-3.5" />
                           {action?.label}
                         </span>
                         {automation.delayMinutes > 0 && (
                           <>
-                            <span>•</span>
-                            <span className="flex items-center gap-1">
-                              <Clock className="h-4 w-4" />
-                              Délai: {automation.delayMinutes >= 60 
+                            <span className="text-muted-foreground/50">•</span>
+                            <span className="flex items-center gap-1.5">
+                              <Clock className="h-3.5 w-3.5" />
+                              {automation.delayMinutes >= 60 
                                 ? `${Math.floor(automation.delayMinutes / 60)}h` 
                                 : `${automation.delayMinutes}min`}
                             </span>
@@ -283,7 +337,7 @@ export default function MarketingAutomations() {
                         )}
                       </div>
                       {automation.totalExecutions > 0 && (
-                        <p className="text-xs text-muted-foreground mt-1">
+                        <p className="text-xs text-muted-foreground mt-1.5">
                           {automation.totalExecutions} exécutions • {automation.totalSuccessful} réussies
                         </p>
                       )}
@@ -292,11 +346,10 @@ export default function MarketingAutomations() {
                       <Switch
                         checked={automation.isActive}
                         onCheckedChange={() => toggleMutation.mutate(automation.id)}
-                        data-testid={`switch-${automation.id}`}
                       />
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" data-testid={`button-menu-${automation.id}`}>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
                             <MoreVertical className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
@@ -321,24 +374,109 @@ export default function MarketingAutomations() {
                       </DropdownMenu>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      ) : (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <Workflow className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-            <p className="text-muted-foreground mb-4">Aucune automation configurée</p>
-            <Button onClick={() => setIsCreateOpen(true)} data-testid="button-first-automation">
-              <Plus className="h-4 w-4 mr-2" />
-              Créer ma première automation
-            </Button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="h-[300px] flex flex-col items-center justify-center rounded-xl border border-dashed border-border/60 bg-muted/20 px-6">
+              <div className="p-4 rounded-full bg-[#4CEFAD]/10 mb-6">
+                <Workflow className="h-12 w-12 text-[#4CEFAD]/50" />
+              </div>
+              <h3 className="text-lg font-semibold text-foreground mb-2">
+                Aucune automation active
+              </h3>
+              <p className="text-sm text-muted-foreground text-center max-w-md mb-8">
+                Les automations vous permettent de communiquer automatiquement
+                avec vos contacts, sans effort.
+              </p>
+              <Button onClick={() => setIsCreateOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Créer ma première automation
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ZONE C — CRÉATION & SCÉNARIOS */}
+      <div className="grid gap-4 md:grid-cols-3">
+        {/* Message de bienvenue */}
+        <Card 
+          className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] hover:border-blue-500/30 transition-all cursor-pointer group"
+          onClick={() => handleCreateFromScenario('welcome')}
+        >
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-xl bg-blue-500/10 group-hover:bg-blue-500/20 transition-colors">
+                  <UserPlus className="h-6 w-6 text-blue-400" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-base font-semibold text-foreground group-hover:text-blue-400 transition-colors">
+                    Message de bienvenue
+                  </h3>
+                </div>
+                <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-blue-400 group-hover:translate-x-1 transition-all" />
+              </div>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Envoyez automatiquement un message aux nouveaux contacts
+              </p>
+            </div>
           </CardContent>
         </Card>
-      )}
 
+        {/* Relance automatique */}
+        <Card 
+          className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] hover:border-[#C8B88A]/30 transition-all cursor-pointer group"
+          onClick={() => handleCreateFromScenario('reengagement')}
+        >
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-xl bg-[#C8B88A]/10 group-hover:bg-[#C8B88A]/20 transition-colors">
+                  <RotateCcw className="h-6 w-6 text-[#C8B88A]" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-base font-semibold text-foreground group-hover:text-[#C8B88A] transition-colors">
+                    Relance automatique
+                  </h3>
+                </div>
+                <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-[#C8B88A] group-hover:translate-x-1 transition-all" />
+              </div>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Relancez les contacts inactifs sans y penser
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Message événementiel */}
+        <Card 
+          className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] hover:border-[#4CEFAD]/30 transition-all cursor-pointer group"
+          onClick={() => handleCreateFromScenario('event')}
+        >
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-xl bg-[#4CEFAD]/10 group-hover:bg-[#4CEFAD]/20 transition-colors">
+                  <Calendar className="h-6 w-6 text-[#4CEFAD]" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-base font-semibold text-foreground group-hover:text-[#4CEFAD] transition-colors">
+                    Message événementiel
+                  </h3>
+                </div>
+                <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-[#4CEFAD] group-hover:translate-x-1 transition-all" />
+              </div>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Envoyez un message à une date clé
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Dialog Créer/Modifier Automation */}
       <Dialog open={isCreateOpen} onOpenChange={handleCloseCreate}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -356,7 +494,7 @@ export default function MarketingAutomations() {
                   <FormItem>
                     <FormLabel>Nom de l'automation</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="ex: Bienvenue nouveau client" data-testid="input-automation-name" />
+                      <Input {...field} placeholder="ex: Bienvenue nouveau client" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -391,7 +529,7 @@ export default function MarketingAutomations() {
                       <FormLabel>Quand déclencher ?</FormLabel>
                       <Select value={field.value} onValueChange={field.onChange}>
                         <FormControl>
-                          <SelectTrigger data-testid="select-trigger-type">
+                          <SelectTrigger>
                             <SelectValue />
                           </SelectTrigger>
                         </FormControl>
@@ -431,7 +569,6 @@ export default function MarketingAutomations() {
                             max="30"
                             {...field}
                             onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                            data-testid="input-days-before"
                           />
                         </FormControl>
                         <FormDescription>0 = le jour même</FormDescription>
@@ -455,7 +592,6 @@ export default function MarketingAutomations() {
                             max="365"
                             {...field}
                             onChange={(e) => field.onChange(parseInt(e.target.value) || 30)}
-                            data-testid="input-inactive-days"
                           />
                         </FormControl>
                         <FormMessage />
@@ -472,7 +608,7 @@ export default function MarketingAutomations() {
                       <FormItem>
                         <FormLabel>Nom du tag</FormLabel>
                         <FormControl>
-                          <Input {...field} placeholder="ex: vip" data-testid="input-tag-name" />
+                          <Input {...field} placeholder="ex: vip" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -489,7 +625,7 @@ export default function MarketingAutomations() {
                         <FormLabel>Segment</FormLabel>
                         <Select value={field.value || ''} onValueChange={field.onChange}>
                           <FormControl>
-                            <SelectTrigger data-testid="select-segment">
+                            <SelectTrigger>
                               <SelectValue placeholder="Choisir un segment" />
                             </SelectTrigger>
                           </FormControl>
@@ -522,7 +658,7 @@ export default function MarketingAutomations() {
                       <FormLabel>Quelle action effectuer ?</FormLabel>
                       <Select value={field.value} onValueChange={field.onChange}>
                         <FormControl>
-                          <SelectTrigger data-testid="select-action-type">
+                          <SelectTrigger>
                             <SelectValue />
                           </SelectTrigger>
                         </FormControl>
@@ -554,7 +690,7 @@ export default function MarketingAutomations() {
                         <FormLabel>Template</FormLabel>
                         <Select value={field.value || ''} onValueChange={field.onChange}>
                           <FormControl>
-                            <SelectTrigger data-testid="select-template">
+                            <SelectTrigger>
                               <SelectValue placeholder="Choisir un template" />
                             </SelectTrigger>
                           </FormControl>
@@ -605,7 +741,6 @@ export default function MarketingAutomations() {
                         min="0"
                         {...field}
                         onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                        data-testid="input-delay"
                       />
                     </FormControl>
                     <FormDescription>
@@ -620,7 +755,7 @@ export default function MarketingAutomations() {
                 <Button type="button" variant="outline" onClick={handleCloseCreate}>
                   Annuler
                 </Button>
-                <Button type="submit" disabled={createMutation.isPending} data-testid="button-save-automation">
+                <Button type="submit" disabled={createMutation.isPending}>
                   {createMutation.isPending && <RefreshCw className="h-4 w-4 mr-2 animate-spin" />}
                   {editingAutomation ? 'Enregistrer' : 'Créer'}
                 </Button>

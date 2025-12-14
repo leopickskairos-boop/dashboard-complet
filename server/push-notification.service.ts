@@ -8,12 +8,16 @@ const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || process.env.VITE_VAPID_
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY;
 
 if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
-  webpush.setVapidDetails(
-    'mailto:support@speedai.fr',
-    VAPID_PUBLIC_KEY,
-    VAPID_PRIVATE_KEY
-  );
-  console.log('[PushNotificationService] VAPID keys configured');
+  try {
+    webpush.setVapidDetails(
+      'mailto:support@speedai.fr',
+      VAPID_PUBLIC_KEY,
+      VAPID_PRIVATE_KEY
+    );
+    console.log('[PushNotificationService] VAPID keys configured');
+  } catch (error) {
+    console.warn('[PushNotificationService] Invalid VAPID keys - push notifications disabled:', error instanceof Error ? error.message : error);
+  }
 } else {
   console.warn('[PushNotificationService] VAPID keys not configured - push notifications disabled');
 }

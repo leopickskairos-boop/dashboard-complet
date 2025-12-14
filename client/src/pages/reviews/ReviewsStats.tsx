@@ -1,19 +1,40 @@
-import { useState } from "react";
+/**
+ * ReviewsStats - Page de statistiques des avis (REFONTE COMPLÈTE)
+ * 
+ * Architecture en 8 zones :
+ * 1. Hero Score (score de réputation)
+ * 2. KPI Business (5 KPIs sans graphique)
+ * 3. Tendance globale (1 seul graphe - note moyenne)
+ * 4. Distribution des notes (barres horizontales)
+ * 5. Sentiment global (simplifié)
+ * 6. Performance par plateforme
+ * 7. Actions prioritaires
+ * 8. IA (analyse intelligente)
+ */
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Star, TrendingUp, TrendingDown, MessageSquare, Award, Loader2, Clock, Sparkles, ArrowUpRight, ArrowDownRight, Minus } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Progress } from "@/components/ui/progress";
+import { Star, TrendingUp, TrendingDown, MessageSquare, Award, Loader2, Clock, Sparkles, ArrowUpRight, ArrowDownRight, Minus, MousePointerClick, HelpCircle, ChevronRight, CheckCircle2, AlertTriangle, Target } from "lucide-react";
 import { SiGoogle, SiFacebook, SiTripadvisor, SiYelp } from "react-icons/si";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, LineChart, Line, AreaChart, Area, ComposedChart } from "recharts";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, Area, AreaChart } from "recharts";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
+import { cn } from "@/lib/utils";
 
 interface ReviewStats {
   globalScore: number;
   totalReviews: number;
   newReviewsPeriod: number;
   responseRate: number;
+  unansweredReviews?: number;
+  clickThroughRate?: number;
+  clickThroughRateDataAvailable?: boolean;
+  clickThroughRateVariation?: number | null;
   platforms: Record<string, { score: number; count: number }>;
   ratingDistribution: Record<number, number>;
   sentimentDistribution: Record<string, number>;
@@ -23,10 +44,21 @@ interface ReviewStats {
   platformComparison: Array<{ platform: string; score: number; count: number; trend: number }>;
 }
 
+interface AIInsights {
+  risks?: string | null;
+  opportunities?: string | null;
+  actions?: string | null;
+  raw?: string | null;
+  error?: string;
+}
+
 export default function ReviewsStats() {
   const [period, setPeriod] = useState<string>("month");
-  const [aiInsights, setAiInsights] = useState<string | null>(null);
+  const [aiInsights, setAiInsights] = useState<AIInsights | null>(null);
+  const [showImprovement, setShowImprovement] = useState(false);
+  const [scoreDisplay, setScoreDisplay] = useState(0);
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
 
   const { data: stats, isLoading } = useQuery<ReviewStats>({
     queryKey: ["/api/reviews/stats", { period }],
@@ -39,19 +71,105 @@ export default function ReviewsStats() {
 
   const generateInsightsMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest("POST", "/api/ai/review-insights", { stats, period });
+      return await apiRequest<{ insights: AIInsights }>("POST", "/api/ai/review-insights", { stats, period });
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data) => {
       setAiInsights(data.insights);
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error("[AI] Error:", error);
       toast({
         title: "Erreur",
-        description: "Impossible de générer les insights IA",
+        description: error?.message || "Impossible de générer les insights IA",
         variant: "destructive",
+      });
+      setAiInsights({
+        risks: null,
+        opportunities: null,
+        actions: null,
+        raw: null,
+        error: "Erreur lors de la génération",
       });
     },
   });
+
+  // Animation du score au chargement
+  useEffect(() => {
+    if (stats) {
+      const reputationScore = calculateReputationScore();
+      if (reputationScore) {
+        const target = reputationScore.score;
+        const duration = 1000;
+        const steps = 30;
+        const increment = target / steps;
+        let current = 0;
+        const timer = setInterval(() => {
+          current += increment;
+          if (current >= target) {
+            setScoreDisplay(target);
+            clearInterval(timer);
+          } else {
+            setScoreDisplay(Math.round(current));
+          }
+        }, duration / steps);
+        return () => clearInterval(timer);
+      }
+    }
+  }, [stats]);
+
+  // Calculer le score de réputation
+  const calculateReputationScore = () => {
+    if (!stats) return null;
+    
+    const noteScore = Math.min(40, (stats.globalScore / 5) * 40);
+    const volumeScore = Math.min(20, (stats.totalReviews / 50) * 20);
+    const responseRateScore = (stats.responseRate / 100) * 20;
+    
+    let responseTimeScore = 0;
+    if (stats.avgResponseTimeHours !== null) {
+      if (stats.avgResponseTimeHours <= 24) responseTimeScore = 10;
+      else if (stats.avgResponseTimeHours <= 48) responseTimeScore = 7;
+      else if (stats.avgResponseTimeHours <= 72) responseTimeScore = 4;
+    }
+    
+    let sentimentBonus = 0;
+    if (stats.sentimentDistribution) {
+      const veryPositive = stats.sentimentDistribution.very_positive || 0;
+      const positive = stats.sentimentDistribution.positive || 0;
+      const neutral = stats.sentimentDistribution.neutral || 0;
+      const negative = stats.sentimentDistribution.negative || 0;
+      const veryNegative = stats.sentimentDistribution.very_negative || 0;
+      const total = veryPositive + positive + neutral + negative + veryNegative;
+      
+      if (total > 0) {
+        const positivePercent = ((veryPositive + positive) / total) * 100;
+        const negativePercent = ((negative + veryNegative) / total) * 100;
+        
+        if (positivePercent >= 70) {
+          const baseScore = noteScore + volumeScore + responseRateScore + responseTimeScore;
+          if (baseScore < 50) {
+            sentimentBonus = Math.min(15, (50 - baseScore) * 0.4);
+          } else {
+            sentimentBonus = 10;
+          }
+        } else if (positivePercent >= 50) {
+          sentimentBonus = 7;
+        } else if (negativePercent >= 30) {
+          sentimentBonus = -5;
+        } else {
+          sentimentBonus = 5;
+        }
+      }
+    }
+    
+    const baseScore = noteScore + volumeScore + responseRateScore + responseTimeScore;
+    const finalScore = Math.max(0, Math.min(100, baseScore + sentimentBonus));
+    
+    return {
+      score: Math.round(finalScore),
+      label: finalScore >= 80 ? "Excellente" : finalScore >= 60 ? "Solide" : finalScore >= 40 ? "Moyenne" : "À améliorer",
+    };
+  };
 
   const getPlatformIcon = (platform: string) => {
     switch (platform.toLowerCase()) {
@@ -74,7 +192,7 @@ export default function ReviewsStats() {
         {[1, 2, 3, 4, 5].map((star) => (
           <Star
             key={star}
-            className={`h-5 w-5 ${star <= rating ? "text-[#C8B88A] fill-[#C8B88A]" : "text-muted-foreground"}`}
+            className={`h-4 w-4 ${star <= rating ? "text-[#C8B88A] fill-[#C8B88A]" : "text-muted-foreground/30"}`}
           />
         ))}
       </div>
@@ -89,46 +207,6 @@ export default function ReviewsStats() {
     return `${days}j`;
   };
 
-  const getTrendIcon = (trend: number) => {
-    if (trend > 0) return <ArrowUpRight className="h-3 w-3 text-[#4CEFAD]" />;
-    if (trend < 0) return <ArrowDownRight className="h-3 w-3 text-red-400" />;
-    return <Minus className="h-3 w-3 text-muted-foreground" />;
-  };
-
-  const ratingChartData = stats?.ratingDistribution
-    ? Object.entries(stats.ratingDistribution).map(([rating, count]) => ({
-        rating: `${rating} étoile${parseInt(rating) > 1 ? "s" : ""}`,
-        count,
-        fill: parseInt(rating) >= 4 ? "#4CEFAD" : parseInt(rating) >= 3 ? "#C8B88A" : "#EF4444",
-      }))
-    : [];
-
-  const sentimentChartData = stats?.sentimentDistribution
-    ? Object.entries(stats.sentimentDistribution)
-        .filter(([_, count]) => count > 0)
-        .map(([sentiment, count]) => {
-          const labels: Record<string, string> = {
-            very_positive: "Très positif",
-            positive: "Positif",
-            neutral: "Neutre",
-            negative: "Négatif",
-            very_negative: "Très négatif",
-          };
-          const colors: Record<string, string> = {
-            very_positive: "#4CEFAD",
-            positive: "#22C55E",
-            neutral: "#6B7280",
-            negative: "#F97316",
-            very_negative: "#EF4444",
-          };
-          return {
-            name: labels[sentiment] || sentiment,
-            value: count,
-            fill: colors[sentiment] || "#6B7280",
-          };
-        })
-    : [];
-
   const formatTrendDate = (date: string) => {
     if (period === "year") {
       const [year, month] = date.split("-");
@@ -139,6 +217,122 @@ export default function ReviewsStats() {
     return `${d.getDate()}/${d.getMonth() + 1}`;
   };
 
+  // Calculer la tendance de la note moyenne
+  const getRatingTrend = () => {
+    if (!stats?.trends || stats.trends.length < 2) return null;
+    const first = stats.trends[0]?.avgRating || 0;
+    const last = stats.trends[stats.trends.length - 1]?.avgRating || 0;
+    const diff = last - first;
+    if (Math.abs(diff) < 0.1) return "Stable";
+    if (diff > 0) return "En amélioration";
+    return "En baisse";
+  };
+
+  // Préparer les données pour la distribution
+  const ratingDistributionData = stats?.ratingDistribution
+    ? Object.entries(stats.ratingDistribution)
+        .sort(([a], [b]) => parseInt(b) - parseInt(a))
+        .map(([rating, count]) => ({
+          rating: `${rating}★`,
+          count,
+          fill: parseInt(rating) >= 4 ? "#4CEFAD" : parseInt(rating) >= 3 ? "#C8B88A" : "#EF4444",
+        }))
+    : [];
+
+  // Calculer le sentiment dominant
+  const getDominantSentiment = () => {
+    if (!stats?.sentimentDistribution) return null;
+    const entries = Object.entries(stats.sentimentDistribution);
+    if (entries.length === 0) return null;
+    const sorted = entries.sort((a, b) => b[1] - a[1]);
+    const dominant = sorted[0][0];
+    const labels: Record<string, string> = {
+      very_positive: "Très positif",
+      positive: "Positif",
+      neutral: "Mitigé",
+      negative: "Négatif",
+      very_negative: "Très négatif",
+    };
+    return labels[dominant] || "Neutre";
+  };
+
+  // Calculer la répartition sentiment
+  const getSentimentBreakdown = () => {
+    if (!stats?.sentimentDistribution) return { positive: 0, neutral: 0, negative: 0 };
+    const veryPositive = stats.sentimentDistribution.very_positive || 0;
+    const positive = stats.sentimentDistribution.positive || 0;
+    const neutral = stats.sentimentDistribution.neutral || 0;
+    const negative = stats.sentimentDistribution.negative || 0;
+    const veryNegative = stats.sentimentDistribution.very_negative || 0;
+    const total = veryPositive + positive + neutral + negative + veryNegative;
+    if (total === 0) return { positive: 0, neutral: 0, negative: 0 };
+    return {
+      positive: Math.round(((veryPositive + positive) / total) * 100),
+      neutral: Math.round((neutral / total) * 100),
+      negative: Math.round(((negative + veryNegative) / total) * 100),
+    };
+  };
+
+  // Générer les actions prioritaires
+  const getPriorityActions = () => {
+    const actions = [];
+    
+    if (stats?.unansweredReviews && stats.unansweredReviews > 0) {
+      const estimatedPoints = Math.min(15, stats.unansweredReviews * 2);
+      actions.push({
+        action: `Répondre à ${stats.unansweredReviews} avis non traités`,
+        points: `+${estimatedPoints} points estimés`,
+        impact: "high",
+        buttonLabel: "Répondre",
+        buttonPath: "/reviews?responseStatus=none",
+      });
+    }
+    
+    if (stats?.totalReviews && stats.totalReviews < 20) {
+      const needed = 20 - stats.totalReviews;
+      const estimatedPoints = Math.min(10, needed * 1.5);
+      actions.push({
+        action: `Obtenir ${needed} nouveaux avis`,
+        points: `+${Math.round(estimatedPoints)} points estimés`,
+        impact: "medium",
+        buttonLabel: "Créer campagne",
+        buttonPath: "/reviews/campaigns",
+      });
+    }
+    
+    if (stats?.responseRate && stats.responseRate < 70) {
+      const target = 70;
+      const estimatedPoints = Math.min(12, (target - stats.responseRate) * 0.3);
+      actions.push({
+        action: `Améliorer le taux de réponse à ${target}%`,
+        points: `+${Math.round(estimatedPoints)} points estimés`,
+        impact: "medium",
+        buttonLabel: "Voir avis",
+        buttonPath: "/reviews?responseStatus=none",
+      });
+    }
+    
+    if (stats?.avgResponseTimeHours && stats.avgResponseTimeHours > 48) {
+      actions.push({
+        action: "Réduire le temps de réponse sous 24h",
+        points: "+8 points estimés",
+        impact: "low",
+        buttonLabel: "Voir avis",
+        buttonPath: "/reviews",
+      });
+    }
+    
+    return actions.slice(0, 3);
+  };
+
+  // Trouver la plateforme la plus faible
+  const getWeakestPlatform = () => {
+    if (!stats?.platformComparison || stats.platformComparison.length === 0) return null;
+    return stats.platformComparison.reduce((weakest, current) => 
+      current.score < weakest.score ? current : weakest
+    );
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -147,8 +341,13 @@ export default function ReviewsStats() {
     );
   }
 
+  const reputationScore = calculateReputationScore();
+  const priorityActions = getPriorityActions();
+  const weakestPlatform = getWeakestPlatform();
+  const sentimentBreakdown = getSentimentBreakdown();
+
   return (
-    <div className="space-y-5 pb-8">
+    <div className="space-y-6 pb-8">
       {/* Header */}
       <div className="flex items-center justify-between pl-1">
         <div>
@@ -156,7 +355,7 @@ export default function ReviewsStats() {
           <p className="text-xs text-muted-foreground mt-0.5">Analysez votre réputation en ligne</p>
         </div>
         <Select value={period} onValueChange={setPeriod}>
-          <SelectTrigger className="w-[160px] h-9 text-xs" data-testid="select-period">
+          <SelectTrigger className="w-[160px] h-9 text-xs">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -168,7 +367,62 @@ export default function ReviewsStats() {
         </Select>
       </div>
 
-      {/* KPI Cards - Extended with response time */}
+      {/* ZONE 1 — HERO SCORE */}
+      <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_20px_rgba(0,0,0,0.4)] border-white/[0.08] overflow-hidden">
+        <CardContent className="p-8">
+          <div className="text-center space-y-4">
+            <div className="space-y-2">
+              <p className={cn(
+                "text-7xl font-bold transition-all duration-1000",
+                reputationScore?.score >= 80 ? "text-[#4CEFAD]" :
+                reputationScore?.score >= 60 ? "text-[#C8B88A]" :
+                reputationScore?.score >= 40 ? "text-orange-400" :
+                "text-red-400"
+              )}>
+                {scoreDisplay}
+              </p>
+              <p className="text-lg text-muted-foreground">/ 100</p>
+              <p className={cn(
+                "text-xl font-semibold",
+                reputationScore?.score >= 80 ? "text-[#4CEFAD]" :
+                reputationScore?.score >= 60 ? "text-[#C8B88A]" :
+                reputationScore?.score >= 40 ? "text-orange-400" :
+                "text-red-400"
+              )}>
+                Réputation {reputationScore?.label}
+              </p>
+            </div>
+            <Progress 
+              value={reputationScore?.score || 0} 
+              className="h-2 max-w-md mx-auto"
+            />
+            <p className="text-xs text-muted-foreground max-w-md mx-auto">
+              Basé sur votre note, le volume d'avis, le taux et le temps de réponse, et le sentiment global.
+            </p>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowImprovement(!showImprovement)}
+              className="text-xs"
+            >
+              👉 Comment améliorer mon score
+              <ChevronRight className={cn("h-3 w-3 ml-1 transition-transform", showImprovement && "rotate-90")} />
+            </Button>
+            {showImprovement && priorityActions.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-border/40 space-y-2 max-w-md mx-auto">
+                {priorityActions.map((action, index) => (
+                  <div key={index} className="flex items-center justify-between p-2.5 rounded-lg bg-muted/20">
+                    <span className="text-xs text-foreground/90">{action.action}</span>
+                    <span className="text-xs font-medium text-[#4CEFAD] ml-2">{action.points}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ZONE 2 — KPI BUSINESS */}
       <div className="grid gap-4 md:grid-cols-5">
         <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
           <CardContent className="p-4">
@@ -178,11 +432,8 @@ export default function ReviewsStats() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats?.globalScore?.toFixed(1) || "-"}</p>
-                <p className="text-xs text-muted-foreground">Note globale</p>
+                <p className="text-xs text-muted-foreground">Note moyenne</p>
               </div>
-            </div>
-            <div className="mt-2">
-              {renderStars(Math.round(stats?.globalScore || 0))}
             </div>
           </CardContent>
         </Card>
@@ -195,46 +446,33 @@ export default function ReviewsStats() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats?.totalReviews || 0}</p>
-                <p className="text-xs text-muted-foreground">Avis total</p>
+                <p className="text-xs text-muted-foreground">Nombre d'avis</p>
               </div>
             </div>
-            <p className="mt-2 text-[10px] text-muted-foreground/70">
-              +{stats?.newReviewsPeriod || 0} nouveaux sur la période
-            </p>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-blue-500/10">
-                <TrendingUp className="h-5 w-5 text-blue-400" />
+              <div className="p-2.5 rounded-xl bg-red-500/10">
+                <AlertTriangle className="h-5 w-5 text-red-400" />
               </div>
-              <div>
-                <p className="text-2xl font-bold">{stats?.responseRate || 0}%</p>
-                <p className="text-xs text-muted-foreground">Taux de réponse</p>
+              <div className="flex-1">
+                <p className="text-2xl font-bold">{stats?.unansweredReviews || 0}</p>
+                <p className="text-xs text-muted-foreground">Avis non répondus</p>
               </div>
+              {stats?.unansweredReviews && stats.unansweredReviews > 0 && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-xs h-7"
+                  onClick={() => setLocation("/reviews?responseStatus=none")}
+                >
+                  Répondre
+                </Button>
+              )}
             </div>
-            <p className="mt-2 text-[10px] text-muted-foreground/70">
-              Réponses aux avis clients
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-orange-500/10">
-                <Clock className="h-5 w-5 text-orange-400" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{formatResponseTime(stats?.avgResponseTimeHours ?? null)}</p>
-                <p className="text-xs text-muted-foreground">Temps de réponse</p>
-              </div>
-            </div>
-            <p className="mt-2 text-[10px] text-muted-foreground/70">
-              Délai moyen de réponse
-            </p>
           </CardContent>
         </Card>
 
@@ -242,35 +480,72 @@ export default function ReviewsStats() {
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2.5 rounded-xl bg-purple-500/10">
-                <Award className="h-5 w-5 text-purple-400" />
+                <MessageSquare className="h-5 w-5 text-purple-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold">
-                  {stats?.ratingDistribution?.[5] || 0}
-                </p>
-                <p className="text-xs text-muted-foreground">Avis 5 étoiles</p>
+                <p className="text-2xl font-bold">{stats?.responseRate || 0}%</p>
+                <p className="text-xs text-muted-foreground">Taux de réponse</p>
               </div>
             </div>
-            <p className="mt-2 text-[10px] text-muted-foreground/70">
-              Excellence reconnue
-            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-blue-500/10">
+                <MousePointerClick className="h-5 w-5 text-blue-400" />
+              </div>
+              <div>
+                <div className="flex items-center gap-1">
+                  <p className="text-2xl font-bold">
+                    {stats?.clickThroughRateDataAvailable ? `${stats.clickThroughRate || 0}%` : "N/A"}
+                  </p>
+                  {!stats?.clickThroughRateDataAvailable && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="text-xs">Données insuffisantes pour calculer le CTR</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">CTR</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Trends Chart - NEW */}
+      {/* ZONE 3 — TENDANCE GLOBALE */}
       <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base font-semibold flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-[#4CEFAD]" />
-            Évolution des avis
-          </CardTitle>
-          <CardDescription className="text-xs">Volume et note moyenne au fil du temps</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-base font-semibold">Tendance globale</CardTitle>
+              <CardDescription className="text-xs">Évolution de votre note moyenne</CardDescription>
+            </div>
+            {getRatingTrend() && (
+              <span className="text-xs font-medium text-muted-foreground">
+                {getRatingTrend()}
+              </span>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="pt-0">
           {stats?.trends && stats.trends.length > 0 ? (
-            <ResponsiveContainer width="100%" height={250}>
-              <ComposedChart data={stats.trends}>
+            <ResponsiveContainer width="100%" height={260}>
+              <AreaChart data={stats.trends}>
+                <defs>
+                  <linearGradient id="ratingGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#C8B88A" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#C8B88A" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
                 <XAxis 
                   dataKey="date" 
@@ -278,214 +553,251 @@ export default function ReviewsStats() {
                   tick={{ fontSize: 10 }} 
                   tickFormatter={formatTrendDate}
                 />
-                <YAxis yAxisId="left" stroke="#666" tick={{ fontSize: 10 }} />
-                <YAxis yAxisId="right" orientation="right" domain={[0, 5]} stroke="#666" tick={{ fontSize: 10 }} />
-                <Tooltip
+                <YAxis 
+                  domain={[1, 5]}
+                  stroke="#666" 
+                  tick={{ fontSize: 10 }}
+                />
+                <RechartsTooltip
                   contentStyle={{ backgroundColor: "#0E1015", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", fontSize: "12px" }}
                   labelFormatter={formatTrendDate}
-                  formatter={(value: number, name: string) => [
-                    name === "count" ? `${value} avis` : value.toFixed(1),
-                    name === "count" ? "Nombre d'avis" : "Note moyenne"
-                  ]}
+                  formatter={(value: number) => [value.toFixed(1), "Note moyenne"]}
                 />
-                <Bar yAxisId="left" dataKey="count" fill="#4CEFAD" opacity={0.6} radius={[4, 4, 0, 0]} name="count" />
-                <Line yAxisId="right" type="monotone" dataKey="avgRating" stroke="#C8B88A" strokeWidth={2} dot={{ fill: "#C8B88A", r: 3 }} name="avgRating" />
-              </ComposedChart>
+                <Area 
+                  type="monotone" 
+                  dataKey="avgRating" 
+                  stroke="#C8B88A" 
+                  strokeWidth={2.5}
+                  fill="url(#ratingGradient)"
+                />
+              </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-[250px] flex flex-col items-center justify-center rounded-xl border border-dashed border-border/60 bg-muted/20">
-              <div className="p-2.5 rounded-full bg-[#4CEFAD]/10 mb-3">
-                <TrendingUp className="h-5 w-5 text-[#4CEFAD]/50" />
-              </div>
+            <div className="h-[260px] flex items-center justify-center rounded-xl border border-dashed border-border/60 bg-muted/20">
               <p className="text-xs text-muted-foreground">Pas encore de données de tendance</p>
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Original Charts Row */}
-      <div className="grid gap-5 md:grid-cols-2">
-        <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold">Distribution des notes</CardTitle>
-            <CardDescription className="text-xs">Répartition des avis par note attribuée</CardDescription>
-          </CardHeader>
-          <CardContent className="pt-0">
-            {ratingChartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={ratingChartData} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-                  <XAxis type="number" stroke="#666" tick={{ fontSize: 10 }} />
-                  <YAxis dataKey="rating" type="category" stroke="#666" width={70} tick={{ fontSize: 10 }} />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: "#0E1015", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", fontSize: "12px" }}
-                    labelStyle={{ color: "#fff" }}
-                  />
-                  <Bar dataKey="count" fill="#C8B88A" radius={[0, 6, 6, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-[200px] flex flex-col items-center justify-center rounded-xl border border-dashed border-border/60 bg-muted/20">
-                <div className="p-2.5 rounded-full bg-[#C8B88A]/10 mb-3">
-                  <Star className="h-5 w-5 text-[#C8B88A]/50" />
-                </div>
-                <p className="text-xs text-muted-foreground">Aucune donnée disponible</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold">Analyse des sentiments</CardTitle>
-            <CardDescription className="text-xs">Tonalité générale détectée par IA</CardDescription>
-          </CardHeader>
-          <CardContent className="pt-0">
-            {sentimentChartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie
-                    data={sentimentChartData}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={70}
-                    label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                    labelLine={false}
-                  >
-                    {sentimentChartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.fill} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{ backgroundColor: "#0E1015", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", fontSize: "12px" }}
-                  />
-                  <Legend wrapperStyle={{ fontSize: "10px" }} />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-[200px] flex flex-col items-center justify-center rounded-xl border border-dashed border-border/60 bg-muted/20">
-                <div className="p-2.5 rounded-full bg-[#4CEFAD]/10 mb-3">
-                  <MessageSquare className="h-5 w-5 text-[#4CEFAD]/50" />
-                </div>
-                <p className="text-xs text-muted-foreground">Aucune analyse disponible</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Sentiment Trend Chart - NEW */}
+      {/* ZONE 4 — DISTRIBUTION DES NOTES */}
       <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base font-semibold">Évolution du sentiment</CardTitle>
-          <CardDescription className="text-xs">Tendance des avis positifs, neutres et négatifs</CardDescription>
+          <CardTitle className="text-base font-semibold">Distribution des notes</CardTitle>
+          <CardDescription className="text-xs">Répartition qualitative de vos avis</CardDescription>
         </CardHeader>
         <CardContent className="pt-0">
-          {stats?.sentimentTrend && stats.sentimentTrend.length > 0 ? (
+          {ratingDistributionData.length > 0 ? (
             <ResponsiveContainer width="100%" height={200}>
-              <AreaChart data={stats.sentimentTrend}>
+              <BarChart data={ratingDistributionData} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-                <XAxis 
-                  dataKey="date" 
-                  stroke="#666" 
-                  tick={{ fontSize: 10 }} 
-                  tickFormatter={formatTrendDate}
-                />
-                <YAxis stroke="#666" tick={{ fontSize: 10 }} />
-                <Tooltip
+                <XAxis type="number" stroke="#666" tick={{ fontSize: 10 }} />
+                <YAxis dataKey="rating" type="category" stroke="#666" width={60} tick={{ fontSize: 10 }} />
+                <RechartsTooltip
                   contentStyle={{ backgroundColor: "#0E1015", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", fontSize: "12px" }}
-                  labelFormatter={formatTrendDate}
+                  formatter={(value: number, name: string, props: any) => [
+                    `${value} avis (${Math.round((value / stats?.totalReviews || 1) * 100)}%)`,
+                    ""
+                  ]}
                 />
-                <Area type="monotone" dataKey="positive" stackId="1" stroke="#4CEFAD" fill="#4CEFAD" fillOpacity={0.6} name="Positifs" />
-                <Area type="monotone" dataKey="neutral" stackId="1" stroke="#6B7280" fill="#6B7280" fillOpacity={0.6} name="Neutres" />
-                <Area type="monotone" dataKey="negative" stackId="1" stroke="#EF4444" fill="#EF4444" fillOpacity={0.6} name="Négatifs" />
-                <Legend wrapperStyle={{ fontSize: "10px" }} />
-              </AreaChart>
+                <Bar dataKey="count" fill="#C8B88A" radius={[0, 6, 6, 0]} />
+              </BarChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-[200px] flex flex-col items-center justify-center rounded-xl border border-dashed border-border/60 bg-muted/20">
-              <div className="p-2.5 rounded-full bg-muted/30 mb-3">
-                <TrendingUp className="h-5 w-5 text-muted-foreground/50" />
-              </div>
-              <p className="text-xs text-muted-foreground">Pas de données de sentiment</p>
+            <div className="h-[200px] flex items-center justify-center rounded-xl border border-dashed border-border/60 bg-muted/20">
+              <p className="text-xs text-muted-foreground">Aucune donnée disponible</p>
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Platform Comparison with Trends - ENHANCED */}
+      {/* ZONE 5 — SENTIMENT GLOBAL */}
+      <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-semibold">Sentiment global</CardTitle>
+          <CardDescription className="text-xs">Tonalité générale détectée par IA</CardDescription>
+        </CardHeader>
+        <CardContent className="pt-0 space-y-4">
+          <div className="flex items-center gap-4">
+            <div className={cn(
+              "px-4 py-3 rounded-xl",
+              getDominantSentiment()?.includes("positif") ? "bg-[#4CEFAD]/10" :
+              getDominantSentiment() === "Mitigé" ? "bg-muted/20" :
+              "bg-red-500/10"
+            )}>
+              <p className={cn(
+                "text-lg font-bold",
+                getDominantSentiment()?.includes("positif") ? "text-[#4CEFAD]" :
+                getDominantSentiment() === "Mitigé" ? "text-muted-foreground" :
+                "text-red-400"
+              )}>
+                {getDominantSentiment() || "Neutre"}
+              </p>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 h-3 bg-muted/30 rounded-full overflow-hidden">
+              {sentimentBreakdown.positive > 0 && (
+                <div 
+                  className="bg-[#4CEFAD] h-full transition-all"
+                  style={{ width: `${sentimentBreakdown.positive}%` }}
+                />
+              )}
+              {sentimentBreakdown.neutral > 0 && (
+                <div 
+                  className="bg-muted-foreground/50 h-full transition-all"
+                  style={{ width: `${sentimentBreakdown.neutral}%` }}
+                />
+              )}
+              {sentimentBreakdown.negative > 0 && (
+                <div 
+                  className="bg-red-400 h-full transition-all"
+                  style={{ width: `${sentimentBreakdown.negative}%` }}
+                />
+              )}
+            </div>
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-[#4CEFAD]">Positif: {sentimentBreakdown.positive}%</span>
+              <span className="text-muted-foreground">Neutre: {sentimentBreakdown.neutral}%</span>
+              <span className="text-red-400">Négatif: {sentimentBreakdown.negative}%</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ZONE 6 — PERFORMANCE PAR PLATEFORME */}
       <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
         <CardHeader className="pb-3">
           <CardTitle className="text-base font-semibold">Performance par plateforme</CardTitle>
-          <CardDescription className="text-xs">Comparez votre réputation sur chaque plateforme avec les tendances</CardDescription>
+          <CardDescription className="text-xs">Comparez votre réputation sur chaque plateforme</CardDescription>
         </CardHeader>
         <CardContent className="pt-0">
           {stats?.platformComparison && stats.platformComparison.length > 0 ? (
             <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-              {stats.platformComparison.map((platform) => (
-                <div
-                  key={platform.platform}
-                  className="flex items-center gap-3 p-3 rounded-xl border border-border/40 bg-muted/20 hover:bg-muted/30 transition-colors"
-                  data-testid={`platform-card-${platform.platform}`}
-                >
-                  <div className="p-2 rounded-lg bg-background/50">
-                    {getPlatformIcon(platform.platform)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium capitalize">{platform.platform}</p>
-                      <div className="flex items-center gap-0.5">
-                        {getTrendIcon(platform.trend)}
-                        <span className={`text-[10px] ${platform.trend > 0 ? "text-[#4CEFAD]" : platform.trend < 0 ? "text-red-400" : "text-muted-foreground"}`}>
-                          {platform.trend > 0 ? "+" : ""}{platform.trend.toFixed(1)}
-                        </span>
-                      </div>
+              {stats.platformComparison.map((platform) => {
+                const isWeakest = weakestPlatform?.platform === platform.platform;
+                return (
+                  <div
+                    key={platform.platform}
+                    className={cn(
+                      "flex items-center gap-3 p-3 rounded-xl border transition-colors",
+                      isWeakest 
+                        ? "border-orange-500/30 bg-orange-500/5" 
+                        : "border-border/40 bg-muted/20 hover:bg-muted/30"
+                    )}
+                  >
+                    <div className="p-2 rounded-lg bg-background/50">
+                      {getPlatformIcon(platform.platform)}
                     </div>
-                    <div className="flex items-center gap-1.5 mt-0.5">
-                      <div className="flex items-center gap-0.5">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <Star
-                            key={star}
-                            className={`h-3 w-3 ${star <= Math.round(platform.score) ? "text-[#C8B88A] fill-[#C8B88A]" : "text-muted-foreground/30"}`}
-                          />
-                        ))}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium capitalize">{platform.platform}</p>
+                        {isWeakest && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400 font-medium">
+                            Priorité
+                          </span>
+                        )}
+                        <div className="flex items-center gap-0.5 ml-auto">
+                          {platform.trend > 0 ? (
+                            <ArrowUpRight className="h-3 w-3 text-[#4CEFAD]" />
+                          ) : platform.trend < 0 ? (
+                            <ArrowDownRight className="h-3 w-3 text-red-400" />
+                          ) : (
+                            <Minus className="h-3 w-3 text-muted-foreground" />
+                          )}
+                          <span className={cn(
+                            "text-[10px]",
+                            platform.trend > 0 ? "text-[#4CEFAD]" :
+                            platform.trend < 0 ? "text-red-400" :
+                            "text-muted-foreground"
+                          )}>
+                            {platform.trend > 0 ? "+" : ""}{platform.trend.toFixed(1)}
+                          </span>
+                        </div>
                       </div>
-                      <span className="text-[10px] text-muted-foreground">
-                        ({platform.count})
-                      </span>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        {renderStars(Math.round(platform.score))}
+                        <span className="text-[10px] text-muted-foreground">({platform.count})</span>
+                      </div>
+                      <p className="text-lg font-bold mt-0.5">{platform.score.toFixed(1)}</p>
                     </div>
-                    <p className="text-lg font-bold mt-0.5">{platform.score.toFixed(1)}</p>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-10 px-6 rounded-xl border border-dashed border-border/60 bg-muted/20">
-              <div className="p-3 rounded-full bg-muted/30 mb-4">
-                <MessageSquare className="h-6 w-6 text-muted-foreground/50" />
-              </div>
               <p className="text-sm font-medium text-foreground/80">Aucune plateforme connectée</p>
               <p className="text-xs text-muted-foreground mt-1 text-center max-w-xs">
-                Configurez vos liens de plateformes dans les paramètres pour voir vos performances
+                Configurez vos liens de plateformes dans les paramètres
               </p>
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* AI Insights Section - ENHANCED */}
+      {/* ZONE 7 — ACTIONS PRIORITAIRES */}
+      {priorityActions.length > 0 && (
+        <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <Target className="h-4 w-4 text-[#C8B88A]" />
+              À faire pour améliorer votre réputation
+            </CardTitle>
+            <CardDescription className="text-xs">Actions concrètes avec impact estimé</CardDescription>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="space-y-2">
+              {priorityActions.map((action, index) => (
+                <div
+                  key={index}
+                  className="flex items-center justify-between p-3 rounded-lg border border-border/40 bg-muted/20"
+                >
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className={cn(
+                      "p-1.5 rounded",
+                      action.impact === "high" ? "bg-[#4CEFAD]/10" :
+                      action.impact === "medium" ? "bg-[#C8B88A]/10" :
+                      "bg-orange-500/10"
+                    )}>
+                      <Target className={cn(
+                        "h-3.5 w-3.5",
+                        action.impact === "high" ? "text-[#4CEFAD]" :
+                        action.impact === "medium" ? "text-[#C8B88A]" :
+                        "text-orange-400"
+                      )} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground/90">{action.action}</p>
+                      <p className="text-xs text-[#4CEFAD] mt-0.5">{action.points}</p>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setLocation(action.buttonPath)}
+                    className="text-xs h-8 ml-3"
+                  >
+                    {action.buttonLabel}
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ZONE 8 — IA */}
       <Card className="border-border/50 bg-gradient-to-br from-[#C8B88A]/5 to-transparent">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-base font-semibold flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-[#C8B88A]" />
-                Insights IA & Recommandations
+                Analyse intelligente de votre réputation
               </CardTitle>
               <CardDescription className="text-xs">
-                Analyse intelligente de votre réputation
+                Insights IA personnalisés pour votre activité
               </CardDescription>
             </div>
             <Button
@@ -494,75 +806,64 @@ export default function ReviewsStats() {
               onClick={() => generateInsightsMutation.mutate()}
               disabled={generateInsightsMutation.isPending || !stats}
               className="text-xs"
-              data-testid="button-generate-insights"
             >
               {generateInsightsMutation.isPending ? (
                 <Loader2 className="h-3 w-3 animate-spin mr-1" />
               ) : (
                 <Sparkles className="h-3 w-3 mr-1" />
               )}
-              Générer analyse IA
+              Analyser ma réputation avec l'IA
             </Button>
           </div>
         </CardHeader>
         <CardContent className="pt-0">
           {aiInsights ? (
-            <div className="p-4 rounded-xl bg-[#C8B88A]/10 border border-[#C8B88A]/20">
-              <p className="text-sm text-foreground/90 whitespace-pre-wrap">{aiInsights}</p>
-            </div>
+            aiInsights.error ? (
+              <div className="p-4 rounded-xl bg-muted/20 border border-border/30">
+                <p className="text-sm text-muted-foreground">{aiInsights.error}</p>
+              </div>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-3">
+                {aiInsights.opportunities && (
+                  <div className="p-4 rounded-xl bg-[#4CEFAD]/10 border border-[#4CEFAD]/20">
+                    <div className="flex items-center gap-2 mb-2">
+                      <CheckCircle2 className="h-4 w-4 text-[#4CEFAD]" />
+                      <h4 className="text-sm font-semibold text-[#4CEFAD]">Ce qui va bien</h4>
+                    </div>
+                    <p className="text-sm text-foreground/90 whitespace-pre-wrap">{aiInsights.opportunities}</p>
+                  </div>
+                )}
+                {aiInsights.risks && (
+                  <div className="p-4 rounded-xl bg-orange-500/10 border border-orange-500/20">
+                    <div className="flex items-center gap-2 mb-2">
+                      <AlertTriangle className="h-4 w-4 text-orange-400" />
+                      <h4 className="text-sm font-semibold text-orange-400">Points à surveiller</h4>
+                    </div>
+                    <p className="text-sm text-foreground/90 whitespace-pre-wrap">{aiInsights.risks}</p>
+                  </div>
+                )}
+                {aiInsights.actions && (
+                  <div className="p-4 rounded-xl bg-[#C8B88A]/10 border border-[#C8B88A]/20">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Target className="h-4 w-4 text-[#C8B88A]" />
+                      <h4 className="text-sm font-semibold text-[#C8B88A]">Actions prioritaires cette semaine</h4>
+                    </div>
+                    <p className="text-sm text-foreground/90 whitespace-pre-wrap">{aiInsights.actions}</p>
+                  </div>
+                )}
+                {!aiInsights.opportunities && !aiInsights.risks && !aiInsights.actions && aiInsights.raw && (
+                  <div className="p-4 rounded-xl bg-[#C8B88A]/10 border border-[#C8B88A]/20 col-span-3">
+                    <p className="text-sm text-foreground/90 whitespace-pre-wrap">{aiInsights.raw}</p>
+                  </div>
+                )}
+              </div>
+            )
           ) : (
-            <div className="grid gap-3 md:grid-cols-3">
-              <div className="p-3 rounded-xl bg-muted/20 border border-border/30">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="p-1.5 rounded-lg bg-[#4CEFAD]/10">
-                    <Clock className="h-3.5 w-3.5 text-[#4CEFAD]" />
-                  </div>
-                  <span className="text-xs font-medium">Réactivité</span>
-                </div>
-                <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  {stats?.avgResponseTimeHours !== null && stats?.avgResponseTimeHours !== undefined
-                    ? stats.avgResponseTimeHours <= 24
-                      ? "Excellent ! Vous répondez en moins de 24h."
-                      : stats.avgResponseTimeHours <= 48
-                      ? "Bon délai. Essayez de répondre sous 24h."
-                      : "Améliorez votre délai de réponse pour montrer votre engagement."
-                    : "Répondez à tous les avis dans les 24h pour montrer votre engagement."}
-                </p>
-              </div>
-              <div className="p-3 rounded-xl bg-muted/20 border border-border/30">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="p-1.5 rounded-lg bg-[#C8B88A]/10">
-                    <Star className="h-3.5 w-3.5 text-[#C8B88A]" />
-                  </div>
-                  <span className="text-xs font-medium">Qualité</span>
-                </div>
-                <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  {stats?.globalScore
-                    ? stats.globalScore >= 4.5
-                      ? "Excellente réputation ! Maintenez ce niveau d'excellence."
-                      : stats.globalScore >= 4
-                      ? "Bonne note moyenne. Quelques améliorations possibles."
-                      : "Identifiez les points d'insatisfaction pour progresser."
-                    : "Encouragez les clients satisfaits à laisser un avis."}
-                </p>
-              </div>
-              <div className="p-3 rounded-xl bg-muted/20 border border-border/30">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="p-1.5 rounded-lg bg-blue-500/10">
-                    <Award className="h-3.5 w-3.5 text-blue-400" />
-                  </div>
-                  <span className="text-xs font-medium">Engagement</span>
-                </div>
-                <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  {stats?.responseRate
-                    ? stats.responseRate >= 90
-                      ? "Parfait ! Vous répondez à presque tous les avis."
-                      : stats.responseRate >= 70
-                      ? "Bon taux de réponse. Visez 90% pour l'excellence."
-                      : "Augmentez votre taux de réponse pour fidéliser vos clients."
-                    : "Diversifiez vos plateformes d'avis pour plus de visibilité."}
-                </p>
-              </div>
+            <div className="p-6 rounded-xl bg-muted/20 border border-border/30 text-center">
+              <Sparkles className="h-8 w-8 text-[#C8B88A]/50 mx-auto mb-3" />
+              <p className="text-sm text-muted-foreground">
+                Cliquez sur le bouton ci-dessus pour générer une analyse IA personnalisée de votre réputation
+              </p>
             </div>
           )}
         </CardContent>

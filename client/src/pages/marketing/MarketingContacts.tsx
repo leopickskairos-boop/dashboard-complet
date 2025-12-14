@@ -1,3 +1,11 @@
+/**
+ * MarketingContacts - Page Contacts Marketing (REFONTE COMPLÈTE)
+ * 
+ * Architecture en 3 zones :
+ * 1. Zone A — Valeur & pilotage (4 KPIs)
+ * 2. Zone B — Base de contacts (table améliorée avec empty state)
+ * 3. Zone C — Activation & leviers (2-3 cards d'actions)
+ */
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -5,7 +13,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -13,13 +22,13 @@ import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest } from "@/lib/queryClient";
+import { useLocation } from "wouter";
 import {
   Users,
   Plus,
   Search,
   Upload,
-  Download,
   MoreVertical,
   Mail,
   Phone,
@@ -30,6 +39,11 @@ import {
   XCircle,
   Filter,
   RefreshCw,
+  Send,
+  Target,
+  Zap,
+  ArrowRight,
+  HelpCircle,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -38,6 +52,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 
 const contactFormSchema = z.object({
   firstName: z.string().min(1, "Prénom requis"),
@@ -54,6 +69,7 @@ type ContactFormData = z.infer<typeof contactFormSchema>;
 export default function MarketingContacts() {
   const { toast } = useToast();
   const queryClientInst = useQueryClient();
+  const [, setLocation] = useLocation();
   const [search, setSearch] = useState("");
   const [filterOptIn, setFilterOptIn] = useState<string>("all");
   const [page, setPage] = useState(0);
@@ -68,6 +84,19 @@ export default function MarketingContacts() {
     total: number;
   }>({
     queryKey: [`/api/marketing/contacts?search=${encodeURIComponent(search)}&filter=${filterOptIn}&limit=${limit}&offset=${page * limit}`],
+  });
+
+  // Récupérer tous les contacts pour calculer les stats d'opt-in
+  const { data: allContacts } = useQuery<{
+    contacts: any[];
+    total: number;
+  }>({
+    queryKey: [`/api/marketing/contacts?limit=1000&offset=0`],
+  });
+
+  // Récupérer les segments
+  const { data: segments } = useQuery<any[]>({
+    queryKey: [`/api/marketing/segments`],
   });
 
   const form = useForm<ContactFormData>({
@@ -159,47 +188,163 @@ export default function MarketingContacts() {
     form.reset();
   };
 
+  // Calculer les stats d'opt-in
+  const calculateOptInStats = () => {
+    if (!allContacts?.contacts) return { email: 0, sms: 0, emailPercent: 0, smsPercent: 0 };
+    const total = allContacts.total || allContacts.contacts.length;
+    const emailOptIn = allContacts.contacts.filter((c: any) => c.optInEmail).length;
+    const smsOptIn = allContacts.contacts.filter((c: any) => c.optInSms).length;
+    return {
+      email: emailOptIn,
+      sms: smsOptIn,
+      emailPercent: total > 0 ? Math.round((emailOptIn / total) * 100) : 0,
+      smsPercent: total > 0 ? Math.round((smsOptIn / total) * 100) : 0,
+    };
+  };
+
+  const optInStats = calculateOptInStats();
+  const hasContacts = data && data.total > 0;
+
   return (
-    <div className="min-h-screen p-6 space-y-6">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
+    <div className="space-y-6 pb-8">
+      {/* Header */}
+      <div className="flex items-center justify-between pl-1">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Contacts</h1>
-          <p className="text-muted-foreground">
-            {data?.total || 0} contacts au total
-          </p>
+          <h1 className="text-lg font-semibold text-foreground">Contacts</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">Gérez votre base de contacts marketing</p>
         </div>
-        <div className="flex items-center gap-3 flex-wrap">
-          <Button variant="outline" onClick={() => setIsImportOpen(true)} data-testid="button-import">
-            <Upload className="h-4 w-4 mr-2" />
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => setIsImportOpen(true)} className="text-xs">
+            <Upload className="h-3.5 w-3.5 mr-1.5" />
             Importer
           </Button>
-          <Button variant="outline" data-testid="button-export">
-            <Download className="h-4 w-4 mr-2" />
-            Exporter
-          </Button>
-          <Button onClick={() => setIsAddOpen(true)} data-testid="button-add-contact">
-            <Plus className="h-4 w-4 mr-2" />
+          <Button size="sm" onClick={() => setIsAddOpen(true)} className="text-xs">
+            <Plus className="h-3.5 w-3.5 mr-1.5" />
             Ajouter
           </Button>
         </div>
       </div>
 
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center gap-4 flex-wrap">
+      {/* ZONE A — VALEUR & PILOTAGE */}
+      <div className="grid gap-4 md:grid-cols-4">
+        {/* Contacts totaux */}
+        <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-[#4CEFAD]/10">
+                <Users className="h-5 w-5 text-[#4CEFAD]" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{data?.total?.toLocaleString() || "0"}</p>
+                <p className="text-xs text-muted-foreground">dans votre base</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Opt-in Email */}
+        <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-blue-500/10">
+                <Mail className="h-5 w-5 text-blue-400" />
+              </div>
+              <div className="flex-1">
+                <p className="text-2xl font-bold">
+                  {data?.total && data.total > 0
+                    ? `${optInStats.emailPercent}%`
+                    : "—"}
+                </p>
+                <p className="text-xs text-muted-foreground">Opt-in Email</p>
+                {data?.total && data.total > 0 && (
+                  <p className="text-[10px] text-muted-foreground/70 mt-0.5">
+                    {optInStats.email} contacts
+                  </p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Opt-in SMS */}
+        <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-purple-500/10">
+                <Phone className="h-5 w-5 text-purple-400" />
+              </div>
+              <div className="flex-1">
+                <p className="text-2xl font-bold">
+                  {data?.total && data.total > 0
+                    ? `${optInStats.smsPercent}%`
+                    : "—"}
+                </p>
+                <p className="text-xs text-muted-foreground">Opt-in SMS</p>
+                {data?.total && data.total > 0 && (
+                  <p className="text-[10px] text-muted-foreground/70 mt-0.5">
+                    {optInStats.sms} contacts
+                  </p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Segments actifs */}
+        <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-[#C8B88A]/10">
+                <Target className="h-5 w-5 text-[#C8B88A]" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-1">
+                  <p className="text-2xl font-bold">{segments?.length || 0}</p>
+                  {segments && segments.length === 0 && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="text-xs">Créez des segments pour cibler vos campagnes</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">Segments actifs</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ZONE B — BASE DE CONTACTS */}
+      <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-base font-semibold">Base de contacts</CardTitle>
+              <CardDescription className="text-xs">Gérez et exploitez vos contacts marketing</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-0">
+          {/* Barre de recherche et filtres */}
+          <div className="flex items-center gap-3 mb-4">
             <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Rechercher par nom, email, téléphone..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-10"
-                data-testid="input-search"
+                className="pl-10 h-9 text-xs"
               />
             </div>
             <Select value={filterOptIn} onValueChange={setFilterOptIn}>
-              <SelectTrigger className="w-[180px]" data-testid="select-filter-optin">
-                <Filter className="h-4 w-4 mr-2" />
+              <SelectTrigger className="w-[180px] h-9 text-xs">
+                <Filter className="h-3.5 w-3.5 mr-2" />
                 <SelectValue placeholder="Filtrer" />
               </SelectTrigger>
               <SelectContent>
@@ -209,19 +354,16 @@ export default function MarketingContacts() {
                 <SelectItem value="no_optin">Sans opt-in</SelectItem>
               </SelectContent>
             </Select>
-            <Button variant="ghost" size="icon" onClick={() => refetch()} data-testid="button-refresh">
+            <Button variant="ghost" size="icon" onClick={() => refetch()} className="h-9 w-9">
               <RefreshCw className="h-4 w-4" />
             </Button>
           </div>
-        </CardContent>
-      </Card>
 
-      <Card>
-        <CardContent className="p-0">
+          {/* Table ou Empty State */}
           {isLoading ? (
-            <div className="p-6 space-y-4">
+            <div className="space-y-3">
               {[...Array(5)].map((_, i) => (
-                <div key={i} className="flex items-center gap-4">
+                <div key={i} className="flex items-center gap-4 p-4">
                   <Skeleton className="h-10 w-10 rounded-full" />
                   <div className="flex-1">
                     <Skeleton className="h-4 w-32 mb-1" />
@@ -231,126 +373,227 @@ export default function MarketingContacts() {
                 </div>
               ))}
             </div>
-          ) : data?.contacts && data.contacts.length > 0 ? (
-            <div className="divide-y divide-border">
-              {data.contacts.map((contact: any) => (
-                <div
-                  key={contact.id}
-                  className="flex items-center gap-4 p-4 hover:bg-muted/30 transition-colors"
-                  data-testid={`row-contact-${contact.id}`}
-                >
-                  <div className="h-10 w-10 rounded-full bg-[#C8B88A]/20 flex items-center justify-center text-[#C8B88A] font-medium">
-                    {(contact.firstName?.[0] || '?').toUpperCase()}
-                    {(contact.lastName?.[0] || '').toUpperCase()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">
-                      {contact.firstName} {contact.lastName}
-                    </p>
-                    <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                      {contact.email && (
-                        <span className="flex items-center gap-1 truncate">
-                          <Mail className="h-3 w-3" />
-                          {contact.email}
-                        </span>
-                      )}
-                      {contact.phone && (
-                        <span className="flex items-center gap-1">
-                          <Phone className="h-3 w-3" />
-                          {contact.phone}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {contact.optInEmail ? (
-                      <Badge variant="outline" className="text-[#4CEFAD] border-[#4CEFAD]/50">
-                        <CheckCircle className="h-3 w-3 mr-1" />
-                        Email
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="text-muted-foreground">
-                        <XCircle className="h-3 w-3 mr-1" />
-                        Email
-                      </Badge>
-                    )}
-                    {contact.optInSms ? (
-                      <Badge variant="outline" className="text-[#4CEFAD] border-[#4CEFAD]/50">
-                        <CheckCircle className="h-3 w-3 mr-1" />
-                        SMS
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="text-muted-foreground">
-                        <XCircle className="h-3 w-3 mr-1" />
-                        SMS
-                      </Badge>
-                    )}
-                  </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" data-testid={`button-menu-${contact.id}`}>
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleEdit(contact)}>
-                        <Edit className="h-4 w-4 mr-2" />
-                        Modifier
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <Shield className="h-4 w-4 mr-2" />
-                        Historique RGPD
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        className="text-red-400"
-                        onClick={() => deleteMutation.mutate(contact.id)}
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Supprimer
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              ))}
+          ) : !hasContacts ? (
+            /* EMPTY STATE */
+            <div className="h-[400px] flex flex-col items-center justify-center rounded-xl border border-dashed border-border/60 bg-muted/20 px-6">
+              <div className="p-4 rounded-full bg-[#4CEFAD]/10 mb-6">
+                <Users className="h-12 w-12 text-[#4CEFAD]/50" />
+              </div>
+              <h3 className="text-lg font-semibold text-foreground mb-2">
+                Votre base de contacts est vide
+              </h3>
+              <p className="text-sm text-muted-foreground text-center max-w-md mb-8">
+                Ajoutez des contacts pour pouvoir lancer vos campagnes marketing.
+              </p>
+              <div className="flex items-center gap-3">
+                <Button onClick={() => setIsAddOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Ajouter mon premier contact
+                </Button>
+                <Button variant="outline" onClick={() => setIsImportOpen(true)}>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Importer des contacts
+                </Button>
+              </div>
             </div>
           ) : (
-            <div className="text-center py-12">
-              <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-              <p className="text-muted-foreground mb-4">Aucun contact trouvé</p>
-              <Button onClick={() => setIsAddOpen(true)} data-testid="button-first-contact">
-                <Plus className="h-4 w-4 mr-2" />
-                Ajouter un contact
-              </Button>
+            /* TABLE */
+            <div className="space-y-0">
+              <div className="divide-y divide-border/40">
+                {data.contacts.map((contact: any) => (
+                  <div
+                    key={contact.id}
+                    className="flex items-center gap-4 p-4 hover:bg-muted/20 transition-colors group"
+                  >
+                    <div className="h-10 w-10 rounded-full bg-[#C8B88A]/20 flex items-center justify-center text-[#C8B88A] font-medium text-sm">
+                      {(contact.firstName?.[0] || '?').toUpperCase()}
+                      {(contact.lastName?.[0] || '').toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate text-sm">
+                        {contact.firstName} {contact.lastName}
+                      </p>
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
+                        {contact.email && (
+                          <span className="flex items-center gap-1 truncate">
+                            <Mail className="h-3 w-3" />
+                            {contact.email}
+                          </span>
+                        )}
+                        {contact.phone && (
+                          <span className="flex items-center gap-1">
+                            <Phone className="h-3 w-3" />
+                            {contact.phone}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {contact.optInEmail ? (
+                        <Badge variant="outline" className="text-[#4CEFAD] border-[#4CEFAD]/50 bg-[#4CEFAD]/10 text-[10px]">
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          Email
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-muted-foreground/70 border-border/40 text-[10px]">
+                          <XCircle className="h-3 w-3 mr-1" />
+                          Email
+                        </Badge>
+                      )}
+                      {contact.optInSms ? (
+                        <Badge variant="outline" className="text-[#4CEFAD] border-[#4CEFAD]/50 bg-[#4CEFAD]/10 text-[10px]">
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          SMS
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-muted-foreground/70 border-border/40 text-[10px]">
+                          <XCircle className="h-3 w-3 mr-1" />
+                          SMS
+                        </Badge>
+                      )}
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleEdit(contact)}>
+                          <Edit className="h-4 w-4 mr-2" />
+                          Modifier
+                        </DropdownMenuItem>
+                        <DropdownMenuItem>
+                          <Shield className="h-4 w-4 mr-2" />
+                          Historique RGPD
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-red-400"
+                          onClick={() => deleteMutation.mutate(contact.id)}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Supprimer
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                ))}
+              </div>
+              {/* Pagination */}
+              {data && data.total > limit && (
+                <div className="flex items-center justify-between pt-4 mt-4 border-t border-border/40">
+                  <p className="text-xs text-muted-foreground">
+                    Affichage {page * limit + 1}–{Math.min((page + 1) * limit, data.total)} sur {data.total} contacts
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={page === 0}
+                      onClick={() => setPage(p => p - 1)}
+                      className="text-xs h-7"
+                    >
+                      Précédent
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={(page + 1) * limit >= data.total}
+                      onClick={() => setPage(p => p + 1)}
+                      className="text-xs h-7"
+                    >
+                      Suivant
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </CardContent>
       </Card>
 
-      {data && data.total > limit && (
-        <div className="flex items-center justify-center gap-2">
-          <Button
-            variant="outline"
-            disabled={page === 0}
-            onClick={() => setPage(p => p - 1)}
-            data-testid="button-prev-page"
+      {/* ZONE C — ACTIVATION & LEVIERS */}
+      {hasContacts && (
+        <div className="grid gap-4 md:grid-cols-3">
+          {/* Créer une campagne */}
+          <Card 
+            className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] hover:border-blue-500/30 transition-all cursor-pointer group"
+            onClick={() => setLocation("/marketing/campaigns/new")}
           >
-            Précédent
-          </Button>
-          <span className="text-sm text-muted-foreground">
-            Page {page + 1} sur {Math.ceil(data.total / limit)}
-          </span>
-          <Button
-            variant="outline"
-            disabled={(page + 1) * limit >= data.total}
-            onClick={() => setPage(p => p + 1)}
-            data-testid="button-next-page"
+            <CardContent className="p-6">
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 rounded-xl bg-blue-500/10 group-hover:bg-blue-500/20 transition-colors">
+                    <Send className="h-6 w-6 text-blue-400" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-base font-semibold text-foreground group-hover:text-blue-400 transition-colors">
+                      Créer une campagne
+                    </h3>
+                  </div>
+                  <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-blue-400 group-hover:translate-x-1 transition-all" />
+                </div>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Envoyez un message à vos contacts en quelques minutes
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Créer un segment */}
+          <Card 
+            className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] hover:border-[#C8B88A]/30 transition-all cursor-pointer group"
+            onClick={() => setLocation("/marketing/segments/new")}
           >
-            Suivant
-          </Button>
+            <CardContent className="p-6">
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 rounded-xl bg-[#C8B88A]/10 group-hover:bg-[#C8B88A]/20 transition-colors">
+                    <Target className="h-6 w-6 text-[#C8B88A]" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-base font-semibold text-foreground group-hover:text-[#C8B88A] transition-colors">
+                      Créer un segment
+                    </h3>
+                  </div>
+                  <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-[#C8B88A] group-hover:translate-x-1 transition-all" />
+                </div>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Cibler les bonnes personnes pour vos campagnes
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Créer une automation */}
+          <Card 
+            className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] hover:border-[#4CEFAD]/30 transition-all cursor-pointer group"
+            onClick={() => setLocation("/marketing/automations/new")}
+          >
+            <CardContent className="p-6">
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 rounded-xl bg-[#4CEFAD]/10 group-hover:bg-[#4CEFAD]/20 transition-colors">
+                    <Zap className="h-6 w-6 text-[#4CEFAD]" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-base font-semibold text-foreground group-hover:text-[#4CEFAD] transition-colors">
+                      Créer une automation
+                    </h3>
+                  </div>
+                  <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-[#4CEFAD] group-hover:translate-x-1 transition-all" />
+                </div>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Automatisez vos envois et gagnez du temps
+                </p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )}
 
+      {/* Dialog Ajouter/Modifier Contact */}
       <Dialog open={isAddOpen} onOpenChange={handleCloseDialog}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -369,7 +612,7 @@ export default function MarketingContacts() {
                     <FormItem>
                       <FormLabel>Prénom</FormLabel>
                       <FormControl>
-                        <Input {...field} data-testid="input-firstname" />
+                        <Input {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -382,7 +625,7 @@ export default function MarketingContacts() {
                     <FormItem>
                       <FormLabel>Nom</FormLabel>
                       <FormControl>
-                        <Input {...field} data-testid="input-lastname" />
+                        <Input {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -397,7 +640,7 @@ export default function MarketingContacts() {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input type="email" {...field} data-testid="input-email" />
+                      <Input type="email" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -411,7 +654,7 @@ export default function MarketingContacts() {
                   <FormItem>
                     <FormLabel>Téléphone</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="+33 6 12 34 56 78" data-testid="input-phone" />
+                      <Input {...field} placeholder="+33 6 12 34 56 78" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -425,7 +668,7 @@ export default function MarketingContacts() {
                   <FormItem>
                     <FormLabel>Tags (séparés par virgule)</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="vip, nouveau, restaurant" data-testid="input-tags" />
+                      <Input {...field} placeholder="vip, nouveau, restaurant" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -442,7 +685,6 @@ export default function MarketingContacts() {
                         <Checkbox
                           checked={field.value}
                           onCheckedChange={field.onChange}
-                          data-testid="checkbox-optin-email"
                         />
                       </FormControl>
                       <FormLabel className="!mt-0 cursor-pointer">Opt-in Email</FormLabel>
@@ -458,7 +700,6 @@ export default function MarketingContacts() {
                         <Checkbox
                           checked={field.value}
                           onCheckedChange={field.onChange}
-                          data-testid="checkbox-optin-sms"
                         />
                       </FormControl>
                       <FormLabel className="!mt-0 cursor-pointer">Opt-in SMS</FormLabel>
@@ -474,7 +715,6 @@ export default function MarketingContacts() {
                 <Button
                   type="submit"
                   disabled={createMutation.isPending || updateMutation.isPending}
-                  data-testid="button-save-contact"
                 >
                   {(createMutation.isPending || updateMutation.isPending) && (
                     <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
@@ -487,6 +727,7 @@ export default function MarketingContacts() {
         </DialogContent>
       </Dialog>
 
+      {/* Dialog Importer */}
       <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
         <DialogContent>
           <DialogHeader>

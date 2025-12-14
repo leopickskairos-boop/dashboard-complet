@@ -815,7 +815,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     api_key: process.env.N8N_MASTER_API_KEY,
                     dashboard_url: process.env.REPLIT_DEV_DOMAIN 
                       ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
-                      : 'https://speedai-b2b-platform-v2.replit.app',
+                      : process.env.FRONTEND_URL || 'https://vocaledash.com',
                     
                     // Session ID
                     session_id: guaranteeSession.id,
@@ -4334,8 +4334,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         mode: 'setup',
         payment_method_types: ['card'],
         customer_email: session.customerEmail || undefined,
-        success_url: `${process.env.PUBLIC_URL || 'https://speedai.fr'}/guarantee/confirmation?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${process.env.PUBLIC_URL || 'https://speedai.fr'}/guarantee/annulation`,
+        success_url: `${process.env.PUBLIC_URL || process.env.FRONTEND_URL || 'https://vocaledash.com'}/guarantee/confirmation?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${process.env.PUBLIC_URL || process.env.FRONTEND_URL || 'https://vocaledash.com'}/guarantee/annulation`,
         metadata: {
           speedai_user_id: userId,
           reservation_id: session.reservationId,
@@ -4356,7 +4356,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         success: true,
         checkout_url: checkoutSession.url,
-        public_url: `${process.env.PUBLIC_URL || 'https://speedai.fr'}/g/${sessionId}`,
+        public_url: `${process.env.PUBLIC_URL || process.env.FRONTEND_URL || 'https://vocaledash.com'}/g/${sessionId}`,
       });
     } catch (error: any) {
       console.error('[Guarantee] Error resending link:', error);
@@ -5011,7 +5011,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // ===== SPEEDAI DASHBOARD ACCESS =====
           // Each client has their own API key and dashboard access
           api_key: user?.apiKey || null, // Client's SpeedAI API key for N8N callbacks
-          dashboard_url: process.env.FRONTEND_URL || 'https://speedai-b2b-platform-v2.replit.app',
+          dashboard_url: process.env.FRONTEND_URL || 'https://vocaledash.com',
           user_id: session.userId,
           user_email: user?.email,
         };
@@ -5827,7 +5827,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const prompt = `Tu es un expert en gestion de la réputation en ligne et en analyse de données.
-Analyse ces statistiques d'avis clients et génère 3-4 recommandations concrètes et actionnables.
+Analyse ces statistiques d'avis clients et génère une analyse structurée en 3 parties.
 
 Statistiques:
 - Note globale: ${stats.globalScore}/5
@@ -5839,23 +5839,52 @@ Statistiques:
 - Distribution des sentiments: ${JSON.stringify(stats.sentimentDistribution)}
 - Plateformes: ${JSON.stringify(stats.platforms)}
 
-Génère une analyse en français avec:
-1. Un point fort identifié
-2. Un axe d'amélioration prioritaire
-3. 2-3 actions concrètes à mettre en place
+Génère une analyse en français structurée ainsi:
+1. RISQUES ACTUELS (1-2 points d'attention)
+2. OPPORTUNITÉS (1-2 points forts à valoriser)
+3. ACTIONS RECOMMANDÉES CETTE SEMAINE (2-3 actions concrètes, une par plateforme si possible)
 
-Format: Utilise des bullet points et reste concis (max 200 mots).`;
+Format: Utilise des bullet points, reste concis (max 300 mots), sois concret et actionnable.`;
 
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [{ role: "user", content: prompt }],
-        temperature: 0.7,
-        max_tokens: 400,
-      });
+      try {
+        const completion = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [{ role: "user", content: prompt }],
+          temperature: 0.7,
+          max_tokens: 800,
+        });
 
-      const insights = completion.choices[0]?.message?.content || "Analyse non disponible";
+        const rawInsights = completion.choices[0]?.message?.content || "Analyse non disponible";
+        
+        // Parser la réponse pour extraire les 3 sections
+        const parseInsights = (text: string) => {
+          const risksMatch = text.match(/RISQUES[^\n]*\n([\s\S]*?)(?=OPPORTUNITÉS|ACTIONS|$)/i);
+          const opportunitiesMatch = text.match(/OPPORTUNITÉS[^\n]*\n([\s\S]*?)(?=ACTIONS|RISQUES|$)/i);
+          const actionsMatch = text.match(/ACTIONS[^\n]*\n([\s\S]*?)$/i);
+          
+          return {
+            risks: risksMatch ? risksMatch[1].trim() : null,
+            opportunities: opportunitiesMatch ? opportunitiesMatch[1].trim() : null,
+            actions: actionsMatch ? actionsMatch[1].trim() : null,
+            raw: text,
+          };
+        };
 
-      res.json({ insights });
+        const structuredInsights = parseInsights(rawInsights);
+
+        res.json({ insights: structuredInsights });
+      } catch (aiError: any) {
+        console.error("[AI Reviews] OpenAI error:", aiError);
+        res.json({ 
+          insights: {
+            risks: null,
+            opportunities: null,
+            actions: null,
+            raw: null,
+            error: "Service IA temporairement indisponible"
+          }
+        });
+      }
     } catch (error: any) {
       console.error("[AI Reviews] Error generating insights:", error);
       res.status(500).json({ message: "Erreur lors de la génération IA" });

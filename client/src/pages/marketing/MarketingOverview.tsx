@@ -1,42 +1,53 @@
+/**
+ * MarketingOverview - Page Vue d'ensemble Marketing (REFONTE COMPLÈTE)
+ * 
+ * Architecture en 3 zones :
+ * 1. Zone A — Pilotage rapide (4-5 KPIs)
+ * 2. Zone B — Performance & activité (avec empty state si pas de données)
+ * 3. Zone C — Actions & leviers (3 cards cliquables)
+ */
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Link } from "wouter";
+import { useLocation } from "wouter";
 import {
   Users,
   Mail,
-  MousePointer,
-  TrendingUp,
+  MousePointerClick,
   Send,
-  Eye,
-  Target,
-  Plus,
-  ArrowUpRight,
-  ArrowDownRight,
-  BarChart3,
   Megaphone,
-  Filter,
+  TrendingUp,
+  Plus,
+  Sparkles,
+  Zap,
+  CheckCircle2,
+  HelpCircle,
+  ArrowRight,
 } from "lucide-react";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from "recharts";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from "recharts";
+import { cn } from "@/lib/utils";
+
+interface MarketingStats {
+  totalContacts: number;
+  newContactsPeriod: number;
+  totalCampaigns: number;
+  campaignsSentPeriod: number;
+  totalEmailsSent: number;
+  avgOpenRate: number;
+  avgClickRate: number;
+  totalRevenue?: number;
+  costPerConversion?: number;
+}
 
 export default function MarketingOverview() {
   const [period, setPeriod] = useState<'week' | 'month' | 'year'>('month');
+  const [, setLocation] = useLocation();
 
-  const { data: stats, isLoading: statsLoading } = useQuery<{
-    totalContacts: number;
-    newContactsPeriod: number;
-    totalCampaigns: number;
-    campaignsSentPeriod: number;
-    totalEmailsSent: number;
-    avgOpenRate: number;
-    avgClickRate: number;
-    totalRevenue: number;
-    costPerConversion: number;
-  }>({
+  const { data: stats, isLoading: statsLoading } = useQuery<MarketingStats>({
     queryKey: [`/api/marketing/analytics/overview?period=${period}`],
   });
 
@@ -45,85 +56,45 @@ export default function MarketingOverview() {
     emailsSent: number;
     opened: number;
     clicked: number;
-    conversions: number;
+    conversions?: number;
   }>>({
     queryKey: [`/api/marketing/analytics/performance?period=${period}`],
   });
 
-  const { data: recentCampaigns, isLoading: campaignsLoading } = useQuery<any[]>({
-    queryKey: [`/api/marketing/campaigns?limit=5`],
-  });
+  const formatTrendDate = (date: string) => {
+    const d = new Date(date);
+    return `${d.getDate()}/${d.getMonth() + 1}`;
+  };
 
-  const renderKpiCard = (
-    title: string,
-    value: number | string,
-    subtitle: string,
-    icon: any,
-    change?: number,
-    color: string = "text-[#C8B88A]"
-  ) => (
-    <Card className="hover-elevate">
-      <CardContent className="p-5">
-        <div className="flex items-start justify-between">
-          <div className="space-y-1">
-            <p className="text-sm text-muted-foreground">{title}</p>
-            <p className="text-2xl font-bold">{value}</p>
-            <p className="text-xs text-muted-foreground">{subtitle}</p>
-          </div>
-          <div className={`p-2 rounded-lg bg-[#C8B88A]/10 ${color}`}>
-            {icon}
-          </div>
-        </div>
-        {change !== undefined && (
-          <div className="mt-3 flex items-center gap-1">
-            {change >= 0 ? (
-              <ArrowUpRight className="h-4 w-4 text-[#4CEFAD]" />
-            ) : (
-              <ArrowDownRight className="h-4 w-4 text-red-400" />
-            )}
-            <span className={`text-sm ${change >= 0 ? 'text-[#4CEFAD]' : 'text-red-400'}`}>
-              {Math.abs(change)}%
-            </span>
-            <span className="text-xs text-muted-foreground">vs période précédente</span>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
+  const hasData = stats && (stats.totalEmailsSent > 0 || stats.totalCampaigns > 0);
 
   return (
-    <div className="min-h-screen p-6 space-y-6">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
+    <div className="space-y-6 pb-8">
+      {/* Header */}
+      <div className="flex items-center justify-between pl-1">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Marketing</h1>
-          <p className="text-muted-foreground">Gérez vos campagnes et analysez vos performances</p>
+          <h1 className="text-lg font-semibold text-foreground">Marketing</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">Gérez vos campagnes et analysez vos performances</p>
         </div>
-        <div className="flex items-center gap-3 flex-wrap">
-          <Select value={period} onValueChange={(v) => setPeriod(v as any)}>
-            <SelectTrigger className="w-[140px]" data-testid="select-period">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="week">7 derniers jours</SelectItem>
-              <SelectItem value="month">30 derniers jours</SelectItem>
-              <SelectItem value="year">12 derniers mois</SelectItem>
-            </SelectContent>
-          </Select>
-          <Link href="/marketing/campaigns/new">
-            <Button data-testid="button-new-campaign">
-              <Plus className="h-4 w-4 mr-2" />
-              Nouvelle campagne
-            </Button>
-          </Link>
-        </div>
+        <Select value={period} onValueChange={(v) => setPeriod(v as any)}>
+          <SelectTrigger className="w-[160px] h-9 text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="week">7 derniers jours</SelectItem>
+            <SelectItem value="month">30 derniers jours</SelectItem>
+            <SelectItem value="year">12 derniers mois</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* ZONE A — PILOTAGE RAPIDE */}
+      <div className="grid gap-4 md:grid-cols-5">
         {statsLoading ? (
           <>
-            {[...Array(4)].map((_, i) => (
-              <Card key={i}>
-                <CardContent className="p-5">
+            {[...Array(5)].map((_, i) => (
+              <Card key={i} className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
+                <CardContent className="p-4">
                   <Skeleton className="h-4 w-20 mb-2" />
                   <Skeleton className="h-8 w-16 mb-1" />
                   <Skeleton className="h-3 w-24" />
@@ -133,211 +104,269 @@ export default function MarketingOverview() {
           </>
         ) : (
           <>
-            {renderKpiCard(
-              "Contacts",
-              stats?.totalContacts?.toLocaleString() || "0",
-              `+${stats?.newContactsPeriod || 0} cette période`,
-              <Users className="h-5 w-5" />
-            )}
-            {renderKpiCard(
-              "Emails envoyés",
-              stats?.totalEmailsSent?.toLocaleString() || "0",
-              `${(stats?.avgOpenRate || 0).toFixed(1)}% taux d'ouverture`,
-              <Mail className="h-5 w-5" />
-            )}
-            {renderKpiCard(
-              "Taux de clic",
-              `${(stats?.avgClickRate || 0).toFixed(1)}%`,
-              `${stats?.campaignsSentPeriod || 0} campagnes envoyées`,
-              <MousePointer className="h-5 w-5" />
-            )}
-            {renderKpiCard(
-              "Campagnes",
-              stats?.totalCampaigns || 0,
-              `${stats?.campaignsSentPeriod || 0} envoyées cette période`,
-              <Megaphone className="h-5 w-5" />
-            )}
+            {/* Contacts - Card dominante */}
+            <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] md:col-span-2">
+              <CardContent className="p-5">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 rounded-xl bg-[#4CEFAD]/10">
+                    <Users className="h-6 w-6 text-[#4CEFAD]" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-3xl font-bold">{stats?.totalContacts?.toLocaleString() || "0"}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Contacts exploitables</p>
+                    {stats?.newContactsPeriod && stats.newContactsPeriod > 0 && (
+                      <p className="text-[10px] text-[#4CEFAD] mt-1">
+                        +{stats.newContactsPeriod} cette période
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Campagnes */}
+            <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-[#C8B88A]/10">
+                    <Megaphone className="h-5 w-5 text-[#C8B88A]" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{stats?.totalCampaigns || 0}</p>
+                    <p className="text-xs text-muted-foreground">Campagnes</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Emails envoyés */}
+            <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-blue-500/10">
+                    <Mail className="h-5 w-5 text-blue-400" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{stats?.totalEmailsSent?.toLocaleString() || "0"}</p>
+                    <p className="text-xs text-muted-foreground">Emails envoyés</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* CTR */}
+            <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-purple-500/10">
+                    <MousePointerClick className="h-5 w-5 text-purple-400" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-1">
+                      <p className="text-2xl font-bold">
+                        {stats?.avgClickRate !== undefined && stats.avgClickRate > 0
+                          ? `${stats.avgClickRate.toFixed(1)}%`
+                          : "—"}
+                      </p>
+                      {(!stats?.avgClickRate || stats.avgClickRate === 0) && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="text-xs">Taux de clic disponible après l'envoi de campagnes</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">Taux de clic (CTR)</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </>
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between gap-2">
-            <div>
-              <CardTitle className="text-lg">Performance des campagnes</CardTitle>
-              <CardDescription>Évolution des envois, ouvertures et clics</CardDescription>
+      {/* ZONE B — PERFORMANCE & ACTIVITÉ */}
+      <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-semibold">Performance & activité</CardTitle>
+          <CardDescription className="text-xs">Évolution de vos campagnes dans le temps</CardDescription>
+        </CardHeader>
+        <CardContent className="pt-0">
+          {chartLoading ? (
+            <Skeleton className="h-[300px] w-full" />
+          ) : !hasData || !chartData || chartData.length === 0 ? (
+            /* EMPTY STATE - CAS 1 */
+            <div className="h-[400px] flex flex-col items-center justify-center rounded-xl border border-dashed border-border/60 bg-muted/20 px-6">
+              <div className="p-4 rounded-full bg-[#C8B88A]/10 mb-6">
+                <Megaphone className="h-12 w-12 text-[#C8B88A]/50" />
+              </div>
+              <h3 className="text-lg font-semibold text-foreground mb-2">
+                Votre marketing n'est pas encore actif
+              </h3>
+              <p className="text-sm text-muted-foreground text-center max-w-md mb-8">
+                Les statistiques apparaîtront après l'envoi de votre première campagne.
+              </p>
+              <div className="space-y-3 w-full max-w-sm">
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-background/50 border border-border/40">
+                  <div className="p-1.5 rounded bg-[#4CEFAD]/10">
+                    <Users className="h-4 w-4 text-[#4CEFAD]" />
+                  </div>
+                  <p className="text-sm text-foreground/90 flex-1">Ajouter des contacts</p>
+                  <CheckCircle2 className="h-4 w-4 text-muted-foreground/50" />
+                </div>
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-background/50 border border-border/40">
+                  <div className="p-1.5 rounded bg-[#C8B88A]/10">
+                    <Mail className="h-4 w-4 text-[#C8B88A]" />
+                  </div>
+                  <p className="text-sm text-foreground/90 flex-1">Créer un template</p>
+                  <CheckCircle2 className="h-4 w-4 text-muted-foreground/50" />
+                </div>
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-background/50 border border-border/40">
+                  <div className="p-1.5 rounded bg-blue-500/10">
+                    <Send className="h-4 w-4 text-blue-400" />
+                  </div>
+                  <p className="text-sm text-foreground/90 flex-1">Lancer une campagne</p>
+                  <CheckCircle2 className="h-4 w-4 text-muted-foreground/50" />
+                </div>
+              </div>
             </div>
-          </CardHeader>
-          <CardContent>
-            {chartLoading ? (
-              <Skeleton className="h-[300px] w-full" />
-            ) : chartData && chartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                  <XAxis dataKey="date" stroke="#888" fontSize={12} />
-                  <YAxis stroke="#888" fontSize={12} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#1a1a2e',
-                      border: '1px solid #333',
-                      borderRadius: '8px',
-                      color: '#fff',
-                    }}
-                  />
-                  <Legend />
-                  <Line
-                    type="monotone"
-                    dataKey="emailsSent"
-                    name="Envoyés"
-                    stroke="#C8B88A"
-                    strokeWidth={2}
-                    dot={false}
-                  />
+          ) : (
+            /* CAS 2 — Données partielles */
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+                <XAxis 
+                  dataKey="date" 
+                  stroke="#666" 
+                  fontSize={10}
+                  tickFormatter={formatTrendDate}
+                />
+                <YAxis stroke="#666" fontSize={10} />
+                <RechartsTooltip
+                  contentStyle={{
+                    backgroundColor: "#0E1015",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    borderRadius: "8px",
+                    fontSize: "12px",
+                  }}
+                  labelFormatter={formatTrendDate}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="emailsSent"
+                  name="Envoyés"
+                  stroke="#C8B88A"
+                  strokeWidth={2.5}
+                  dot={false}
+                />
+                {chartData.some(d => d.opened > 0) && (
                   <Line
                     type="monotone"
                     dataKey="opened"
                     name="Ouverts"
                     stroke="#4CEFAD"
-                    strokeWidth={2}
+                    strokeWidth={2.5}
                     dot={false}
                   />
+                )}
+                {chartData.some(d => d.clicked > 0) && (
                   <Line
                     type="monotone"
                     dataKey="clicked"
                     name="Clics"
                     stroke="#60a5fa"
-                    strokeWidth={2}
+                    strokeWidth={2.5}
                     dot={false}
                   />
-                </LineChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-                Aucune donnée disponible pour cette période
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-[#C8B88A]" />
-              Accès rapide
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Link href="/marketing/contacts">
-              <Button variant="outline" className="w-full justify-start" data-testid="link-quick-contacts">
-                <Users className="h-4 w-4 mr-3 text-[#C8B88A]" />
-                Contacts ({stats?.totalContacts || 0})
-              </Button>
-            </Link>
-            <Link href="/marketing/segments">
-              <Button variant="outline" className="w-full justify-start" data-testid="link-quick-segments">
-                <Filter className="h-4 w-4 mr-3 text-[#C8B88A]" />
-                Segments
-              </Button>
-            </Link>
-            <Link href="/marketing/templates">
-              <Button variant="outline" className="w-full justify-start" data-testid="link-quick-templates">
-                <Mail className="h-4 w-4 mr-3 text-[#C8B88A]" />
-                Templates
-              </Button>
-            </Link>
-            <Link href="/marketing/automations">
-              <Button variant="outline" className="w-full justify-start" data-testid="link-quick-automations">
-                <TrendingUp className="h-4 w-4 mr-3 text-[#C8B88A]" />
-                Automations
-              </Button>
-            </Link>
-            <Link href="/marketing/analytics">
-              <Button variant="outline" className="w-full justify-start" data-testid="link-quick-analytics">
-                <BarChart3 className="h-4 w-4 mr-3 text-[#C8B88A]" />
-                Analytics avancées
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between gap-2">
-          <div>
-            <CardTitle className="text-lg">Campagnes récentes</CardTitle>
-            <CardDescription>Dernières campagnes créées ou envoyées</CardDescription>
-          </div>
-          <Link href="/marketing/campaigns">
-            <Button variant="outline" size="sm" data-testid="link-all-campaigns">
-              Voir tout
-            </Button>
-          </Link>
-        </CardHeader>
-        <CardContent>
-          {campaignsLoading ? (
-            <div className="space-y-3">
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className="flex items-center gap-4">
-                  <Skeleton className="h-10 w-10 rounded" />
-                  <div className="flex-1">
-                    <Skeleton className="h-4 w-32 mb-1" />
-                    <Skeleton className="h-3 w-20" />
-                  </div>
-                  <Skeleton className="h-6 w-16" />
-                </div>
-              ))}
-            </div>
-          ) : recentCampaigns && recentCampaigns.length > 0 ? (
-            <div className="space-y-3">
-              {recentCampaigns.map((campaign: any) => (
-                <Link key={campaign.id} href={`/marketing/campaigns/${campaign.id}`}>
-                  <div className="flex items-center gap-4 p-3 rounded-lg hover-elevate cursor-pointer border border-transparent hover:border-border">
-                    <div className={`p-2 rounded-lg ${
-                      campaign.channel === 'email' ? 'bg-blue-500/10 text-blue-400' :
-                      campaign.channel === 'sms' ? 'bg-green-500/10 text-green-400' :
-                      'bg-purple-500/10 text-purple-400'
-                    }`}>
-                      {campaign.channel === 'email' ? <Mail className="h-5 w-5" /> :
-                       campaign.channel === 'sms' ? <Send className="h-5 w-5" /> :
-                       <Megaphone className="h-5 w-5" />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{campaign.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {campaign.totalSent || 0} envoyés • {campaign.totalOpened || 0} ouverts
-                      </p>
-                    </div>
-                    <Badge variant={
-                      campaign.status === 'sent' ? 'default' :
-                      campaign.status === 'sending' ? 'secondary' :
-                      campaign.status === 'scheduled' ? 'outline' :
-                      'secondary'
-                    }>
-                      {campaign.status === 'sent' ? 'Envoyée' :
-                       campaign.status === 'sending' ? 'En cours' :
-                       campaign.status === 'scheduled' ? 'Programmée' :
-                       campaign.status === 'draft' ? 'Brouillon' : campaign.status}
-                    </Badge>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <Megaphone className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-              <p className="text-muted-foreground mb-4">Aucune campagne pour le moment</p>
-              <Link href="/marketing/campaigns/new">
-                <Button data-testid="button-first-campaign">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Créer ma première campagne
-                </Button>
-              </Link>
-            </div>
+                )}
+              </LineChart>
+            </ResponsiveContainer>
           )}
         </CardContent>
       </Card>
+
+      {/* ZONE C — ACTIONS & LEVIERS */}
+      <div className="grid gap-4 md:grid-cols-3">
+        {/* Créer une campagne */}
+        <Card 
+          className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] hover:border-[#C8B88A]/30 transition-all cursor-pointer group"
+          onClick={() => setLocation("/marketing/campaigns")}
+        >
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-xl bg-blue-500/10 group-hover:bg-blue-500/20 transition-colors">
+                  <Send className="h-6 w-6 text-blue-400" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-base font-semibold text-foreground group-hover:text-blue-400 transition-colors">
+                    Créer une campagne
+                  </h3>
+                </div>
+                <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-blue-400 group-hover:translate-x-1 transition-all" />
+              </div>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Envoyez votre premier message en quelques minutes
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Générer un template par IA */}
+        <Card 
+          className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] hover:border-[#C8B88A]/30 transition-all cursor-pointer group"
+          onClick={() => setLocation("/marketing/templates")}
+        >
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-xl bg-[#C8B88A]/10 group-hover:bg-[#C8B88A]/20 transition-colors">
+                  <Sparkles className="h-6 w-6 text-[#C8B88A]" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-base font-semibold text-foreground group-hover:text-[#C8B88A] transition-colors">
+                    Générer un template par IA
+                  </h3>
+                </div>
+                <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-[#C8B88A] group-hover:translate-x-1 transition-all" />
+              </div>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Laissez l'IA créer un message personnalisé pour vous
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Créer une automation */}
+        <Card 
+          className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] hover:border-[#4CEFAD]/30 transition-all cursor-pointer group"
+          onClick={() => setLocation("/marketing/automations")}
+        >
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-xl bg-[#4CEFAD]/10 group-hover:bg-[#4CEFAD]/20 transition-colors">
+                  <Zap className="h-6 w-6 text-[#4CEFAD]" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-base font-semibold text-foreground group-hover:text-[#4CEFAD] transition-colors">
+                    Créer une automation
+                  </h3>
+                </div>
+                <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-[#4CEFAD] group-hover:translate-x-1 transition-all" />
+              </div>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Automatisez vos envois et gagnez du temps
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

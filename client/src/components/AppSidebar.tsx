@@ -86,7 +86,7 @@ const marketingItems = [
     icon: Megaphone,
   },
   {
-    title: "Contacts",
+    title: "Audience",
     url: "/marketing/contacts",
     icon: Users,
   },
@@ -101,20 +101,15 @@ const marketingItems = [
     icon: Send,
   },
   {
-    title: "Segments",
-    url: "/marketing/segments",
-    icon: Filter,
-  },
-  {
     title: "Automations",
     url: "/marketing/automations",
     icon: Workflow,
   },
-  {
-    title: "Analytics",
-    url: "/marketing/analytics",
-    icon: TrendingUp,
-  },
+      {
+        title: "Analytics",
+        url: "/marketing/analytics",
+        icon: TrendingUp,
+      },
 ];
 
 const integrationItems = [

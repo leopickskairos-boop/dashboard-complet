@@ -1,3 +1,11 @@
+/**
+ * MarketingCampaigns - Page Campagnes Marketing (REFONTE COMPLÈTE)
+ * 
+ * Architecture en 3 zones :
+ * 1. Zone A — Pilotage rapide (4 KPIs)
+ * 2. Zone B — Liste des campagnes (organisée en 3 sections : Brouillons, Programmées, Envoyées)
+ * 3. Zone C — Création & leviers (2-3 cards d'actions)
+ */
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -5,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -15,7 +23,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { apiRequest } from "@/lib/queryClient";
-import { Link } from "wouter";
+import { useLocation } from "wouter";
 import {
   Megaphone,
   Plus,
@@ -33,11 +41,13 @@ import {
   CheckCircle,
   AlertCircle,
   Play,
-  Pause,
   RefreshCw,
   Users,
   Filter,
   ArrowRight,
+  Sparkles,
+  FileText,
+  HelpCircle,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -46,6 +56,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 
 const campaignFormSchema = z.object({
   name: z.string().min(1, "Nom requis"),
@@ -90,19 +101,14 @@ function replaceVariablesWithSample(content: string): string {
 export default function MarketingCampaigns() {
   const { toast } = useToast();
   const queryClientInst = useQueryClient();
+  const [, setLocation] = useLocation();
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [channelFilter, setChannelFilter] = useState<string>("all");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState<any>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   const { data: campaigns, isLoading } = useQuery<any[]>({
-    queryKey: [`/api/marketing/campaigns?status=${statusFilter}&channel=${channelFilter}`],
-  });
-
-  const { data: segments } = useQuery<any[]>({
-    queryKey: ['/api/marketing/segments'],
+    queryKey: [`/api/marketing/campaigns`],
   });
 
   const { data: templates } = useQuery<any[]>({
@@ -174,191 +180,437 @@ export default function MarketingCampaigns() {
 
   const channel = form.watch('channel');
 
+  // Filtrer les campagnes par recherche
   const filteredCampaigns = campaigns?.filter(c => {
     if (search && !c.name.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
-  });
+  }) || [];
+
+  // Organiser les campagnes par statut
+  const drafts = filteredCampaigns.filter(c => c.status === 'draft');
+  const scheduled = filteredCampaigns.filter(c => c.status === 'scheduled');
+  const sent = filteredCampaigns.filter(c => c.status === 'sent' || c.status === 'sending');
+
+  // Calculer les KPIs
+  const calculateKPIs = () => {
+    if (!campaigns) return { sent: 0, scheduled: 0, openRate: 0, clickRate: 0, openRateAvailable: false, clickRateAvailable: false };
+    
+    const sentCampaigns = campaigns.filter(c => c.status === 'sent' || c.status === 'sending');
+    const scheduledCampaigns = campaigns.filter(c => c.status === 'scheduled');
+    
+    const totalSent = sentCampaigns.reduce((sum, c) => sum + (c.totalSent || 0), 0);
+    const totalOpened = sentCampaigns.reduce((sum, c) => sum + (c.totalOpened || 0), 0);
+    const totalClicked = sentCampaigns.reduce((sum, c) => sum + (c.totalClicked || 0), 0);
+    
+    const openRate = totalSent > 0 ? (totalOpened / totalSent) * 100 : 0;
+    const clickRate = totalSent > 0 ? (totalClicked / totalSent) * 100 : 0;
+    
+    return {
+      sent: sentCampaigns.length,
+      scheduled: scheduledCampaigns.length,
+      openRate: Math.round(openRate * 10) / 10,
+      clickRate: Math.round(clickRate * 10) / 10,
+      openRateAvailable: totalSent > 0,
+      clickRateAvailable: totalSent > 0,
+    };
+  };
+
+  const kpis = calculateKPIs();
+
+  const renderCampaignCard = (campaign: any) => {
+    const status = statusColors[campaign.status] || statusColors.draft;
+    return (
+      <div
+        key={campaign.id}
+        className="flex items-center gap-4 p-4 rounded-lg border border-border/40 bg-background/50 hover:bg-muted/20 transition-colors group"
+      >
+        <div className={cn(
+          "p-3 rounded-lg",
+          campaign.channel === 'email' ? 'bg-blue-500/10' :
+          campaign.channel === 'sms' ? 'bg-green-500/10' :
+          'bg-purple-500/10'
+        )}>
+          {campaign.channel === 'email' ? (
+            <Mail className="h-5 w-5 text-blue-400" />
+          ) : campaign.channel === 'sms' ? (
+            <MessageSquare className="h-5 w-5 text-green-400" />
+          ) : (
+            <Megaphone className="h-5 w-5 text-purple-400" />
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <h3 className="font-semibold truncate text-sm">{campaign.name}</h3>
+            <Badge className={cn("text-[10px] border-0", status.bg, status.text)}>
+              {status.label}
+            </Badge>
+          </div>
+          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1">
+              <Users className="h-3.5 w-3.5" />
+              {campaign.totalRecipients || 0} destinataires
+            </span>
+            <span className="flex items-center gap-1">
+              <Send className="h-3.5 w-3.5" />
+              {campaign.totalSent || 0} envoyés
+            </span>
+            {campaign.totalOpened > 0 && (
+              <span className="flex items-center gap-1">
+                <Eye className="h-3.5 w-3.5" />
+                {campaign.totalOpened} ouverts
+              </span>
+            )}
+            {campaign.scheduledAt && (
+              <span className="flex items-center gap-1">
+                <Calendar className="h-3.5 w-3.5" />
+                {new Date(campaign.scheduledAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {campaign.status === 'draft' && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => sendMutation.mutate(campaign.id)}
+              disabled={sendMutation.isPending}
+              className="text-xs h-7"
+            >
+              <Play className="h-3 w-3 mr-1" />
+              Envoyer
+            </Button>
+          )}
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="text-xs h-7 opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={() => {
+              // TODO: Ouvrir un dialog de détails ou rediriger vers une page de détails
+              toast({ title: "Détails", description: `Détails de la campagne ${campaign.name}` });
+            }}
+          >
+            <BarChart3 className="h-3.5 w-3.5 mr-1" />
+            Détails
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem>
+                <Copy className="h-4 w-4 mr-2" />
+                Dupliquer
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-red-400"
+                onClick={() => deleteMutation.mutate(campaign.id)}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Supprimer
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+    );
+  };
 
   return (
-    <div className="min-h-screen p-6 space-y-6">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
+    <div className="space-y-6 pb-8">
+      {/* Header */}
+      <div className="flex items-center justify-between pl-1">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Campagnes</h1>
-          <p className="text-muted-foreground">
-            Créez et gérez vos campagnes marketing
-          </p>
+          <h1 className="text-lg font-semibold text-foreground">Campagnes</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">Créez et gérez vos campagnes marketing</p>
         </div>
-        <Button onClick={() => setIsCreateOpen(true)} data-testid="button-new-campaign">
-          <Plus className="h-4 w-4 mr-2" />
-          Nouvelle campagne
-        </Button>
       </div>
 
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center gap-4 flex-wrap">
-            <div className="relative flex-1 min-w-[200px]">
+      {/* ZONE A — PILOTAGE RAPIDE */}
+      <div className="grid gap-4 md:grid-cols-4">
+        {/* Campagnes envoyées - Card dominante */}
+        <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] md:col-span-2">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-xl bg-[#4CEFAD]/10">
+                <Send className="h-6 w-6 text-[#4CEFAD]" />
+              </div>
+              <div className="flex-1">
+                <p className="text-3xl font-bold">{kpis.sent}</p>
+                <p className="text-xs text-muted-foreground mt-1">Campagnes envoyées</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Campagnes programmées */}
+        <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-blue-500/10">
+                <Calendar className="h-5 w-5 text-blue-400" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{kpis.scheduled}</p>
+                <p className="text-xs text-muted-foreground">Programmées</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Taux d'ouverture */}
+        <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-purple-500/10">
+                <Eye className="h-5 w-5 text-purple-400" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-1">
+                  <p className="text-2xl font-bold">
+                    {kpis.openRateAvailable ? `${kpis.openRate}%` : "—"}
+                  </p>
+                  {!kpis.openRateAvailable && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="text-xs">Taux d'ouverture disponible après l'envoi de campagnes</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">Taux d'ouverture</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Taux de clic */}
+        <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-[#C8B88A]/10">
+                <BarChart3 className="h-5 w-5 text-[#C8B88A]" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-1">
+                  <p className="text-2xl font-bold">
+                    {kpis.clickRateAvailable ? `${kpis.clickRate}%` : "—"}
+                  </p>
+                  {!kpis.clickRateAvailable && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="text-xs">Taux de clic disponible après l'envoi de campagnes</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">Taux de clic</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ZONE B — LISTE DES CAMPAGNES */}
+      <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-base font-semibold">Liste des campagnes</CardTitle>
+              <CardDescription className="text-xs">Gérez vos campagnes par statut</CardDescription>
+            </div>
+            <div className="relative flex-1 max-w-[300px] ml-4">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Rechercher une campagne..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-10"
-                data-testid="input-search"
+                className="pl-10 h-9 text-xs"
               />
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[160px]" data-testid="select-status">
-                <SelectValue placeholder="Statut" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tous les statuts</SelectItem>
-                <SelectItem value="draft">Brouillons</SelectItem>
-                <SelectItem value="scheduled">Programmées</SelectItem>
-                <SelectItem value="sending">En cours</SelectItem>
-                <SelectItem value="sent">Envoyées</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={channelFilter} onValueChange={setChannelFilter}>
-              <SelectTrigger className="w-[140px]" data-testid="select-channel">
-                <SelectValue placeholder="Canal" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tous</SelectItem>
-                <SelectItem value="email">Email</SelectItem>
-                <SelectItem value="sms">SMS</SelectItem>
-                <SelectItem value="both">Multi-canal</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
+        </CardHeader>
+        <CardContent className="pt-0 space-y-6">
+          {isLoading ? (
+            <div className="space-y-4">
+              {[...Array(3)].map((_, i) => (
+                <Skeleton key={i} className="h-20 w-full" />
+              ))}
+            </div>
+          ) : (
+            <>
+              {/* Section Brouillons */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="h-px flex-1 bg-border/40" />
+                  <h3 className="text-sm font-semibold text-foreground/80 px-2">Brouillons</h3>
+                  <div className="h-px flex-1 bg-border/40" />
+                </div>
+                {drafts.length > 0 ? (
+                  <div className="space-y-2">
+                    {drafts.map(renderCampaignCard)}
+                  </div>
+                ) : (
+                  <div className="py-6 text-center rounded-lg border border-dashed border-border/60 bg-muted/10">
+                    <p className="text-xs text-muted-foreground">Aucune campagne en brouillon</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Section Programmées */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="h-px flex-1 bg-border/40" />
+                  <h3 className="text-sm font-semibold text-foreground/80 px-2">Programmées</h3>
+                  <div className="h-px flex-1 bg-border/40" />
+                </div>
+                {scheduled.length > 0 ? (
+                  <div className="space-y-2">
+                    {scheduled.map(renderCampaignCard)}
+                  </div>
+                ) : (
+                  <div className="py-6 text-center rounded-lg border border-dashed border-border/60 bg-muted/10">
+                    <p className="text-xs text-muted-foreground">Aucune campagne programmée</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Section Envoyées */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="h-px flex-1 bg-border/40" />
+                  <h3 className="text-sm font-semibold text-foreground/80 px-2">Envoyées</h3>
+                  <div className="h-px flex-1 bg-border/40" />
+                </div>
+                {sent.length > 0 ? (
+                  <div className="space-y-2">
+                    {sent.map(renderCampaignCard)}
+                  </div>
+                ) : (
+                  <div className="py-6 text-center rounded-lg border border-dashed border-border/60 bg-muted/10">
+                    <p className="text-xs text-muted-foreground">Aucune campagne envoyée pour le moment</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Empty state global si aucune campagne */}
+              {filteredCampaigns.length === 0 && !search && (
+                <div className="h-[300px] flex flex-col items-center justify-center rounded-xl border border-dashed border-border/60 bg-muted/20 px-6">
+                  <div className="p-4 rounded-full bg-[#C8B88A]/10 mb-6">
+                    <Megaphone className="h-12 w-12 text-[#C8B88A]/50" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-foreground mb-2">
+                    Aucune campagne créée
+                  </h3>
+                  <p className="text-sm text-muted-foreground text-center max-w-md mb-8">
+                    Créez votre première campagne pour commencer à communiquer avec votre audience.
+                  </p>
+                  <Button onClick={() => setIsCreateOpen(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Créer ma première campagne
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
         </CardContent>
       </Card>
 
-      {isLoading ? (
-        <div className="grid gap-4">
-          {[...Array(3)].map((_, i) => (
-            <Card key={i}>
-              <CardContent className="p-6">
-                <div className="flex items-center gap-4">
-                  <Skeleton className="h-12 w-12 rounded-lg" />
-                  <div className="flex-1">
-                    <Skeleton className="h-5 w-48 mb-2" />
-                    <Skeleton className="h-4 w-32" />
-                  </div>
-                  <Skeleton className="h-8 w-24" />
+      {/* ZONE C — CRÉATION & LEVIERS */}
+      <div className="grid gap-4 md:grid-cols-3">
+        {/* Créer une campagne */}
+        <Card 
+          className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] hover:border-blue-500/30 transition-all cursor-pointer group"
+          onClick={() => setIsCreateOpen(true)}
+        >
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-xl bg-blue-500/10 group-hover:bg-blue-500/20 transition-colors">
+                  <Plus className="h-6 w-6 text-blue-400" />
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : filteredCampaigns && filteredCampaigns.length > 0 ? (
-        <div className="grid gap-4">
-          {filteredCampaigns.map((campaign: any) => {
-            const status = statusColors[campaign.status] || statusColors.draft;
-            return (
-              <Card key={campaign.id} className="hover-elevate" data-testid={`card-campaign-${campaign.id}`}>
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-4">
-                    <div className={`p-3 rounded-lg ${
-                      campaign.channel === 'email' ? 'bg-blue-500/10' :
-                      campaign.channel === 'sms' ? 'bg-green-500/10' :
-                      'bg-purple-500/10'
-                    }`}>
-                      {campaign.channel === 'email' ? (
-                        <Mail className="h-6 w-6 text-blue-400" />
-                      ) : campaign.channel === 'sms' ? (
-                        <MessageSquare className="h-6 w-6 text-green-400" />
-                      ) : (
-                        <Megaphone className="h-6 w-6 text-purple-400" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold truncate">{campaign.name}</h3>
-                        <Badge className={`${status.bg} ${status.text} border-0`}>
-                          {status.label}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Users className="h-4 w-4" />
-                          {campaign.totalRecipients || 0} destinataires
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Send className="h-4 w-4" />
-                          {campaign.totalSent || 0} envoyés
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Eye className="h-4 w-4" />
-                          {campaign.totalOpened || 0} ouverts
-                        </span>
-                        {campaign.scheduledAt && (
-                          <span className="flex items-center gap-1">
-                            <Calendar className="h-4 w-4" />
-                            {new Date(campaign.scheduledAt).toLocaleDateString('fr-FR')}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {campaign.status === 'draft' && (
-                        <Button
-                          size="sm"
-                          onClick={() => sendMutation.mutate(campaign.id)}
-                          disabled={sendMutation.isPending}
-                          data-testid={`button-send-${campaign.id}`}
-                        >
-                          <Play className="h-4 w-4 mr-1" />
-                          Envoyer
-                        </Button>
-                      )}
-                      <Link href={`/marketing/campaigns/${campaign.id}`}>
-                        <Button variant="outline" size="sm" data-testid={`button-view-${campaign.id}`}>
-                          <BarChart3 className="h-4 w-4 mr-1" />
-                          Détails
-                        </Button>
-                      </Link>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" data-testid={`button-menu-${campaign.id}`}>
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem>
-                            <Copy className="h-4 w-4 mr-2" />
-                            Dupliquer
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            className="text-red-400"
-                            onClick={() => deleteMutation.mutate(campaign.id)}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Supprimer
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      ) : (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <Megaphone className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-            <p className="text-muted-foreground mb-4">Aucune campagne trouvée</p>
-            <Button onClick={() => setIsCreateOpen(true)} data-testid="button-first-campaign">
-              <Plus className="h-4 w-4 mr-2" />
-              Créer ma première campagne
-            </Button>
+                <div className="flex-1">
+                  <h3 className="text-base font-semibold text-foreground group-hover:text-blue-400 transition-colors">
+                    Créer une nouvelle campagne
+                  </h3>
+                </div>
+                <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-blue-400 group-hover:translate-x-1 transition-all" />
+              </div>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Envoyer un message à votre audience
+              </p>
+            </div>
           </CardContent>
         </Card>
-      )}
 
+        {/* Utiliser un template */}
+        <Card 
+          className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] hover:border-[#C8B88A]/30 transition-all cursor-pointer group"
+          onClick={() => setLocation("/marketing/templates")}
+        >
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-xl bg-[#C8B88A]/10 group-hover:bg-[#C8B88A]/20 transition-colors">
+                  <FileText className="h-6 w-6 text-[#C8B88A]" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-base font-semibold text-foreground group-hover:text-[#C8B88A] transition-colors">
+                    Utiliser un template
+                  </h3>
+                </div>
+                <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-[#C8B88A] group-hover:translate-x-1 transition-all" />
+              </div>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Gagner du temps avec un message prêt à l'emploi
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Générer un message avec l'IA */}
+        <Card 
+          className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] hover:border-[#4CEFAD]/30 transition-all cursor-pointer group"
+          onClick={() => {
+            setIsCreateOpen(true);
+            // TODO: Ouvrir le dialog avec génération IA activée
+          }}
+        >
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-xl bg-[#4CEFAD]/10 group-hover:bg-[#4CEFAD]/20 transition-colors">
+                  <Sparkles className="h-6 w-6 text-[#4CEFAD]" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-base font-semibold text-foreground group-hover:text-[#4CEFAD] transition-colors">
+                    Générer un message avec l'IA
+                  </h3>
+                </div>
+                <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-[#4CEFAD] group-hover:translate-x-1 transition-all" />
+              </div>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Laissez l'IA créer un message personnalisé pour vous
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Dialog Créer Campagne */}
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -376,7 +628,7 @@ export default function MarketingCampaigns() {
                   <FormItem>
                     <FormLabel>Nom de la campagne</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="ex: Promo été 2024" data-testid="input-campaign-name" />
+                      <Input {...field} placeholder="ex: Promo été 2024" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -391,7 +643,7 @@ export default function MarketingCampaigns() {
                     <FormLabel>Canal</FormLabel>
                     <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
-                        <SelectTrigger data-testid="select-campaign-channel">
+                        <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                       </FormControl>
@@ -421,48 +673,6 @@ export default function MarketingCampaigns() {
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="segmentId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Audience</FormLabel>
-                    <Select value={field.value || 'all'} onValueChange={(v) => {
-                      if (v === 'all') {
-                        field.onChange(undefined);
-                        form.setValue('targetAll', true);
-                      } else {
-                        field.onChange(v);
-                        form.setValue('targetAll', false);
-                      }
-                    }}>
-                      <FormControl>
-                        <SelectTrigger data-testid="select-audience">
-                          <SelectValue placeholder="Sélectionner un segment" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="all">
-                          <span className="flex items-center gap-2">
-                            <Users className="h-4 w-4" />
-                            Tous les contacts
-                          </span>
-                        </SelectItem>
-                        {segments?.map((segment: any) => (
-                          <SelectItem key={segment.id} value={segment.id}>
-                            <span className="flex items-center gap-2">
-                              <Filter className="h-4 w-4" />
-                              {segment.name} ({segment.contactCount || 0})
-                            </span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
               {(channel === 'email' || channel === 'both') && (
                 <>
                   <FormField
@@ -472,25 +682,8 @@ export default function MarketingCampaigns() {
                       <FormItem>
                         <FormLabel>Sujet de l'email</FormLabel>
                         <FormControl>
-                          <Input {...field} placeholder="ex: Offre exclusive -20%" data-testid="input-email-subject" />
+                          <Input {...field} placeholder="ex: Offre exclusive -20%" />
                         </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="emailPreviewText"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Texte de prévisualisation</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="Aperçu dans la boîte de réception" data-testid="input-preview-text" />
-                        </FormControl>
-                        <FormDescription>
-                          Ce texte apparaît après le sujet dans les boîtes de réception
-                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -507,7 +700,6 @@ export default function MarketingCampaigns() {
                             {...field}
                             placeholder="Contenu HTML de l'email..."
                             rows={6}
-                            data-testid="textarea-email-content"
                           />
                         </FormControl>
                         <FormDescription>
@@ -532,7 +724,6 @@ export default function MarketingCampaigns() {
                           {...field}
                           placeholder="Contenu du SMS (160 caractères max recommandé)"
                           rows={3}
-                          data-testid="textarea-sms-content"
                         />
                       </FormControl>
                       <FormDescription>
@@ -554,7 +745,6 @@ export default function MarketingCampaigns() {
                       <Input
                         type="datetime-local"
                         {...field}
-                        data-testid="input-scheduled-at"
                       />
                     </FormControl>
                     <FormDescription>
@@ -569,24 +759,9 @@ export default function MarketingCampaigns() {
                 <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)}>
                   Annuler
                 </Button>
-                <Button 
-                  type="button" 
-                  variant="secondary"
-                  onClick={() => setIsPreviewOpen(true)}
-                  disabled={
-                    (channel === 'email' && !form.getValues('emailContent')) ||
-                    (channel === 'sms' && !form.getValues('smsContent')) ||
-                    (channel === 'both' && (!form.getValues('emailContent') || !form.getValues('smsContent')))
-                  }
-                  data-testid="button-preview-campaign"
-                >
-                  <Eye className="h-4 w-4 mr-2" />
-                  Aperçu
-                </Button>
                 <Button
                   type="submit"
                   disabled={createMutation.isPending}
-                  data-testid="button-create-campaign"
                 >
                   {createMutation.isPending && <RefreshCw className="h-4 w-4 mr-2 animate-spin" />}
                   Créer la campagne
@@ -594,118 +769,6 @@ export default function MarketingCampaigns() {
               </DialogFooter>
             </form>
           </Form>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Eye className="h-5 w-5" />
-              Aperçu de la campagne
-            </DialogTitle>
-            <DialogDescription>
-              Prévisualisation avec les variables remplacées par des données d'exemple
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-6">
-            <Card className="bg-muted/30">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Contact d'exemple utilisé
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm">
-                <div className="grid grid-cols-2 gap-2">
-                  <div><span className="text-muted-foreground">Prénom:</span> {sampleContact.prenom}</div>
-                  <div><span className="text-muted-foreground">Nom:</span> {sampleContact.nom}</div>
-                  <div><span className="text-muted-foreground">Email:</span> {sampleContact.email}</div>
-                  <div><span className="text-muted-foreground">Téléphone:</span> {sampleContact.telephone}</div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {(channel === 'email' || channel === 'both') && (
-              <Card>
-                <CardHeader className="pb-2">
-                  <div className="flex items-center gap-2">
-                    <Mail className="h-4 w-4 text-blue-400" />
-                    <CardTitle className="text-sm font-medium">Aperçu Email</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {form.getValues('emailContent') ? (
-                    <>
-                      {form.getValues('emailSubject') && (
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-1">Sujet</p>
-                          <p className="font-semibold" data-testid="preview-email-subject">
-                            {replaceVariablesWithSample(form.getValues('emailSubject') || '')}
-                          </p>
-                        </div>
-                      )}
-                      {form.getValues('emailPreviewText') && (
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-1">Prévisualisation</p>
-                          <p className="text-sm text-muted-foreground" data-testid="preview-email-previewtext">
-                            {replaceVariablesWithSample(form.getValues('emailPreviewText') || '')}
-                          </p>
-                        </div>
-                      )}
-                      <div>
-                        <p className="text-xs text-muted-foreground mb-2">Contenu</p>
-                        <div 
-                          className="border rounded-md p-4 bg-background prose prose-sm dark:prose-invert max-w-none"
-                          data-testid="preview-email-content"
-                          dangerouslySetInnerHTML={{ 
-                            __html: replaceVariablesWithSample(form.getValues('emailContent') || '') 
-                          }}
-                        />
-                      </div>
-                    </>
-                  ) : (
-                    <p className="text-sm text-muted-foreground italic" data-testid="preview-email-empty">
-                      Aucun contenu email saisi
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
-            {(channel === 'sms' || channel === 'both') && (
-              <Card>
-                <CardHeader className="pb-2">
-                  <div className="flex items-center gap-2">
-                    <MessageSquare className="h-4 w-4 text-green-400" />
-                    <CardTitle className="text-sm font-medium">Aperçu SMS</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {form.getValues('smsContent') ? (
-                    <div className="bg-green-500/10 rounded-lg p-4 max-w-xs">
-                      <p className="text-sm" data-testid="preview-sms-content">
-                        {replaceVariablesWithSample(form.getValues('smsContent') || '')}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        {replaceVariablesWithSample(form.getValues('smsContent') || '').length} caractères
-                      </p>
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground italic" data-testid="preview-sms-empty">
-                      Aucun contenu SMS saisi
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsPreviewOpen(false)}>
-              Fermer
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

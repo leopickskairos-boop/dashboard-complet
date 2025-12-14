@@ -45,7 +45,7 @@ import ReviewCollect from "@/pages/reviews/ReviewCollect";
 
 // Marketing Pages
 import MarketingOverview from "@/pages/marketing/MarketingOverview";
-import MarketingContacts from "@/pages/marketing/MarketingContacts";
+import MarketingAudience from "@/pages/marketing/MarketingAudience";
 import MarketingCampaigns from "@/pages/marketing/MarketingCampaigns";
 import MarketingTemplates from "@/pages/marketing/MarketingTemplates";
 import MarketingSegments from "@/pages/marketing/MarketingSegments";
@@ -215,7 +215,14 @@ function Router() {
       <Route path="/marketing/contacts">
         <ProtectedRoute requireVerified={true} requireSubscription={true}>
           <DashboardLayout>
-            <MarketingContacts />
+            <MarketingAudience />
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/marketing/audience">
+        <ProtectedRoute requireVerified={true} requireSubscription={true}>
+          <DashboardLayout>
+            <MarketingAudience />
           </DashboardLayout>
         </ProtectedRoute>
       </Route>
