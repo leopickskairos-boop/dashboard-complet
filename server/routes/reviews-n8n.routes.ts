@@ -2,6 +2,7 @@
 import { Router, Request, Response } from "express";
 import { storage, getFrontendUrl } from "./middleware";
 import { sendEmail } from "../gmail-email";
+import { resolveEffectiveTenantId } from "../utils/tenant-context";
 
 const router = Router();
 
@@ -23,6 +24,7 @@ router.post("/create-request", async (req, res) => {
 
     const { 
       client_email, 
+      agent_id,
       customer_name, 
       customer_email, 
       customer_phone, 
@@ -32,22 +34,44 @@ router.post("/create-request", async (req, res) => {
       send_method = 'email' 
     } = req.body;
 
-    // Validate required fields
-    if (!client_email) {
-      return res.status(400).json({ success: false, error: "client_email is required" });
+    // Validate required fields - agent_id OR client_email required
+    if (!client_email && !agent_id) {
+      return res.status(400).json({ success: false, error: "client_email or agent_id is required" });
     }
     if (!customer_name && !customer_email && !customer_phone) {
       return res.status(400).json({ success: false, error: "At least customer_name, customer_email or customer_phone is required" });
     }
 
-    // Find user by email
-    const user = await storage.getUserByEmail(client_email);
+    // Phase 2 Multi-Tenant: Resolve user via agent_id (tenant) or client_email (legacy)
+    let user = null;
+    let tenantId: string | null = null;
+
+    // Try agent_id first for tenant lookup
+    if (agent_id) {
+      const tenantContext = { tenantId: null, userId: null, agentId: agent_id };
+      tenantId = await resolveEffectiveTenantId(tenantContext);
+      if (tenantId) {
+        const tenant = await storage.getTenant(tenantId);
+        if (tenant?.ownerId) {
+          user = await storage.getUser(tenant.ownerId);
+        }
+      }
+    }
+
+    // Fallback to client_email for backward compatibility
+    if (!user && client_email) {
+      user = await storage.getUserByEmail(client_email);
+    }
+
     if (!user) {
       return res.status(404).json({ success: false, error: "Client not found" });
     }
 
-    // Check if review system is enabled
-    const config = await storage.getReviewConfig(user.id);
+    // Phase 2: Build owner context for dual-key queries
+    const owner = { userId: user.id, tenantId: tenantId || undefined };
+
+    // Check if review system is enabled (using ByOwner for tenant support)
+    const config = await storage.getReviewConfigByOwner(owner);
     if (!config || !config.enabled) {
       return res.json({
         success: true,
@@ -56,7 +80,7 @@ router.post("/create-request", async (req, res) => {
       });
     }
 
-    // Get default incentive if exists
+    // Get default incentive if exists (incentives still use userId)
     const incentives = await storage.getReviewIncentives(user.id);
     const defaultIncentive = incentives.find(i => i.isDefault && i.isActive);
 
@@ -70,9 +94,10 @@ router.post("/create-request", async (req, res) => {
       parsedReservationDate = new Date(reservation_date);
     }
 
-    // Create the review request
+    // Create the review request with tenantId for Phase 2 multi-tenant
     const newRequest = await storage.createReviewRequest({
       userId: user.id,
+      tenantId: tenantId || null,
       customerName: customer_name || null,
       customerEmail: customer_email || null,
       customerPhone: customer_phone || null,
