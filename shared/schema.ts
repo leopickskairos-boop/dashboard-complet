@@ -2661,3 +2661,156 @@ export type CreateConnection = z.infer<typeof createConnectionSchema>;
 export type OAuthCallback = z.infer<typeof oauthCallbackSchema>;
 export type APIKeyConnection = z.infer<typeof apiKeyConnectionSchema>;
 export type DatabaseConnection = z.infer<typeof databaseConnectionSchema>;
+
+// ===== MULTI-TENANT ARCHITECTURE =====
+
+// Tenant status enum
+export const tenantStatusEnum = pgEnum('tenant_status', [
+  'onboarding',
+  'active', 
+  'suspended',
+  'cancelled'
+]);
+
+// Tenant user role enum
+export const tenantUserRoleEnum = pgEnum('tenant_user_role', [
+  'tenant_admin',
+  'staff',
+  'viewer'
+]);
+
+// Tenants table - Central entity for multi-tenant architecture
+export const tenants = pgTable("tenants", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  slug: text("slug").notNull().unique(), // URL-friendly identifier (e.g., "au-bureau")
+  name: text("name").notNull(), // Display name
+  legalName: text("legal_name"), // Legal business name
+  status: tenantStatusEnum("status").notNull().default("onboarding"),
+  
+  // From speedai_clients migration (Phase 2)
+  agentId: text("agent_id").unique(), // Legacy N8N agent ID
+  businessType: text("business_type"), // restaurant, kine, garage, other
+  contactEmail: text("contact_email"),
+  contactPhone: text("contact_phone"),
+  
+  // Subscription (tenant-level)
+  plan: text("plan").default("basic"), // basic, standard, premium
+  trialEndsAt: timestamp("trial_ends_at"),
+  
+  // Localization
+  timezone: text("timezone").default("Europe/Paris"),
+  language: text("language").default("fr"),
+  
+  // Timestamps
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Insert schema for tenants
+export const insertTenantSchema = createInsertSchema(tenants).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Types for tenants
+export type InsertTenant = z.infer<typeof insertTenantSchema>;
+export type Tenant = typeof tenants.$inferSelect;
+
+// Tenant settings - JSON-based configuration per tenant
+export const tenantSettings = pgTable("tenant_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: 'cascade' }).unique(),
+  
+  // Enabled modules (feature flags at module level)
+  enabledModules: jsonb("enabled_modules").default(['calls', 'dashboard']), // ['calls', 'bookings', 'reviews', 'marketing', 'guarantee']
+  
+  // Module-specific configurations
+  bookingRules: jsonb("booking_rules"), // { slot_duration, search_window_minutes, etc. }
+  guaranteeRules: jsonb("guarantee_rules"), // { penalty_amount, cancellation_delay, etc. }
+  reviewsConfig: jsonb("reviews_config"), // { auto_request_delay, platforms, etc. }
+  marketingConfig: jsonb("marketing_config"), // { default_sender, templates, etc. }
+  
+  // UI/Branding
+  ui: jsonb("ui"), // { theme, primary_color, logo_url, favicon_url, etc. }
+  
+  // Integration credentials (encrypted at rest)
+  integrations: jsonb("integrations"), // { smtp: {...}, stripe_connect: {...}, twilio: {...} }
+  
+  // Timestamps
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Insert schema for tenant_settings
+export const insertTenantSettingsSchema = createInsertSchema(tenantSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Types for tenant_settings
+export type InsertTenantSettings = z.infer<typeof insertTenantSettingsSchema>;
+export type TenantSettings = typeof tenantSettings.$inferSelect;
+
+// Tenant features - Granular feature flags per tenant
+export const tenantFeatures = pgTable("tenant_features", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  featureKey: text("feature_key").notNull(), // e.g., "ai_insights", "sms_reminders", "pdf_reports"
+  enabled: boolean("enabled").notNull().default(false),
+  config: jsonb("config"), // Optional feature-specific config
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Insert schema for tenant_features
+export const insertTenantFeatureSchema = createInsertSchema(tenantFeatures).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Types for tenant_features
+export type InsertTenantFeature = z.infer<typeof insertTenantFeatureSchema>;
+export type TenantFeature = typeof tenantFeatures.$inferSelect;
+
+// Tenant user roles - Maps users to tenants with specific roles
+export const tenantUserRoles = pgTable("tenant_user_roles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tenantId: varchar("tenant_id").notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  role: tenantUserRoleEnum("role").notNull().default("staff"),
+  isDefault: boolean("is_default").notNull().default(false), // Default tenant for this user
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Insert schema for tenant_user_roles
+export const insertTenantUserRoleSchema = createInsertSchema(tenantUserRoles).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Types for tenant_user_roles
+export type InsertTenantUserRole = z.infer<typeof insertTenantUserRoleSchema>;
+export type TenantUserRole = typeof tenantUserRoles.$inferSelect;
+
+// ===== TENANT API SCHEMAS =====
+
+// Schema for creating a new tenant
+export const createTenantSchema = z.object({
+  slug: z.string().min(2).max(50).regex(/^[a-z0-9-]+$/, "Slug must be lowercase alphanumeric with dashes"),
+  name: z.string().min(1).max(100),
+  legalName: z.string().optional(),
+  businessType: z.enum(['restaurant', 'kine', 'garage', 'other']).optional(),
+  contactEmail: z.string().email().optional(),
+  contactPhone: z.string().optional(),
+  plan: z.enum(['basic', 'standard', 'premium']).default('basic'),
+  timezone: z.string().default('Europe/Paris'),
+  language: z.enum(['fr', 'en']).default('fr'),
+});
+
+// Schema for updating tenant
+export const updateTenantSchema = createTenantSchema.partial();
+
+// Types
+export type CreateTenantInput = z.infer<typeof createTenantSchema>;
+export type UpdateTenantInput = z.infer<typeof updateTenantSchema>;
