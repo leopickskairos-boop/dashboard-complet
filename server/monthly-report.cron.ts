@@ -7,6 +7,7 @@ import { fileStorage } from './file-storage.service';
 import { sendEmail } from './gmail-email';
 import { generateReportEmailHTML, generateReportEmailText } from './templates/monthly-report-email.template';
 import type { MonthlyReportMetrics } from './report-data.service';
+import { MbrJobService } from './services/mbr-job.service';
 
 /**
  * Monthly Report Cron Job Service
@@ -112,7 +113,19 @@ export class MonthlyReportCronService {
         return;
       }
 
-      // Step 1: Generate metrics for the previous month
+      // Step 1: Generate mbr_v1 JSON using new builder (pure computation, no DB writes)
+      // Note: tenantId is undefined - builder uses userId fallback for data filtering
+      let mbrJson;
+      try {
+        mbrJson = await MbrJobService.buildMbrForUser(userId, periodStart, periodEnd);
+        console.log(`[MonthlyReportCron] mbr_v1 generated successfully for user ${userId}`);
+      } catch (mbrError) {
+        console.warn(`[MonthlyReportCron] mbr_v1 generation failed for ${userId}:`, mbrError instanceof Error ? mbrError.message : mbrError);
+        console.log(`[MonthlyReportCron] Fallback: using legacy metrics only for user ${userId}`);
+        mbrJson = null;
+      }
+
+      // Step 1b: Generate legacy metrics for PDF (backward compat)
       const metrics = await ReportDataService.generateMonthlyMetrics(userId, periodStart, periodEnd);
       
       if (metrics.totalCalls === 0) {
@@ -158,17 +171,21 @@ export class MonthlyReportCronService {
       }
 
       // Step 6: Create monthly report record
+      // Status reflects actual delivery: 'sent' only if email succeeded, otherwise 'pdf_generated'
+      const reportStatus = emailSentAt ? 'sent' : 'pdf_generated';
       const report = await storage.createMonthlyReport({
         userId,
         periodStart: metrics.periodStart,
         periodEnd: metrics.periodEnd,
         subscriptionRenewalAt: new Date(),
         metrics: JSON.stringify(metrics),
+        metricsJson: mbrJson || null,
         pdfPath,
         pdfChecksum,
         emailedAt: emailSentAt,
         notificationId: null,
         retryCount: 0,
+        status: reportStatus,
       });
 
       // Step 7: Create dashboard notification
