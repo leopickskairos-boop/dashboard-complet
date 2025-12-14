@@ -2375,6 +2375,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
+  // Get a specific monthly report details (with metricsJson)
+  app.get("/api/reports/:id", requireAuth, requireVerified, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const reportId = req.params.id;
+      
+      const report = await storage.getMonthlyReportById(reportId, userId);
+      
+      if (!report) {
+        return res.status(404).json({ message: "Rapport introuvable" });
+      }
+      
+      // Normalize metricsJson to object (may be string from DB or already parsed)
+      let mbrData = null;
+      const rawMetricsJson = report.metricsJson;
+      if (rawMetricsJson) {
+        if (typeof rawMetricsJson === 'string') {
+          try {
+            mbrData = JSON.parse(rawMetricsJson);
+          } catch (e) {
+            console.warn("Failed to parse metricsJson string for report", reportId);
+          }
+        } else if (typeof rawMetricsJson === 'object') {
+          mbrData = rawMetricsJson;
+        }
+      }
+      
+      // Return report with consistent structure
+      res.json({
+        id: report.id,
+        userId: report.userId,
+        periodStart: report.periodStart,
+        periodEnd: report.periodEnd,
+        status: report.status,
+        pdfPath: report.pdfPath,
+        emailedAt: report.emailedAt,
+        createdAt: report.createdAt,
+        mbrData,
+      });
+    } catch (error) {
+      console.error("Error fetching report details:", error);
+      res.status(500).json({ message: "Erreur lors de la récupération du rapport" });
+    }
+  });
+
   // ===== WEBHOOK ROUTES (API Key Authentication) =====
 
   // N8N Webhook - Create a call from external automation with rich data
