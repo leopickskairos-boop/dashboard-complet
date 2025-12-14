@@ -20,6 +20,7 @@ import PaymentSuccess from "@/pages/payment-success";
 import Dashboard from "@/pages/dashboard";
 import Notifications from "@/pages/notifications";
 import Account from "@/pages/account";
+import Reports from "@/pages/reports";
 import Admin from "@/pages/admin";
 import SubscriptionExpired from "@/pages/subscription-expired";
 import TrialExpired from "@/pages/trial-expired";
@@ -107,6 +108,14 @@ function Router() {
         <ProtectedRoute requireVerified={true} requireSubscription={true}>
           <DashboardLayout>
             <Account />
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/reports">
+        <ProtectedRoute requireVerified={true} requireSubscription={true}>
+          <DashboardLayout>
+            <Reports />
           </DashboardLayout>
         </ProtectedRoute>
       </Route>
