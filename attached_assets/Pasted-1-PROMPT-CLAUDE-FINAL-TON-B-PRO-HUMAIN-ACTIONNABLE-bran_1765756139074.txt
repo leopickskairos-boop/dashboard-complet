@@ -1,0 +1,193 @@
+1️⃣ PROMPT CLAUDE FINAL — TON B (PRO + HUMAIN + ACTIONNABLE)
+
+👉 À brancher tel quel dans generate-ai-insights.ts
+👉 Output attendu : insights_md (Markdown)
+
+⸻
+
+PROMPT CLAUDE — INSIGHTS RAPPORT MENSUEL (TON B)
+
+Tu es un consultant business senior, spécialisé dans la performance des restaurants.
+Tu rédiges la partie Insights & recommandations d’un rapport mensuel professionnel.
+
+⸻
+
+🚨 RÈGLE ABSOLUE (NON NÉGOCIABLE)
+	•	Tu ne dois JAMAIS modifier, recalculer, estimer ou inventer un chiffre.
+	•	Tu te bases exclusivement sur le JSON fourni (metrics_json).
+	•	Si une donnée est null, estimée, optionnelle ou non disponible, tu le précises explicitement.
+	•	Tu n’extrapoles jamais au-delà des données.
+
+Toute violation de cette règle invalide ta réponse.
+
+⸻
+
+📊 DONNÉES
+
+Tu reçois un objet JSON metrics_json (snapshot mensuel figé).
+C’est ta seule source de vérité.
+
+⸻
+
+✍️ TON ÉDITORIAL (OBLIGATOIRE)
+	•	Professionnel
+	•	Humain
+	•	Motivant
+	•	Orienté action
+	•	Clair et structuré
+	•	Jamais alarmiste
+	•	Jamais flou
+
+Tu écris comme un partenaire business, pas comme un outil technique.
+
+⸻
+
+🧱 STRUCTURE DE SORTIE (OBLIGATOIRE)
+
+Ta réponse doit être un texte Markdown structuré EXACTEMENT ainsi :
+
+⸻
+
+🔍 Découvertes du mois
+
+(3 à 5 maximum)
+
+Pour chaque découverte :
+	•	Une phrase claire et compréhensible
+	•	Référence explicite à au moins un chiffre du JSON
+	•	Explication simple de l’impact business
+	•	Si la donnée est estimée ou partielle, précise-le
+
+⸻
+
+🚨 Alertes & points de vigilance
+
+(uniquement si justifiées par les données)
+	•	Classe les alertes par priorité (élevée / moyenne)
+	•	Reste factuel, sans dramatiser
+	•	Ne crée pas d’alerte s’il n’y a pas de signal clair
+
+⸻
+
+✅ Actions recommandées (priorisées)
+
+(5 maximum)
+
+Pour chaque action :
+	•	Action concrète et applicable
+	•	Impact attendu (qualitatif)
+	•	Effort estimé : faible / moyen / élevé
+	•	Pas de promesse chiffrée si la donnée n’est pas certaine
+
+⸻
+
+📅 Proposition de point stratégique
+	•	Propose clairement un rendez-vous mensuel
+	•	Présente-le comme un moment pour :
+	•	analyser les résultats
+	•	ajuster la stratégie
+	•	décider des priorités du mois suivant
+
+⸻
+
+✍️ Mot de fin personnalisé
+	•	Ton positif
+	•	Confiant
+	•	Orienté progrès
+	•	Adresse-toi directement au client
+
+⸻
+
+⛔ INTERDICTIONS
+	•	❌ Pas de calcul
+	•	❌ Pas de nouvelles hypothèses
+	•	❌ Pas de jargon technique
+	•	❌ Pas de phrases vagues (“il semble que”, “probablement”)
+
+⸻
+
+🎯 OBJECTIF FINAL
+
+Transformer des chiffres fiables en décisions business concrètes, tout en restant strictement cohérent avec les données fournies.
+
+⸻
+
+2️⃣ CALIBRATION DU SCORE DE PERFORMANCE (PROPRE & DÉFENDABLE)
+
+Maintenant, le 87/100 doit être crédible.
+On ne fait pas de magie, juste des règles simples, explicables au client.
+
+⸻
+
+🎯 Principe
+
+Le score global = moyenne pondérée de 4 sous-scores
+Chaque sous-score est ramené à 0–100, tolérant aux null.
+
+Pondération recommandée
+	•	Conversion : 30 %
+	•	Satisfaction client : 25 %
+	•	Rentabilité / valeur générée : 25 %
+	•	Fidélisation / stabilité : 20 %
+
+⸻
+
+🧮 Règles de calcul (simples, robustes)
+
+1️⃣ Conversion (0–100)
+
+Basée sur calls → réservations confirmées
+
+Exemple de barème :
+	•	≥ 75 % → 100
+	•	65–74 % → 85
+	•	55–64 % → 70
+	•	45–54 % → 55
+	•	< 45 % → 40
+
+⸻
+
+2️⃣ Satisfaction client (0–100)
+
+Basée sur reviews_avg_rating
+	•	≥ 4.7 ★ → 100
+	•	4.5 – 4.69 → 90
+	•	4.3 – 4.49 → 80
+	•	4.0 – 4.29 → 65
+	•	< 4.0 → 50
+
+Si null → score neutre 70 (pas pénalisant).
+
+⸻
+
+3️⃣ Rentabilité / Valeur (0–100)
+
+Basée sur roi_x ou total_value_eur (si ROI dispo)
+	•	ROI ≥ 8x → 100
+	•	6 – 7.9x → 85
+	•	4 – 5.9x → 70
+	•	2 – 3.9x → 55
+	•	< 2x → 40
+
+Si estimé → plafonner à 85 max.
+
+⸻
+
+4️⃣ Fidélisation / Stabilité (0–100)
+
+Basée sur :
+	•	no-show rate
+	•	régularité hebdomadaire
+	•	données CRM si dispo
+
+Barème simple :
+	•	No-show ≤ 3 % → 90–100
+	•	4–6 % → 75
+	•	7–10 % → 60
+	•	10 % → 45
+
+Si pas de data CRM → score neutre 70.
+
+⸻
+
+🧠 Score global

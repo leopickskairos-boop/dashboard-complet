@@ -176,6 +176,7 @@ export class ReportDataService {
     // Financial metrics
     const estimatedRevenue = appointmentsTaken * AVERAGE_CLIENT_VALUE;
     const roi = AI_COST_PER_MONTH > 0 ? ((estimatedRevenue - AI_COST_PER_MONTH) / AI_COST_PER_MONTH) * 100 : 0;
+    const roiX = AI_COST_PER_MONTH > 0 ? estimatedRevenue / AI_COST_PER_MONTH : 0;
     
     // Performance score (weighted average of key metrics)
     const performanceScore = this.calculatePerformanceScore({
@@ -183,6 +184,9 @@ export class ReportDataService {
       appointmentConversionRate,
       afterHoursPercentage,
       averageCallDuration,
+      reviewsAvgRating: null,
+      roi: roiX,
+      noShowRate: null,
     });
 
     // Calculate previous period KPIs
@@ -217,12 +221,16 @@ export class ReportDataService {
     const previousMonthROI = AI_COST_PER_MONTH > 0 
       ? ((previousMonthRevenue - AI_COST_PER_MONTH) / AI_COST_PER_MONTH) * 100 
       : 0;
+    const previousMonthRoiX = AI_COST_PER_MONTH > 0 ? previousMonthRevenue / AI_COST_PER_MONTH : 0;
     
     const previousMonthPerformanceScore = this.calculatePerformanceScore({
       conversionRate: previousMonthConversionRate,
       appointmentConversionRate: previousMonthAppointmentConversionRate,
       afterHoursPercentage: previousMonthAfterHoursPercentage,
       averageCallDuration: previousMonthAverageDuration,
+      reviewsAvgRating: null,
+      roi: previousMonthRoiX,
+      noShowRate: null,
     });
 
     // Analyze peak hours
@@ -586,42 +594,66 @@ export class ReportDataService {
   
   /**
    * Calculate overall performance score (0-100)
+   * Formula: conversion (30%) + satisfaction (25%) + rentabilite (25%) + fidelisation (20%)
+   * Labels: ≥85 Excellent, 70-84 Bon, 55-69 À optimiser, <55 Critique
    */
   private static calculatePerformanceScore(data: {
     conversionRate: number;
     appointmentConversionRate: number;
     afterHoursPercentage: number;
     averageCallDuration: number;
+    reviewsAvgRating?: number | null;
+    roi?: number | null;
+    noShowRate?: number | null;
   }): number {
-    // Weighted scoring system
-    const weights = {
-      conversion: 0.35, // 35% - Most important metric
-      appointments: 0.30, // 30% - Direct business value
-      afterHours: 0.20, // 20% - Service availability
-      duration: 0.15, // 15% - Efficiency
-    };
+    const conversionScore = this.calculateConversionSubScore(data.appointmentConversionRate);
+    const satisfactionScore = this.calculateSatisfactionSubScore(data.reviewsAvgRating ?? null);
+    const profitabilityScore = this.calculateProfitabilitySubScore(data.roi ?? null);
+    const loyaltyScore = this.calculateLoyaltySubScore(data.noShowRate ?? null);
     
-    // Normalize each metric to 0-100 scale
-    const conversionScore = Math.min(data.conversionRate, 100);
-    const appointmentScore = Math.min(data.appointmentConversionRate * 2, 100); // Scale up (50% = 100 points)
-    const afterHoursScore = Math.min(data.afterHoursPercentage * 3, 100); // More after-hours = better
-    
-    // Duration score (optimal is 3-5 mins, penalties for too short/long)
-    let durationScore = 100;
-    if (data.averageCallDuration < 180) { // < 3 mins
-      durationScore = (data.averageCallDuration / 180) * 100;
-    } else if (data.averageCallDuration > 300) { // > 5 mins
-      durationScore = Math.max(50, 100 - ((data.averageCallDuration - 300) / 60) * 10);
-    }
-    
-    // Calculate weighted score
     const totalScore = 
-      conversionScore * weights.conversion +
-      appointmentScore * weights.appointments +
-      afterHoursScore * weights.afterHours +
-      durationScore * weights.duration;
+      conversionScore * 0.30 +
+      satisfactionScore * 0.25 +
+      profitabilityScore * 0.25 +
+      loyaltyScore * 0.20;
     
     return Math.round(totalScore);
+  }
+
+  private static calculateConversionSubScore(conversionRate: number): number {
+    if (conversionRate >= 75) return 100;
+    if (conversionRate >= 65) return 85;
+    if (conversionRate >= 55) return 70;
+    if (conversionRate >= 45) return 55;
+    return 40;
+  }
+
+  private static calculateSatisfactionSubScore(avgRating: number | null): number {
+    if (avgRating === null) return 70;
+    if (avgRating >= 4.7) return 100;
+    if (avgRating >= 4.5) return 90;
+    if (avgRating >= 4.3) return 80;
+    if (avgRating >= 4.0) return 65;
+    return 50;
+  }
+
+  private static calculateProfitabilitySubScore(roiX: number | null, isEstimated: boolean = false): number {
+    if (roiX === null) return 70;
+    let score: number;
+    if (roiX >= 8) score = 100;
+    else if (roiX >= 6) score = 85;
+    else if (roiX >= 4) score = 70;
+    else if (roiX >= 2) score = 55;
+    else score = 40;
+    return isEstimated ? Math.min(score, 85) : score;
+  }
+
+  private static calculateLoyaltySubScore(noShowRate: number | null): number {
+    if (noShowRate === null) return 70;
+    if (noShowRate <= 3) return 95;
+    if (noShowRate <= 6) return 75;
+    if (noShowRate <= 10) return 60;
+    return 45;
   }
   
   /**

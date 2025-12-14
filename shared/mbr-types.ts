@@ -191,6 +191,8 @@ export interface MbrAiInsights {
   discoveries: string[];
   alerts: string[];
   actions: string[];
+  strategicMeeting?: string;
+  closingNote?: string;
 }
 
 export interface MbrForecast {

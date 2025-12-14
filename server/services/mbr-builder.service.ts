@@ -625,33 +625,81 @@ export class MbrBuilderService {
     reservationsData: ReservationsBuilderResult
   ): MbrPerformanceScore {
     const conversionRate = callsData.metrics.appointmentConversionRate;
-    const loyaltyRate = callsData.metrics.returningClientPercentage || 50;
-    const satisfaction = kpis.reviews_avg_rating ? (kpis.reviews_avg_rating / 5) * 100 : 50;
-    const profitability = kpis.roi_x ? Math.min(kpis.roi_x * 10, 100) : 50;
+    const noShowRate = kpis.no_show_rate;
+    const avgRating = kpis.reviews_avg_rating;
+    const roiX = kpis.roi_x;
 
-    const global = Math.round((conversionRate * 0.3 + loyaltyRate * 0.2 + satisfaction * 0.3 + profitability * 0.2));
+    const conversionScore = this.calculateConversionSubScore(conversionRate);
+    const satisfactionScore = this.calculateSatisfactionSubScore(avgRating);
+    const profitabilityScore = this.calculateProfitabilitySubScore(roiX);
+    const loyaltyScore = this.calculateLoyaltySubScore(noShowRate);
+
+    const global = Math.round(
+      conversionScore * 0.30 + 
+      satisfactionScore * 0.25 + 
+      profitabilityScore * 0.25 + 
+      loyaltyScore * 0.20
+    );
     
     let label: string;
-    if (global >= 80) label = 'Excellent';
-    else if (global >= 60) label = 'Bon';
-    else if (global >= 40) label = 'Moyen';
-    else label = 'À améliorer';
+    if (global >= 85) label = 'Excellent';
+    else if (global >= 70) label = 'Bon';
+    else if (global >= 55) label = 'À optimiser';
+    else label = 'Critique';
 
     const notes: string[] = [];
-    if (conversionRate < 20) notes.push("Conversion des appels à améliorer");
-    if (kpis.no_show_rate && kpis.no_show_rate > 10) notes.push("Taux de no-show élevé");
+    if (conversionScore < 55) notes.push("Conversion des appels à améliorer");
+    if (loyaltyScore < 60) notes.push("Taux de no-show élevé");
+    if (satisfactionScore < 65) notes.push("Satisfaction client à surveiller");
+    if (profitabilityScore < 55) notes.push("Rentabilité à optimiser");
 
     return {
       global: global > 0 ? global : null,
       label: global > 0 ? label : null,
       radar: {
-        conversion: Math.round(conversionRate),
-        loyalty: Math.round(loyaltyRate),
-        satisfaction: Math.round(satisfaction),
-        profitability: Math.round(profitability)
+        conversion: conversionScore,
+        loyalty: loyaltyScore,
+        satisfaction: satisfactionScore,
+        profitability: profitabilityScore
       },
       notes
     };
+  }
+
+  private static calculateConversionSubScore(conversionRate: number): number {
+    if (conversionRate >= 75) return 100;
+    if (conversionRate >= 65) return 85;
+    if (conversionRate >= 55) return 70;
+    if (conversionRate >= 45) return 55;
+    return 40;
+  }
+
+  private static calculateSatisfactionSubScore(avgRating: number | null): number {
+    if (avgRating === null) return 70;
+    if (avgRating >= 4.7) return 100;
+    if (avgRating >= 4.5) return 90;
+    if (avgRating >= 4.3) return 80;
+    if (avgRating >= 4.0) return 65;
+    return 50;
+  }
+
+  private static calculateProfitabilitySubScore(roiX: number | null, isEstimated: boolean = false): number {
+    if (roiX === null) return 70;
+    let score: number;
+    if (roiX >= 8) score = 100;
+    else if (roiX >= 6) score = 85;
+    else if (roiX >= 4) score = 70;
+    else if (roiX >= 2) score = 55;
+    else score = 40;
+    return isEstimated ? Math.min(score, 85) : score;
+  }
+
+  private static calculateLoyaltySubScore(noShowRate: number | null): number {
+    if (noShowRate === null) return 70;
+    if (noShowRate <= 3) return 95;
+    if (noShowRate <= 6) return 75;
+    if (noShowRate <= 10) return 60;
+    return 45;
   }
 
   private static buildFinance(
@@ -742,51 +790,100 @@ export class MbrBuilderService {
     callsData: CallsBuilderResult,
     reservationsData: ReservationsBuilderResult,
     reputationData: MbrReputation
-  ): { enabled: boolean; discoveries: string[]; alerts: string[]; actions: string[] } {
+  ): { enabled: boolean; discoveries: string[]; alerts: string[]; actions: string[]; strategicMeeting: string; closingNote: string } {
     const discoveries: string[] = [];
     const alerts: string[] = [];
     const actions: string[] = [];
 
     const metrics = callsData.metrics;
-
-    if (metrics.appointmentConversionRate > 30) {
-      discoveries.push(`Excellent taux de conversion: ${Math.round(metrics.appointmentConversionRate)}% des appels convertis en réservations.`);
-    }
-
-    if (metrics.afterHoursPercentage > 20) {
-      discoveries.push(`${Math.round(metrics.afterHoursPercentage)}% des appels reçus hors horaires - SpeedAI capture ces opportunités.`);
-    }
-
-    if (metrics.returningClientPercentage > 30) {
-      discoveries.push(`Base fidèle: ${Math.round(metrics.returningClientPercentage)}% de clients réguliers.`);
-    }
-
     const noShowRate = reservationsData.reservations.no_show.rate;
-    if (noShowRate && noShowRate > 10) {
-      alerts.push(`Taux de no-show élevé (${Math.round(noShowRate)}%) - Renforcer les confirmations SMS.`);
+    const avgRating = reputationData.reviews.avg_rating;
+
+    if (metrics.appointmentConversionRate >= 60) {
+      discoveries.push(`Taux de conversion exceptionnel de ${Math.round(metrics.appointmentConversionRate)}% ce mois-ci. Votre assistant IA transforme efficacement les appels en réservations concrètes.`);
+    } else if (metrics.appointmentConversionRate >= 40) {
+      discoveries.push(`Taux de conversion de ${Math.round(metrics.appointmentConversionRate)}%. Une marge de progression existe pour optimiser la prise de rendez-vous.`);
     }
 
-    if (reputationData.reviews.avg_rating && reputationData.reviews.avg_rating < 4) {
-      alerts.push(`Note moyenne en baisse (${reputationData.reviews.avg_rating}/5) - Points d'amélioration à identifier.`);
+    if (metrics.afterHoursPercentage >= 15) {
+      discoveries.push(`${Math.round(metrics.afterHoursPercentage)}% des appels captés en dehors des horaires d'ouverture - SpeedAI protège ces opportunités qui auraient été perdues autrement.`);
     }
 
-    if (metrics.lastMinutePercentage > 30) {
-      actions.push("Proposer des offres anticipées pour réduire les réservations de dernière minute.");
+    if (metrics.returningClientPercentage >= 25) {
+      discoveries.push(`Une base fidèle identifiée: ${Math.round(metrics.returningClientPercentage)}% de clients réguliers. Un atout pour développer des offres ciblées.`);
     }
 
-    if (reservationsData.reservations.no_show.count && reservationsData.reservations.no_show.count > 0) {
-      actions.push("Activer les rappels SMS 24h avant pour réduire les no-shows.");
+    if (avgRating !== null && avgRating >= 4.5) {
+      discoveries.push(`Note moyenne de ${avgRating.toFixed(1)}/5 - votre réputation en ligne renforce votre attractivité.`);
     }
 
-    if (reputationData.reviews.new_count && reputationData.reviews.new_count < 5) {
-      actions.push("Augmenter les demandes d'avis automatiques après chaque visite.");
+    if (reservationsData.reservations.no_show.avoided_count && reservationsData.reservations.no_show.avoided_count > 0) {
+      discoveries.push(`${reservationsData.reservations.no_show.avoided_count} no-shows évités grâce au système de garantie CB.`);
     }
+
+    if (noShowRate !== null && noShowRate > 10) {
+      alerts.push(`Priorité élevée: Taux de no-show de ${Math.round(noShowRate)}% ce mois. Recommandation: renforcer les rappels SMS automatiques et envisager une garantie CB systématique.`);
+    } else if (noShowRate !== null && noShowRate > 5) {
+      alerts.push(`Priorité moyenne: Taux de no-show de ${Math.round(noShowRate)}%. Une légère optimisation des rappels pourrait améliorer ce chiffre.`);
+    }
+
+    if (avgRating !== null && avgRating < 4.0) {
+      alerts.push(`Priorité moyenne: Note moyenne de ${avgRating.toFixed(1)}/5 en dessous de votre potentiel. Une analyse des commentaires récents permettrait d'identifier les axes d'amélioration.`);
+    }
+
+    if (metrics.totalCalls > 0 && metrics.appointmentConversionRate < 40) {
+      alerts.push(`Priorité moyenne: Conversion des appels à ${Math.round(metrics.appointmentConversionRate)}%. Vérifier si les créneaux proposés correspondent bien aux demandes clients.`);
+    }
+
+    if (metrics.lastMinutePercentage > 30 && metrics.lastMinuteBookings > 0) {
+      actions.push({
+        action: "Proposer des offres anticipées pour réduire les réservations de dernière minute",
+        impact: "Meilleure organisation, moins de stress opérationnel",
+        effort: "moyen"
+      });
+    }
+
+    if (noShowRate !== null && noShowRate > 5) {
+      actions.push({
+        action: "Activer les rappels SMS 24h avant chaque réservation",
+        impact: "Réduction attendue de 30-50% des no-shows",
+        effort: "faible"
+      });
+    }
+
+    if (reputationData.reviews.new_count !== null && reputationData.reviews.new_count < 5) {
+      actions.push({
+        action: "Automatiser les demandes d'avis après chaque visite",
+        impact: "Plus d'avis positifs, meilleure visibilité en ligne",
+        effort: "faible"
+      });
+    }
+
+    if (metrics.afterHoursPercentage < 10 && metrics.totalCalls > 20) {
+      actions.push({
+        action: "Communiquer sur la disponibilité 24/7 de votre assistant IA",
+        impact: "Capture de nouvelles opportunités en soirée et week-end",
+        effort: "faible"
+      });
+    }
+
+    const formattedActions = actions.map((a: any) => 
+      typeof a === 'string' ? a : `${a.action} | Impact: ${a.impact} | Effort: ${a.effort}`
+    );
+
+    const strategicMeeting = "Nous vous proposons un point stratégique mensuel pour analyser ensemble ces résultats, ajuster les priorités et définir les objectifs du mois à venir.";
+
+    const closingNote = metrics.totalCalls > 0 
+      ? "Vous progressez mois après mois. Continuons à construire ensemble votre croissance."
+      : "Nous sommes prêts à vous accompagner dès que votre activité démarre. N'hésitez pas à nous solliciter.";
 
     return {
       enabled: true,
-      discoveries,
-      alerts,
-      actions
+      discoveries: discoveries.slice(0, 5),
+      alerts: alerts.slice(0, 3),
+      actions: formattedActions.slice(0, 5),
+      strategicMeeting,
+      closingNote
     };
   }
 
