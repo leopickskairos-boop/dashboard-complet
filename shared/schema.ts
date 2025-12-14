@@ -162,6 +162,7 @@ export type SpeedaiClient = typeof speedaiClients.$inferSelect;
 export const calls = pgTable("calls", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id),
+  tenantId: varchar("tenant_id").references(() => tenants.id, { onDelete: 'cascade' }), // Phase 2: Multi-tenant
   
   // Basic call info
   phoneNumber: text("phone_number").notNull(),
@@ -421,6 +422,7 @@ export type NotificationPreferences = typeof notificationPreferences.$inferSelec
 export const monthlyReports = pgTable("monthly_reports", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  tenantId: varchar("tenant_id").references(() => tenants.id, { onDelete: 'cascade' }), // Phase 2: Multi-tenant
   periodStart: timestamp("period_start").notNull(),
   periodEnd: timestamp("period_end").notNull(),
   subscriptionRenewalAt: timestamp("subscription_renewal_at").notNull(),
@@ -740,6 +742,7 @@ export const guaranteeApplyToEnum = pgEnum('guarantee_apply_to', [
 export const clientGuaranteeConfig = pgTable("client_guarantee_config", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }).unique(),
+  tenantId: varchar("tenant_id").references(() => tenants.id, { onDelete: 'cascade' }), // Phase 2: Multi-tenant
   
   // Activation
   enabled: boolean("enabled").notNull().default(false),
@@ -810,6 +813,7 @@ export type ClientGuaranteeConfig = typeof clientGuaranteeConfig.$inferSelect;
 export const guaranteeSessions = pgTable("guarantee_sessions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  tenantId: varchar("tenant_id").references(() => tenants.id, { onDelete: 'cascade' }), // Phase 2: Multi-tenant
   reservationId: text("reservation_id").notNull().unique(), // ID unique de réservation (N8N)
   
   // Agent/Business info (pour N8N callback)
@@ -885,6 +889,7 @@ export const noshowCharges = pgTable("noshow_charges", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   guaranteeSessionId: varchar("guarantee_session_id").notNull().references(() => guaranteeSessions.id, { onDelete: 'cascade' }),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  tenantId: varchar("tenant_id").references(() => tenants.id, { onDelete: 'cascade' }), // Phase 2: Multi-tenant
   
   // Stripe PaymentIntent
   paymentIntentId: text("payment_intent_id"),
@@ -1025,6 +1030,7 @@ export const reviewAlertTypeEnum = pgEnum('review_alert_type', [
 export const reviewConfig = pgTable("review_config", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }).unique(),
+  tenantId: varchar("tenant_id").references(() => tenants.id, { onDelete: 'cascade' }), // Phase 2: Multi-tenant
   
   // Activation
   enabled: boolean("enabled").notNull().default(false),
@@ -1119,6 +1125,7 @@ export type ReviewConfig = typeof reviewConfig.$inferSelect;
 export const reviewIncentives = pgTable("review_incentives", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  tenantId: varchar("tenant_id").references(() => tenants.id, { onDelete: 'cascade' }), // Phase 2: Multi-tenant
   
   // Type d'incitation
   type: text("type").notNull(), // 'percentage', 'fixed_amount', 'free_item', 'lottery', 'loyalty_points', 'custom'
@@ -1161,6 +1168,7 @@ export type ReviewIncentive = typeof reviewIncentives.$inferSelect;
 export const reviewRequests = pgTable("review_requests", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  tenantId: varchar("tenant_id").references(() => tenants.id, { onDelete: 'cascade' }), // Phase 2: Multi-tenant
   
   // Infos client
   customerName: text("customer_name"),
@@ -1214,6 +1222,7 @@ export type ReviewRequest = typeof reviewRequests.$inferSelect;
 export const reviewAutomations = pgTable("review_automations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  tenantId: varchar("tenant_id").references(() => tenants.id, { onDelete: 'cascade' }), // Phase 2: Multi-tenant
   
   name: text("name").notNull(),
   description: text("description"),
@@ -1259,6 +1268,7 @@ export type ReviewAutomation = typeof reviewAutomations.$inferSelect;
 export const reviews = pgTable("reviews", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  tenantId: varchar("tenant_id").references(() => tenants.id, { onDelete: 'cascade' }), // Phase 2: Multi-tenant
   sourceId: varchar("source_id"), // Reference to review_sources (optional, added later)
   
   // Plateforme
@@ -1311,6 +1321,7 @@ export type Review = typeof reviews.$inferSelect;
 export const reviewAlerts = pgTable("review_alerts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  tenantId: varchar("tenant_id").references(() => tenants.id, { onDelete: 'cascade' }), // Phase 2: Multi-tenant
   
   alertType: text("alert_type").notNull(), // 'negative_review', 'new_5_star', 'no_response_48h', 'weekly_report', 'rating_drop'
   
@@ -1426,6 +1437,7 @@ export const reviewSourceStatusEnum = pgEnum('review_source_status', [
 export const reviewSources = pgTable("review_sources", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  tenantId: varchar("tenant_id").references(() => tenants.id, { onDelete: 'cascade' }), // Phase 2: Multi-tenant
   
   // Platform info
   platform: text("platform").notNull(), // 'google', 'facebook', 'tripadvisor'
@@ -1644,6 +1656,7 @@ export const marketingContactSourceEnum = pgEnum('marketing_contact_source', [
 export const marketingContacts = pgTable("marketing_contacts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  tenantId: varchar("tenant_id").references(() => tenants.id, { onDelete: 'cascade' }), // Phase 2: Multi-tenant
   
   // Contact info
   email: text("email"),
@@ -1728,6 +1741,7 @@ export type MarketingConsentHistory = typeof marketingConsentHistory.$inferSelec
 export const marketingSegments = pgTable("marketing_segments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  tenantId: varchar("tenant_id").references(() => tenants.id, { onDelete: 'cascade' }), // Phase 2: Multi-tenant
   
   name: text("name").notNull(),
   description: text("description"),
@@ -1764,6 +1778,7 @@ export type MarketingSegment = typeof marketingSegments.$inferSelect;
 export const marketingTemplates = pgTable("marketing_templates", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").references(() => users.id, { onDelete: 'cascade' }), // NULL = system template
+  tenantId: varchar("tenant_id").references(() => tenants.id, { onDelete: 'cascade' }), // Phase 2: Multi-tenant
   
   name: text("name").notNull(),
   description: text("description"),
@@ -1812,6 +1827,7 @@ export type MarketingTemplate = typeof marketingTemplates.$inferSelect;
 export const marketingCampaigns = pgTable("marketing_campaigns", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  tenantId: varchar("tenant_id").references(() => tenants.id, { onDelete: 'cascade' }), // Phase 2: Multi-tenant
   
   // Basic info
   name: text("name").notNull(),
@@ -1941,6 +1957,7 @@ export type MarketingSend = typeof marketingSends.$inferSelect;
 export const marketingAutomations = pgTable("marketing_automations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  tenantId: varchar("tenant_id").references(() => tenants.id, { onDelete: 'cascade' }), // Phase 2: Multi-tenant
   
   name: text("name").notNull(),
   description: text("description"),
@@ -2168,6 +2185,7 @@ export const integrationEntityTypeEnum = pgEnum('integration_entity_type', [
 export const externalConnections = pgTable("external_connections", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  tenantId: varchar("tenant_id").references(() => tenants.id, { onDelete: 'cascade' }), // Phase 2: Multi-tenant
   
   // Provider info
   provider: text("provider").notNull(), // 'hubspot', 'salesforce', etc.
@@ -2239,6 +2257,7 @@ export const externalSyncJobs = pgTable("external_sync_jobs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   connectionId: varchar("connection_id").notNull().references(() => externalConnections.id, { onDelete: 'cascade' }),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  tenantId: varchar("tenant_id").references(() => tenants.id, { onDelete: 'cascade' }), // Phase 2: Multi-tenant
   
   // Job info
   jobType: text("job_type").notNull(), // 'full', 'incremental', 'entity_specific'
@@ -2300,6 +2319,7 @@ export type ExternalFieldMapping = typeof externalFieldMappings.$inferSelect;
 export const externalCustomers = pgTable("external_customers", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  tenantId: varchar("tenant_id").references(() => tenants.id, { onDelete: 'cascade' }), // Phase 2: Multi-tenant
   connectionId: varchar("connection_id").references(() => externalConnections.id, { onDelete: 'set null' }),
   
   // External references
@@ -2361,6 +2381,7 @@ export type ExternalCustomer = typeof externalCustomers.$inferSelect;
 export const externalOrders = pgTable("external_orders", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  tenantId: varchar("tenant_id").references(() => tenants.id, { onDelete: 'cascade' }), // Phase 2: Multi-tenant
   connectionId: varchar("connection_id").references(() => externalConnections.id, { onDelete: 'set null' }),
   customerId: varchar("customer_id").references(() => externalCustomers.id, { onDelete: 'set null' }),
   
@@ -2430,6 +2451,7 @@ export type ExternalOrder = typeof externalOrders.$inferSelect;
 export const externalProducts = pgTable("external_products", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  tenantId: varchar("tenant_id").references(() => tenants.id, { onDelete: 'cascade' }), // Phase 2: Multi-tenant
   connectionId: varchar("connection_id").references(() => externalConnections.id, { onDelete: 'set null' }),
   
   // External references
@@ -2468,6 +2490,7 @@ export type ExternalProduct = typeof externalProducts.$inferSelect;
 export const externalTransactions = pgTable("external_transactions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  tenantId: varchar("tenant_id").references(() => tenants.id, { onDelete: 'cascade' }), // Phase 2: Multi-tenant
   connectionId: varchar("connection_id").references(() => externalConnections.id, { onDelete: 'set null' }),
   customerId: varchar("customer_id").references(() => externalCustomers.id, { onDelete: 'set null' }),
   orderId: varchar("order_id").references(() => externalOrders.id, { onDelete: 'set null' }),
@@ -2515,6 +2538,7 @@ export type InsertExternalTransaction = typeof externalTransactions.$inferInsert
 export const externalActivities = pgTable("external_activities", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  tenantId: varchar("tenant_id").references(() => tenants.id, { onDelete: 'cascade' }), // Phase 2: Multi-tenant
   connectionId: varchar("connection_id").references(() => externalConnections.id, { onDelete: 'set null' }),
   customerId: varchar("customer_id").references(() => externalCustomers.id, { onDelete: 'set null' }),
   
