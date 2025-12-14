@@ -282,7 +282,9 @@ export interface IStorage {
   
   // Review config
   getReviewConfig(userId: string): Promise<ReviewConfig | undefined>;
+  getReviewConfigByOwner(owner: { userId?: string; tenantId?: string }): Promise<ReviewConfig | undefined>;
   upsertReviewConfig(userId: string, config: Partial<InsertReviewConfig>): Promise<ReviewConfig>;
+  upsertReviewConfigByOwner(owner: { userId?: string; tenantId?: string }, config: Partial<InsertReviewConfig>): Promise<ReviewConfig>;
   
   // Review incentives
   getReviewIncentives(userId: string): Promise<ReviewIncentive[]>;
@@ -2087,6 +2089,23 @@ export class DatabaseStorage implements IStorage {
     return config || undefined;
   }
 
+  async getReviewConfigByOwner(owner: { userId?: string; tenantId?: string }): Promise<ReviewConfig | undefined> {
+    const conditions = [];
+    if (owner.tenantId) {
+      conditions.push(eq(reviewConfig.tenantId, owner.tenantId));
+    }
+    if (owner.userId) {
+      conditions.push(eq(reviewConfig.userId, owner.userId));
+    }
+    if (conditions.length === 0) return undefined;
+    
+    const [config] = await db
+      .select()
+      .from(reviewConfig)
+      .where(conditions.length === 1 ? conditions[0] : or(...conditions));
+    return config || undefined;
+  }
+
   async upsertReviewConfig(userId: string, config: Partial<InsertReviewConfig>): Promise<ReviewConfig> {
     const existing = await this.getReviewConfig(userId);
     
@@ -2104,6 +2123,45 @@ export class DatabaseStorage implements IStorage {
         .returning();
       return created;
     }
+  }
+
+  async upsertReviewConfigByOwner(owner: { userId?: string; tenantId?: string }, config: Partial<InsertReviewConfig>): Promise<ReviewConfig> {
+    const existing = await this.getReviewConfigByOwner(owner);
+    
+    if (existing) {
+      const conditions = [];
+      if (owner.tenantId) {
+        conditions.push(eq(reviewConfig.tenantId, owner.tenantId));
+      }
+      if (owner.userId) {
+        conditions.push(eq(reviewConfig.userId, owner.userId));
+      }
+      
+      const [updated] = await db
+        .update(reviewConfig)
+        .set({
+          ...config,
+          tenantId: owner.tenantId || existing.tenantId,
+          updatedAt: new Date(),
+        })
+        .where(conditions.length === 1 ? conditions[0] : or(...conditions))
+        .returning();
+      return updated;
+    }
+    
+    if (!owner.userId) {
+      throw new Error('userId is required to create a new review config');
+    }
+    
+    const [created] = await db
+      .insert(reviewConfig)
+      .values({
+        userId: owner.userId,
+        tenantId: owner.tenantId,
+        ...config,
+      })
+      .returning();
+    return created;
   }
 
   async getReviewIncentives(userId: string): Promise<ReviewIncentive[]> {

@@ -9,6 +9,7 @@ import {
 import { sendEmail } from "../gmail-email";
 import { insertReviewAutomationSchema } from "@shared/schema";
 import { sendThankYouMessage } from "../services/review-thank-you.service";
+import { getDataOwnerContext } from "../utils/tenant-context";
 
 const router = Router();
 
@@ -18,10 +19,25 @@ const router = Router();
 router.get("/config", requireAuth, async (req, res) => {
   try {
     const userId = req.user!.id;
-    let config = await storage.getReviewConfig(userId);
     
-    if (!config) {
-      config = await storage.upsertReviewConfig(userId, { enabled: false });
+    // Try tenant-aware lookup first
+    let config;
+    try {
+      const ownerContext = await getDataOwnerContext(req);
+      const owner = ownerContext.useBy === 'tenantId' 
+        ? { tenantId: ownerContext.id, userId }
+        : { userId: ownerContext.id };
+      config = await storage.getReviewConfigByOwner(owner);
+      
+      if (!config) {
+        config = await storage.upsertReviewConfigByOwner(owner, { enabled: false });
+      }
+    } catch {
+      // Fallback to userId-only lookup
+      config = await storage.getReviewConfig(userId);
+      if (!config) {
+        config = await storage.upsertReviewConfig(userId, { enabled: false });
+      }
     }
     
     res.json(config);
@@ -37,7 +53,19 @@ router.put("/config", requireAuth, async (req, res) => {
     const userId = req.user!.id;
     const updates = req.body;
     
-    const config = await storage.upsertReviewConfig(userId, updates);
+    // Try tenant-aware update first
+    let config;
+    try {
+      const ownerContext = await getDataOwnerContext(req);
+      const owner = ownerContext.useBy === 'tenantId' 
+        ? { tenantId: ownerContext.id, userId }
+        : { userId: ownerContext.id };
+      config = await storage.upsertReviewConfigByOwner(owner, updates);
+    } catch {
+      // Fallback to userId-only update
+      config = await storage.upsertReviewConfig(userId, updates);
+    }
+    
     res.json(config);
   } catch (error: any) {
     console.error("[Reviews] Error updating config:", error);
@@ -186,7 +214,17 @@ router.post("/requests/:id/send", requireAuth, async (req, res) => {
       return res.status(404).json({ message: "Demande non trouvée" });
     }
     
-    const config = await storage.getReviewConfig(userId);
+    // Try tenant-aware lookup first
+    let config;
+    try {
+      const ownerContext = await getDataOwnerContext(req);
+      const owner = ownerContext.useBy === 'tenantId' 
+        ? { tenantId: ownerContext.id, userId }
+        : { userId: ownerContext.id };
+      config = await storage.getReviewConfigByOwner(owner);
+    } catch {
+      config = await storage.getReviewConfig(userId);
+    }
     
     if (!config) {
       return res.status(400).json({ message: "Configuration des avis non trouvée" });
@@ -637,7 +675,17 @@ router.post("/:id/regenerate-ai", requireAuth, async (req, res) => {
       return res.status(404).json({ message: "Avis non trouvé" });
     }
     
-    const config = await storage.getReviewConfig(userId);
+    // Try tenant-aware lookup first
+    let config;
+    try {
+      const ownerContext = await getDataOwnerContext(req);
+      const owner = ownerContext.useBy === 'tenantId' 
+        ? { tenantId: ownerContext.id, userId }
+        : { userId: ownerContext.id };
+      config = await storage.getReviewConfigByOwner(owner);
+    } catch {
+      config = await storage.getReviewConfig(userId);
+    }
     if (!config) {
       return res.status(400).json({ message: "Configuration des avis non trouvée" });
     }
@@ -671,7 +719,17 @@ router.post("/:id/generate-ai", requireAuth, async (req, res) => {
       return res.status(404).json({ message: "Avis non trouvé" });
     }
     
-    const config = await storage.getReviewConfig(userId);
+    // Try tenant-aware lookup first
+    let config;
+    try {
+      const ownerContext = await getDataOwnerContext(req);
+      const owner = ownerContext.useBy === 'tenantId' 
+        ? { tenantId: ownerContext.id, userId }
+        : { userId: ownerContext.id };
+      config = await storage.getReviewConfigByOwner(owner);
+    } catch {
+      config = await storage.getReviewConfig(userId);
+    }
     if (!config) {
       return res.status(400).json({ message: "Configuration des avis non trouvée" });
     }
