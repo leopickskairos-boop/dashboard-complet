@@ -103,7 +103,19 @@ import {
   type IntegrationWebhook,
   type IntegrationProviderConfig,
   type UserOAuthConfig,
-  type InsertUserOAuthConfig
+  type InsertUserOAuthConfig,
+  tenants,
+  tenantSettings,
+  tenantFeatures,
+  tenantUserRoles,
+  type Tenant,
+  type InsertTenant,
+  type TenantSettings,
+  type InsertTenantSettings,
+  type TenantFeature,
+  type InsertTenantFeature,
+  type TenantUserRole,
+  type InsertTenantUserRole
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lte, desc, sql, count, isNotNull, or, asc, like, ilike, isNull, inArray, ne, lt, gt } from "drizzle-orm";
@@ -4519,6 +4531,130 @@ export class DatabaseStorage implements IStorage {
     await db
       .delete(userOAuthConfig)
       .where(and(eq(userOAuthConfig.userId, userId), eq(userOAuthConfig.provider, provider)));
+  }
+
+  // ===== MULTI-TENANT METHODS =====
+
+  async getTenant(id: string): Promise<Tenant | undefined> {
+    const [tenant] = await db.select().from(tenants).where(eq(tenants.id, id));
+    return tenant;
+  }
+
+  async getTenantBySlug(slug: string): Promise<Tenant | undefined> {
+    const [tenant] = await db.select().from(tenants).where(eq(tenants.slug, slug));
+    return tenant;
+  }
+
+  async getTenantByAgentId(agentId: string): Promise<Tenant | undefined> {
+    const [tenant] = await db.select().from(tenants).where(eq(tenants.agentId, agentId));
+    return tenant;
+  }
+
+  async createTenant(data: InsertTenant): Promise<Tenant> {
+    const [tenant] = await db.insert(tenants).values(data).returning();
+    return tenant;
+  }
+
+  async updateTenant(id: string, updates: Partial<Tenant>): Promise<Tenant | undefined> {
+    const [tenant] = await db.update(tenants)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(tenants.id, id))
+      .returning();
+    return tenant;
+  }
+
+  async getAllTenants(): Promise<Tenant[]> {
+    return db.select().from(tenants).orderBy(desc(tenants.createdAt));
+  }
+
+  async getTenantSettings(tenantId: string): Promise<TenantSettings | undefined> {
+    const [settings] = await db.select().from(tenantSettings).where(eq(tenantSettings.tenantId, tenantId));
+    return settings;
+  }
+
+  async upsertTenantSettings(tenantId: string, data: Partial<InsertTenantSettings>): Promise<TenantSettings> {
+    const existing = await this.getTenantSettings(tenantId);
+    if (existing) {
+      const [updated] = await db.update(tenantSettings)
+        .set({ ...data, updatedAt: new Date() })
+        .where(eq(tenantSettings.tenantId, tenantId))
+        .returning();
+      return updated;
+    }
+    const [created] = await db.insert(tenantSettings)
+      .values({ tenantId, ...data })
+      .returning();
+    return created;
+  }
+
+  async getTenantFeatures(tenantId: string): Promise<TenantFeature[]> {
+    return db.select().from(tenantFeatures).where(eq(tenantFeatures.tenantId, tenantId));
+  }
+
+  async setTenantFeature(tenantId: string, featureKey: string, enabled: boolean, config?: object): Promise<TenantFeature> {
+    const [existing] = await db.select().from(tenantFeatures)
+      .where(and(eq(tenantFeatures.tenantId, tenantId), eq(tenantFeatures.featureKey, featureKey)));
+    
+    if (existing) {
+      const [updated] = await db.update(tenantFeatures)
+        .set({ enabled, config: config || existing.config })
+        .where(eq(tenantFeatures.id, existing.id))
+        .returning();
+      return updated;
+    }
+    
+    const [created] = await db.insert(tenantFeatures)
+      .values({ tenantId, featureKey, enabled, config })
+      .returning();
+    return created;
+  }
+
+  async getTenantUserRole(tenantId: string, userId: string): Promise<TenantUserRole | undefined> {
+    const [role] = await db.select().from(tenantUserRoles)
+      .where(and(eq(tenantUserRoles.tenantId, tenantId), eq(tenantUserRoles.userId, userId)));
+    return role;
+  }
+
+  async getDefaultTenantRoleForUser(userId: string): Promise<TenantUserRole | undefined> {
+    const [role] = await db.select().from(tenantUserRoles)
+      .where(and(eq(tenantUserRoles.userId, userId), eq(tenantUserRoles.isDefault, true)));
+    return role;
+  }
+
+  async getUserTenantRoles(userId: string): Promise<TenantUserRole[]> {
+    return db.select().from(tenantUserRoles).where(eq(tenantUserRoles.userId, userId));
+  }
+
+  async getTenantUsers(tenantId: string): Promise<TenantUserRole[]> {
+    return db.select().from(tenantUserRoles).where(eq(tenantUserRoles.tenantId, tenantId));
+  }
+
+  async addUserToTenant(data: InsertTenantUserRole): Promise<TenantUserRole> {
+    const [role] = await db.insert(tenantUserRoles).values(data).returning();
+    return role;
+  }
+
+  async updateTenantUserRole(tenantId: string, userId: string, role: 'tenant_admin' | 'staff' | 'viewer'): Promise<TenantUserRole | undefined> {
+    const [updated] = await db.update(tenantUserRoles)
+      .set({ role })
+      .where(and(eq(tenantUserRoles.tenantId, tenantId), eq(tenantUserRoles.userId, userId)))
+      .returning();
+    return updated;
+  }
+
+  async removeUserFromTenant(tenantId: string, userId: string): Promise<void> {
+    await db.delete(tenantUserRoles)
+      .where(and(eq(tenantUserRoles.tenantId, tenantId), eq(tenantUserRoles.userId, userId)));
+  }
+
+  async setDefaultTenant(userId: string, tenantId: string): Promise<void> {
+    await db.update(tenantUserRoles)
+      .set({ isDefault: false })
+      .where(eq(tenantUserRoles.userId, userId));
+    
+    await db.update(tenantUserRoles)
+      .set({ isDefault: true })
+      .where(and(eq(tenantUserRoles.userId, userId), eq(tenantUserRoles.tenantId, tenantId)));
   }
 }
 
