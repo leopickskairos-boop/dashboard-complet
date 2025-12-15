@@ -14,8 +14,13 @@ export class PDFGeneratorService {
   async initialize(): Promise<void> {
     if (!this.browser) {
       console.log("[PDFGenerator] Launching Puppeteer browser...");
+      
+      // Use system Chromium installed via Nix
+      const chromiumPath = process.env.CHROMIUM_PATH || '/nix/store/zi4f80l169xlmivz8vja8wlphq74qqk0-chromium-125.0.6422.141/bin/chromium';
+      
       this.browser = await puppeteer.launch({
         headless: true,
+        executablePath: chromiumPath,
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',
