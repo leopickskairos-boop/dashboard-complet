@@ -2978,6 +2978,193 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
+  // ===== TEST REPORT GENERATION - ADMIN ONLY =====
+  app.post(
+    "/api/admin/test-report",
+    requireAuth,
+    requireAdmin,
+    async (req, res) => {
+      try {
+        const currentUser = (req as any).user;
+        console.log(`[TEST REPORT] Generating test report for admin: ${currentUser.email}`);
+
+        // Import PDF generator
+        const { pdfGenerator } = await import("./pdf-generator.service");
+        
+        // Generate simulated metrics data
+        const now = new Date();
+        const periodStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const periodEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+        const monthName = periodStart.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+        
+        // Simulated realistic data
+        const simulatedMetrics = {
+          periodStart,
+          periodEnd,
+          month: monthName.charAt(0).toUpperCase() + monthName.slice(1),
+          
+          // KPIs principaux
+          totalCalls: 247,
+          activeCalls: 198,
+          conversionRate: 68.5,
+          averageCallDuration: 185,
+          
+          // KPIs avancés
+          appointmentsTaken: 156,
+          appointmentConversionRate: 63.2,
+          afterHoursCalls: 42,
+          afterHoursPercentage: 17.0,
+          timeSavedHours: 12.7,
+          estimatedRevenue: 15600,
+          roi: 780,
+          performanceScore: 82,
+          
+          // Comparaison mois précédent
+          previousMonthTotalCalls: 215,
+          previousMonthActiveCalls: 172,
+          previousMonthConversionRate: 62.3,
+          previousMonthAverageDuration: 178,
+          previousMonthAppointments: 134,
+          previousMonthAppointmentConversionRate: 58.1,
+          previousMonthAfterHoursCalls: 38,
+          previousMonthAfterHoursPercentage: 17.7,
+          previousMonthRevenue: 13400,
+          previousMonthTimeSaved: 10.8,
+          previousMonthROI: 670,
+          previousMonthPerformanceScore: 75,
+          
+          // Peak hours
+          peakHours: [
+            { hour: 9, callCount: 28 },
+            { hour: 10, callCount: 42 },
+            { hour: 11, callCount: 38 },
+            { hour: 12, callCount: 15 },
+            { hour: 14, callCount: 32 },
+            { hour: 15, callCount: 35 },
+            { hour: 16, callCount: 29 },
+            { hour: 17, callCount: 18 },
+          ],
+          
+          // Distribution par statut
+          callsByStatus: [
+            { status: "completed", count: 169, percentage: 68.4 },
+            { status: "missed", count: 42, percentage: 17.0 },
+            { status: "voicemail", count: 24, percentage: 9.7 },
+            { status: "failed", count: 12, percentage: 4.9 },
+          ],
+          
+          // Insights textuels
+          insights: {
+            peakActivity: "Vos pics d'activité sont entre 10h et 11h le matin, et 14h-16h l'après-midi.",
+            statusDistribution: "68% de vos appels se terminent avec succès, un excellent taux !",
+            monthComparison: "Hausse de 15% des appels et +10% de conversions vs mois dernier.",
+          },
+          
+          // Recommandations AI
+          aiRecommendations: [
+            {
+              type: "success" as const,
+              title: "Performance en hausse",
+              message: "Votre taux de conversion a progressé de 6 points ce mois-ci. Continuez sur cette lancée !",
+            },
+            {
+              type: "insight" as const,
+              title: "Optimisez vos créneaux",
+              message: "17% de vos appels arrivent après 19h. Envisagez d'étendre les horaires de votre IA.",
+            },
+            {
+              type: "alert" as const,
+              title: "Appels manqués à surveiller",
+              message: "42 appels manqués ce mois. Vérifiez la configuration de votre répondeur IA.",
+            },
+          ],
+          
+          // Métriques N8N enrichies
+          conversionResults: [
+            { result: "converted", count: 156, percentage: 63.2 },
+            { result: "interested", count: 45, percentage: 18.2 },
+            { result: "not_interested", count: 32, percentage: 13.0 },
+            { result: "callback_requested", count: 14, percentage: 5.6 },
+          ],
+          
+          clientMoods: [
+            { mood: "satisfied", count: 142, percentage: 57.5 },
+            { mood: "neutral", count: 78, percentage: 31.6 },
+            { mood: "frustrated", count: 18, percentage: 7.3 },
+            { mood: "angry", count: 9, percentage: 3.6 },
+          ],
+          
+          serviceTypes: [
+            { serviceType: "Consultation", count: 89, percentage: 36.0 },
+            { serviceType: "Réservation", count: 72, percentage: 29.2 },
+            { serviceType: "Information", count: 54, percentage: 21.9 },
+            { serviceType: "Réclamation", count: 32, percentage: 12.9 },
+          ],
+          
+          averageBookingConfidence: 0.87,
+          averageBookingDelayDays: 4.2,
+          lastMinuteBookings: 23,
+          lastMinutePercentage: 14.7,
+          
+          returningClients: 67,
+          returningClientPercentage: 27.1,
+          upsellAccepted: 18,
+          upsellConversionRate: 11.5,
+          
+          callsWithTranscript: 198,
+          averageCallQuality: "Bonne",
+          
+          topKeywords: [
+            { keyword: "rendez-vous", count: 89 },
+            { keyword: "disponibilité", count: 67 },
+            { keyword: "tarif", count: 54 },
+            { keyword: "horaires", count: 48 },
+            { keyword: "annulation", count: 32 },
+          ],
+          
+          eventTypes: [
+            { eventType: "Consultation standard", count: 78, percentage: 50.0 },
+            { eventType: "Première visite", count: 45, percentage: 28.8 },
+            { eventType: "Suivi", count: 33, percentage: 21.2 },
+          ],
+          
+          appointmentsByDayOfWeek: [
+            { day: "Lundi", count: 28, percentage: 17.9 },
+            { day: "Mardi", count: 32, percentage: 20.5 },
+            { day: "Mercredi", count: 25, percentage: 16.0 },
+            { day: "Jeudi", count: 35, percentage: 22.4 },
+            { day: "Vendredi", count: 24, percentage: 15.4 },
+            { day: "Samedi", count: 12, percentage: 7.7 },
+          ],
+        };
+
+        // Generate PDF
+        console.log("[TEST REPORT] Generating PDF with simulated data...");
+        const pdfBuffer = await pdfGenerator.generateMonthlyReportPDF(
+          simulatedMetrics as any,
+          currentUser.email
+        );
+
+        // Return PDF as download
+        const filename = `test-report-${simulatedMetrics.month.replace(/\s+/g, '-')}.pdf`;
+        
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+        res.setHeader("Content-Length", pdfBuffer.length);
+        
+        console.log(`[TEST REPORT] PDF generated successfully (${pdfBuffer.length} bytes)`);
+        res.send(pdfBuffer);
+
+      } catch (error: any) {
+        console.error("[TEST REPORT] Error generating test report:", error);
+        res.status(500).json({
+          message: "Erreur lors de la génération du rapport de test",
+          error: error.message,
+        });
+      }
+    },
+  );
+
   // ===== N8N LOGS ROUTER - MULTI-CLIENT INFRASTRUCTURE =====
 
   /**
