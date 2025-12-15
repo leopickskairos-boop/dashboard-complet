@@ -106,7 +106,8 @@ export interface MonthlyReportPayload {
     moodLabel: string;
     count: number;
     percentage: string;
-    emoji: string;
+    icon: string;
+    isEstimated?: boolean;
   }>;
   
   serviceTypes: Array<{

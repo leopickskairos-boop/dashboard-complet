@@ -70,11 +70,11 @@ const moodLabels: Record<string, string> = {
   angry: 'Mécontent'
 };
 
-const moodEmojis: Record<string, string> = {
-  satisfied: '😊',
-  neutral: '😐',
-  frustrated: '😤',
-  angry: '😠'
+const moodIcons: Record<string, string> = {
+  satisfied: 'check-circle',
+  neutral: 'minus-circle',
+  frustrated: 'alert-circle',
+  angry: 'x-circle'
 };
 
 const serviceTypeLabels: Record<string, string> = {
@@ -192,12 +192,12 @@ export function transformMetricsToPayload(
       { result: 'Autre', count: Math.round(metrics.totalCalls * 0.05), percentage: '5%' },
     ],
     
-    // Client Moods (simulated if not available)
+    // Client Moods (simulated if not available - marked as estimated)
     clientMoods: (metrics as any).clientMoods || [
-      { mood: 'satisfied', moodLabel: 'Satisfait', count: Math.round(metrics.activeCalls * 0.65), percentage: '65%', emoji: '😊' },
-      { mood: 'neutral', moodLabel: 'Neutre', count: Math.round(metrics.activeCalls * 0.25), percentage: '25%', emoji: '😐' },
-      { mood: 'frustrated', moodLabel: 'Frustré', count: Math.round(metrics.activeCalls * 0.07), percentage: '7%', emoji: '😤' },
-      { mood: 'angry', moodLabel: 'Mécontent', count: Math.round(metrics.activeCalls * 0.03), percentage: '3%', emoji: '😠' },
+      { mood: 'satisfied', moodLabel: 'Satisfait', count: Math.round(metrics.activeCalls * 0.65), percentage: '65%', icon: 'check-circle', isEstimated: true },
+      { mood: 'neutral', moodLabel: 'Neutre', count: Math.round(metrics.activeCalls * 0.25), percentage: '25%', icon: 'minus-circle', isEstimated: true },
+      { mood: 'frustrated', moodLabel: 'Frustré', count: Math.round(metrics.activeCalls * 0.07), percentage: '7%', icon: 'alert-circle', isEstimated: true },
+      { mood: 'angry', moodLabel: 'Mécontent', count: Math.round(metrics.activeCalls * 0.03), percentage: '3%', icon: 'x-circle', isEstimated: true },
     ],
     
     // Service Types (simulated if not available)
