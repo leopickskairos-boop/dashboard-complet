@@ -32,7 +32,7 @@ import {
 import { useState } from "react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Shield, UserX, UserCheck, Trash2, Calendar, Phone, Clock, Activity, Search, FileText, Code, Eye, Loader2 } from "lucide-react";
+import { Shield, UserX, UserCheck, Trash2, Calendar, Phone, Clock, Activity, Search, FileText, Code, Eye, Loader2, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
@@ -75,6 +75,47 @@ export default function AdminPage() {
   const [logsEventFilter, setLogsEventFilter] = useState<string>("all");
   const [logsDateFilter, setLogsDateFilter] = useState<string>("all");
   const [selectedLog, setSelectedLog] = useState<N8NLogWithMetadata | null>(null);
+  
+  // Test report state
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  
+  const handleGenerateTestReport = async () => {
+    setIsGeneratingReport(true);
+    try {
+      const response = await fetch('/api/admin/test-report', {
+        method: 'POST',
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Erreur lors de la génération');
+      }
+      
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `test-report-${new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Rapport généré",
+        description: "Le PDF de test a été téléchargé avec succès.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: error.message || "Impossible de générer le rapport de test",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingReport(false);
+    }
+  };
 
   const { data: users, isLoading } = useQuery<AdminUser[]>({
     queryKey: ["/api/admin/users", searchQuery],
@@ -281,6 +322,19 @@ export default function AdminPage() {
             Gérez tous les utilisateurs de la plateforme
           </p>
         </div>
+        <Button
+          onClick={handleGenerateTestReport}
+          disabled={isGeneratingReport}
+          variant="outline"
+          data-testid="button-generate-test-report"
+        >
+          {isGeneratingReport ? (
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          ) : (
+            <Download className="w-4 h-4 mr-2" />
+          )}
+          {isGeneratingReport ? "Génération..." : "Tester PDF Rapport"}
+        </Button>
       </div>
 
       <Card>
