@@ -3165,6 +3165,273 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
+  // ===== PDF MONKEY INTEGRATION - PREMIUM PDF REPORTS =====
+  
+  // Get PDF Monkey configuration status
+  app.get(
+    "/api/admin/pdfmonkey/status",
+    requireAuth,
+    requireAdmin,
+    async (req, res) => {
+      try {
+        const { pdfMonkeyService } = await import("./services/pdfmonkey.service");
+        const status = pdfMonkeyService.getConfigStatus();
+        
+        res.json({
+          configured: status.apiKey && status.templateId,
+          apiKey: status.apiKey,
+          templateId: status.templateId,
+          templateIdValue: status.templateId ? process.env.PDFMONKEY_TEMPLATE_ID : null,
+        });
+      } catch (error: any) {
+        res.status(500).json({ error: error.message });
+      }
+    },
+  );
+
+  // Set PDF Monkey template ID
+  app.post(
+    "/api/admin/pdfmonkey/set-template",
+    requireAuth,
+    requireAdmin,
+    async (req, res) => {
+      try {
+        const { templateId } = req.body;
+        
+        if (!templateId || typeof templateId !== 'string') {
+          return res.status(400).json({ message: "Template ID requis" });
+        }
+        
+        // Note: In production, this should be stored in database or env
+        // For now we'll just validate the format
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!uuidRegex.test(templateId)) {
+          return res.status(400).json({ message: "Format de Template ID invalide (UUID attendu)" });
+        }
+        
+        res.json({ 
+          success: true, 
+          message: "Template ID validé. Ajoutez PDFMONKEY_TEMPLATE_ID dans les secrets Replit.",
+          templateId 
+        });
+      } catch (error: any) {
+        res.status(500).json({ error: error.message });
+      }
+    },
+  );
+
+  // Get payload structure for PDF Monkey template creation
+  app.get(
+    "/api/admin/pdfmonkey/payload-sample",
+    requireAuth,
+    requireAdmin,
+    async (req, res) => {
+      try {
+        const { transformMetricsToPayload } = await import("./services/report-payload.transformer");
+        
+        // Generate sample payload with simulated data
+        const now = new Date();
+        const periodStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const monthName = periodStart.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+        
+        const sampleMetrics = {
+          periodStart,
+          periodEnd: new Date(),
+          month: monthName.charAt(0).toUpperCase() + monthName.slice(1),
+          totalCalls: 247,
+          activeCalls: 198,
+          conversionRate: 68.5,
+          averageCallDuration: 185,
+          appointmentsTaken: 156,
+          appointmentConversionRate: 63.2,
+          afterHoursCalls: 42,
+          afterHoursPercentage: 17.0,
+          timeSavedHours: 12.7,
+          estimatedRevenue: 15600,
+          roi: 780,
+          performanceScore: 82,
+          previousMonthTotalCalls: 215,
+          previousMonthActiveCalls: 172,
+          previousMonthConversionRate: 62.3,
+          previousMonthAverageDuration: 178,
+          previousMonthAppointments: 134,
+          previousMonthAppointmentConversionRate: 58.1,
+          previousMonthAfterHoursCalls: 38,
+          previousMonthAfterHoursPercentage: 17.7,
+          previousMonthRevenue: 13400,
+          previousMonthTimeSaved: 10.8,
+          previousMonthROI: 670,
+          previousMonthPerformanceScore: 75,
+          peakHours: [
+            { hour: 9, callCount: 28 },
+            { hour: 10, callCount: 42 },
+            { hour: 11, callCount: 38 },
+            { hour: 14, callCount: 32 },
+            { hour: 15, callCount: 35 },
+            { hour: 16, callCount: 29 },
+          ],
+          callsByStatus: [
+            { status: "completed", count: 169, percentage: 68.4 },
+            { status: "missed", count: 42, percentage: 17.0 },
+            { status: "voicemail", count: 24, percentage: 9.7 },
+            { status: "failed", count: 12, percentage: 4.9 },
+          ],
+          insights: {
+            peakActivity: "Vos pics d'activité sont entre 10h et 11h le matin.",
+            statusDistribution: "68% de vos appels se terminent avec succès.",
+            monthComparison: "Hausse de 15% des appels vs mois dernier.",
+          },
+          aiRecommendations: [
+            { type: "success", title: "Performance en hausse", message: "Votre taux de conversion a progressé de 6 points." },
+            { type: "insight", title: "Optimisez vos créneaux", message: "17% de vos appels arrivent après 19h." },
+            { type: "alert", title: "Appels manqués", message: "42 appels manqués ce mois." },
+          ],
+        };
+        
+        const payload = transformMetricsToPayload(sampleMetrics as any, "exemple@client.com");
+        
+        res.json({
+          description: "Structure JSON complète pour créer votre template PDF Monkey",
+          instructions: [
+            "1. Copiez ce JSON dans PDF Monkey → New Template → Sample Data",
+            "2. Créez votre design avec les variables {{variable_name}}",
+            "3. Copiez le Template ID et ajoutez-le dans les secrets Replit",
+          ],
+          payload,
+        });
+      } catch (error: any) {
+        res.status(500).json({ error: error.message });
+      }
+    },
+  );
+
+  // Test PDF Monkey generation
+  app.post(
+    "/api/admin/pdfmonkey/test",
+    requireAuth,
+    requireAdmin,
+    async (req, res) => {
+      try {
+        const currentUser = (req as any).user;
+        console.log(`[PDFMONKEY TEST] Generating test report for admin: ${currentUser.email}`);
+        
+        const { pdfMonkeyService } = await import("./services/pdfmonkey.service");
+        const { transformMetricsToPayload } = await import("./services/report-payload.transformer");
+        
+        // Check configuration
+        if (!pdfMonkeyService.isConfigured()) {
+          const status = pdfMonkeyService.getConfigStatus();
+          return res.status(400).json({
+            message: "PDF Monkey n'est pas configuré",
+            missing: {
+              apiKey: !status.apiKey,
+              templateId: !status.templateId,
+            },
+            instructions: "Ajoutez PDFMONKEY_API_KEY et PDFMONKEY_TEMPLATE_ID dans les secrets Replit",
+          });
+        }
+        
+        // Generate simulated metrics (same as test-report)
+        const now = new Date();
+        const periodStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const monthName = periodStart.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+        
+        const simulatedMetrics = {
+          periodStart,
+          periodEnd: new Date(),
+          month: monthName.charAt(0).toUpperCase() + monthName.slice(1),
+          totalCalls: 247,
+          activeCalls: 198,
+          conversionRate: 68.5,
+          averageCallDuration: 185,
+          appointmentsTaken: 156,
+          appointmentConversionRate: 63.2,
+          afterHoursCalls: 42,
+          afterHoursPercentage: 17.0,
+          timeSavedHours: 12.7,
+          estimatedRevenue: 15600,
+          roi: 780,
+          performanceScore: 82,
+          previousMonthTotalCalls: 215,
+          previousMonthActiveCalls: 172,
+          previousMonthConversionRate: 62.3,
+          previousMonthAverageDuration: 178,
+          previousMonthAppointments: 134,
+          previousMonthAppointmentConversionRate: 58.1,
+          previousMonthAfterHoursCalls: 38,
+          previousMonthAfterHoursPercentage: 17.7,
+          previousMonthRevenue: 13400,
+          previousMonthTimeSaved: 10.8,
+          previousMonthROI: 670,
+          previousMonthPerformanceScore: 75,
+          peakHours: [
+            { hour: 9, callCount: 28 },
+            { hour: 10, callCount: 42 },
+            { hour: 11, callCount: 38 },
+            { hour: 14, callCount: 32 },
+            { hour: 15, callCount: 35 },
+            { hour: 16, callCount: 29 },
+          ],
+          callsByStatus: [
+            { status: "completed", count: 169, percentage: 68.4 },
+            { status: "missed", count: 42, percentage: 17.0 },
+            { status: "voicemail", count: 24, percentage: 9.7 },
+            { status: "failed", count: 12, percentage: 4.9 },
+          ],
+          insights: {
+            peakActivity: "Vos pics d'activité sont entre 10h et 11h le matin, et 14h-16h l'après-midi.",
+            statusDistribution: "68% de vos appels se terminent avec succès, un excellent taux !",
+            monthComparison: "Hausse de 15% des appels et +10% de conversions vs mois dernier.",
+          },
+          aiRecommendations: [
+            { type: "success", title: "Performance en hausse", message: "Votre taux de conversion a progressé de 6 points ce mois-ci. Continuez sur cette lancée !" },
+            { type: "insight", title: "Optimisez vos créneaux", message: "17% de vos appels arrivent après 19h. Envisagez d'étendre les horaires de votre IA." },
+            { type: "alert", title: "Appels manqués à surveiller", message: "42 appels manqués ce mois. Vérifiez la configuration de votre répondeur IA." },
+          ],
+        };
+        
+        // Transform to PDF Monkey payload
+        const payload = transformMetricsToPayload(simulatedMetrics as any, currentUser.email);
+        
+        console.log("[PDFMONKEY TEST] Generating PDF via PDF Monkey...");
+        
+        // Generate PDF synchronously
+        const document = await pdfMonkeyService.generatePdfSync(
+          payload,
+          `test-report-${simulatedMetrics.month.replace(/\s+/g, '-')}.pdf`
+        );
+        
+        if (!document.download_url) {
+          return res.status(500).json({
+            message: "PDF généré mais URL de téléchargement non disponible",
+            documentId: document.id,
+            status: document.status,
+          });
+        }
+        
+        // Download the PDF
+        const pdfBuffer = await pdfMonkeyService.downloadPdf(document.download_url);
+        
+        // Return PDF as download
+        const filename = `pdfmonkey-test-${simulatedMetrics.month.replace(/\s+/g, '-')}.pdf`;
+        
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+        res.setHeader("Content-Length", pdfBuffer.length);
+        
+        console.log(`[PDFMONKEY TEST] PDF generated successfully (${pdfBuffer.length} bytes)`);
+        res.send(pdfBuffer);
+        
+      } catch (error: any) {
+        console.error("[PDFMONKEY TEST] Error:", error);
+        res.status(500).json({
+          message: "Erreur lors de la génération du rapport PDF Monkey",
+          error: error.message,
+        });
+      }
+    },
+  );
+
   // ===== N8N LOGS ROUTER - MULTI-CLIENT INFRASTRUCTURE =====
 
   /**
