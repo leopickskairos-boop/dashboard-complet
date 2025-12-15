@@ -81,51 +81,8 @@ export class PDFGeneratorService {
           timeout: 30000, // 30 second timeout
         });
 
-        // Wait for Chart.js to render charts with timeout protection
-        await Promise.race([
-          // Chart rendering wait logic
-          page.evaluate(() => {
-            return new Promise<void>((resolve) => {
-              // Wait for Chart.js charts to be rendered
-              const checkCharts = () => {
-                const charts = document.querySelectorAll('canvas');
-                if (charts.length === 0) {
-                  // No charts to wait for
-                  resolve();
-                  return;
-                }
-
-                // Check if all charts have been rendered (non-zero dimensions)
-                let allRendered = true;
-                charts.forEach((canvas) => {
-                  if (canvas.width === 0 || canvas.height === 0) {
-                    allRendered = false;
-                  }
-                });
-
-                if (allRendered) {
-                  resolve();
-                } else {
-                  // Check again after a short delay
-                  setTimeout(checkCharts, 100);
-                }
-              };
-
-              // Initial check after a small delay to let Chart.js initialize
-              setTimeout(checkCharts, 500);
-            });
-          }),
-          // Timeout fallback (10 seconds max wait)
-          new Promise<void>((resolve) => {
-            setTimeout(() => {
-              console.warn("[PDFGenerator] Chart rendering timeout reached, proceeding anyway");
-              resolve();
-            }, 10000);
-          })
-        ]);
-
-        // Add an extra small delay for safety
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Wait for Chart.js to render charts (simple delay approach to avoid esbuild conflicts)
+        await new Promise(resolve => setTimeout(resolve, 2000));
 
         // Generate PDF
         const pdfData = await page.pdf({
