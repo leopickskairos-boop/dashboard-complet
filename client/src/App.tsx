@@ -66,6 +66,9 @@ import ShortLink from "@/pages/ShortLink";
 // Onboarding
 import Onboarding from "@/pages/onboarding";
 
+// Settings
+import BrandingSettings from "@/pages/settings/BrandingSettings";
+
 function Router() {
   return (
     <Switch>
@@ -141,6 +144,15 @@ function Router() {
 
       <Route path="/subscription-expired" component={SubscriptionExpired} />
       <Route path="/trial-expired" component={TrialExpired} />
+
+      {/* Settings - Protected dashboard pages */}
+      <Route path="/settings/branding">
+        <ProtectedRoute requireVerified={true} requireSubscription={true}>
+          <DashboardLayout>
+            <BrandingSettings />
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
 
       {/* Guarantee CB - Protected dashboard pages */}
       <Route path="/settings/guarantee">
