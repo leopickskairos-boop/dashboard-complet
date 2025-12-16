@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Loader2, Mail, Lock, Trash2, CreditCard, ChevronRight, Home, Bell, FileText, Download, Key, Copy, Eye, EyeOff, RefreshCw, AlertCircle, CheckCircle, X, Smartphone } from "lucide-react";
 import { NotificationSettings } from "@/components/NotificationSettings";
+import { BrandingSection } from "@/components/BrandingSection";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -1241,6 +1242,9 @@ export default function Account() {
           )}
         </CardContent>
       </Card>
+
+      {/* Branding Section */}
+      <BrandingSection />
 
       {/* Danger Zone */}
       <Card className="border-destructive">

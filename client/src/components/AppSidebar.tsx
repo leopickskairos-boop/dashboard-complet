@@ -1,4 +1,4 @@
-import { LayoutDashboard, Bell, User, Shield, CreditCard, Calendar, History, Settings, Star, MessageSquare, BarChart3, Send, QrCode, Megaphone, Users, Mail, Filter, Workflow, TrendingUp, Database, Plug, ShoppingCart, FileText, Palette } from "lucide-react";
+import { LayoutDashboard, Bell, User, Shield, CreditCard, Calendar, History, Settings, Star, MessageSquare, BarChart3, Send, QrCode, Megaphone, Users, Mail, Filter, Workflow, TrendingUp, Database, Plug, ShoppingCart, FileText } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -35,11 +35,6 @@ const menuItems = [
     title: "Mon compte",
     url: "/account",
     icon: User,
-  },
-  {
-    title: "Personnalisation",
-    url: "/settings/branding",
-    icon: Palette,
   },
 ];
 

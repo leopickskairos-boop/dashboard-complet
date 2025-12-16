@@ -1,21 +1,31 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { onboardingFormSchema, type OnboardingFormData } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { Logo } from "@/components/Logo";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Loader2, User, Building2, Phone, Mail } from "lucide-react";
+import { Loader2, User, Building2, Phone, Mail, Upload, Palette, Image } from "lucide-react";
+
+const DEFAULT_PRIMARY = "#3b82f6";
+const DEFAULT_SECONDARY = "#10b981";
 
 export default function Onboarding() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [primaryColor, setPrimaryColor] = useState(DEFAULT_PRIMARY);
+  const [secondaryColor, setSecondaryColor] = useState(DEFAULT_SECONDARY);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<OnboardingFormData>({
     resolver: zodResolver(onboardingFormSchema),
@@ -28,6 +38,56 @@ export default function Onboarding() {
     },
   });
 
+  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast({
+        title: "Fichier trop volumineux",
+        description: "Le logo ne doit pas dépasser 2 Mo.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch("/api/client-branding/logo", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message);
+      }
+
+      const data = await response.json();
+      setLogoUrl(data.logoUrl);
+      
+      toast({
+        title: "Logo ajouté",
+        description: "Votre logo a été enregistré.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erreur d'upload",
+        description: error.message || "Une erreur est survenue",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
   async function onSubmit(data: OnboardingFormData) {
     setIsLoading(true);
     try {
@@ -36,6 +96,13 @@ export default function Onboarding() {
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.message || "Erreur lors de la sauvegarde");
+      }
+
+      if (primaryColor !== DEFAULT_PRIMARY || secondaryColor !== DEFAULT_SECONDARY) {
+        await apiRequest("PUT", "/api/client-branding", {
+          primaryColor,
+          secondaryColor,
+        });
       }
 
       await queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
@@ -191,6 +258,99 @@ export default function Onboarding() {
                   </FormItem>
                 )}
               />
+
+              <Separator className="my-4" />
+
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <Palette className="h-4 w-4" />
+                  Personnalisation (optionnel)
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Ajoutez votre logo et couleurs pour personnaliser vos emails clients
+                </p>
+
+                <div className="flex items-center gap-4">
+                  {logoUrl ? (
+                    <div className="w-16 h-16 rounded-lg border bg-muted flex items-center justify-center overflow-hidden">
+                      <img src={logoUrl} alt="Logo" className="max-w-full max-h-full object-contain" />
+                    </div>
+                  ) : (
+                    <div className="w-16 h-16 rounded-lg border bg-muted flex items-center justify-center">
+                      <Image className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/svg+xml"
+                      onChange={handleLogoUpload}
+                      className="hidden"
+                      data-testid="input-logo-upload"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isUploading || isLoading}
+                      data-testid="button-upload-logo"
+                    >
+                      {isUploading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Upload...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="mr-2 h-4 w-4" />
+                          {logoUrl ? "Changer" : "Ajouter un logo"}
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs">Couleur principale</Label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={primaryColor}
+                        onChange={(e) => setPrimaryColor(e.target.value)}
+                        className="w-8 h-8 rounded cursor-pointer border-0"
+                        data-testid="input-primary-color"
+                      />
+                      <Input
+                        value={primaryColor}
+                        onChange={(e) => setPrimaryColor(e.target.value)}
+                        className="flex-1 font-mono text-xs h-8"
+                        data-testid="input-primary-color-hex"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs">Couleur secondaire</Label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={secondaryColor}
+                        onChange={(e) => setSecondaryColor(e.target.value)}
+                        className="w-8 h-8 rounded cursor-pointer border-0"
+                        data-testid="input-secondary-color"
+                      />
+                      <Input
+                        value={secondaryColor}
+                        onChange={(e) => setSecondaryColor(e.target.value)}
+                        className="flex-1 font-mono text-xs h-8"
+                        data-testid="input-secondary-color-hex"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
 
               <Button 
                 type="submit" 
