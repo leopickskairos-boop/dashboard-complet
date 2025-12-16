@@ -78,12 +78,14 @@ interface Integration {
 const INTEGRATIONS: Integration[] = [
   // CRM Génériques
   { id: "hubspot", name: "HubSpot", description: "CRM complet avec contacts, deals et pipelines", category: "crm", tier: "standard", authMethod: "oauth", color: "#FF7A59", oauthCallback: "/api/integrations/hubspot/callback" },
-  { id: "salesforce", name: "Salesforce", description: "Le leader mondial du CRM enterprise", category: "crm", tier: "premium", authMethod: "oauth", color: "#00A1E0", fields: [
-    { key: "environment", label: "Environnement", type: "select", placeholder: "Production", required: true }
-  ], oauthCallback: "/api/integrations/salesforce/callback" },
-  { id: "zoho", name: "Zoho CRM", description: "Solution CRM complète et abordable", category: "crm", tier: "standard", authMethod: "oauth", color: "#D32F2F", fields: [
-    { key: "region", label: "Région", type: "select", placeholder: "EU", required: true }
-  ], oauthCallback: "/api/integrations/zoho/callback" },
+  { id: "salesforce", name: "Salesforce", description: "Le leader mondial du CRM enterprise", category: "crm", tier: "premium", authMethod: "api_key_secret", color: "#00A1E0", fields: [
+    { key: "instanceUrl", label: "Instance URL", type: "text", placeholder: "https://votre-org.my.salesforce.com", required: true },
+    { key: "apiKey", label: "Access Token", type: "password", placeholder: "Votre access token Salesforce", required: true }
+  ] },
+  { id: "zoho", name: "Zoho CRM", description: "Solution CRM complète et abordable", category: "crm", tier: "standard", authMethod: "api_key", color: "#D32F2F", fields: [
+    { key: "apiKey", label: "API Token", type: "password", placeholder: "Votre token API Zoho", required: true },
+    { key: "region", label: "Région (eu/com/in)", type: "text", placeholder: "eu", required: true }
+  ] },
   { id: "pipedrive", name: "Pipedrive", description: "CRM axé sur les ventes", category: "crm", tier: "standard", authMethod: "api_key", color: "#1A1A1A", fields: [
     { key: "apiKey", label: "API Token", type: "password", placeholder: "Votre token API Pipedrive", required: true }
   ] },
@@ -116,12 +118,16 @@ const INTEGRATIONS: Integration[] = [
     { key: "accessToken", label: "Access Token", type: "password", required: true },
     { key: "hotelId", label: "Hotel ID", type: "text", required: true }
   ] },
-  { id: "cloudbeds", name: "Cloudbeds", description: "Gestion hôtelière cloud", category: "hotel", tier: "premium", authMethod: "oauth", color: "#2A73CC", oauthCallback: "/api/integrations/cloudbeds/callback" },
+  { id: "cloudbeds", name: "Cloudbeds", description: "Gestion hôtelière cloud", category: "hotel", tier: "premium", authMethod: "api_key", color: "#2A73CC", fields: [
+    { key: "apiKey", label: "API Key", type: "password", placeholder: "Votre clé API Cloudbeds", required: true },
+    { key: "propertyId", label: "Property ID", type: "text", placeholder: "ID de la propriété", required: true }
+  ] },
 
   // E-commerce
-  { id: "shopify", name: "Shopify", description: "Plateforme e-commerce leader", category: "ecommerce", tier: "standard", authMethod: "oauth", color: "#96BF48", fields: [
-    { key: "shopDomain", label: "Domaine boutique", type: "text", placeholder: "xxx.myshopify.com", required: true }
-  ], oauthCallback: "/api/integrations/shopify/callback" },
+  { id: "shopify", name: "Shopify", description: "Plateforme e-commerce leader", category: "ecommerce", tier: "standard", authMethod: "api_key", color: "#96BF48", fields: [
+    { key: "shopDomain", label: "Domaine boutique", type: "text", placeholder: "xxx.myshopify.com", required: true },
+    { key: "apiKey", label: "Admin API Access Token", type: "password", placeholder: "shpat_...", required: true }
+  ] },
   { id: "woocommerce", name: "WooCommerce", description: "E-commerce WordPress", category: "ecommerce", tier: "standard", authMethod: "api_key_secret", color: "#96588A", fields: [
     { key: "siteUrl", label: "URL du site", type: "text", placeholder: "https://votre-site.com", required: true },
     { key: "consumerKey", label: "Consumer Key", type: "password", required: true },
@@ -142,12 +148,14 @@ const INTEGRATIONS: Integration[] = [
     { key: "baseId", label: "Base ID", type: "text", required: true },
     { key: "tableId", label: "Table ID", type: "text", required: true }
   ] },
-  { id: "notion", name: "Notion", description: "Workspace tout-en-un", category: "database", tier: "standard", authMethod: "oauth", color: "#000000", fields: [
-    { key: "databaseId", label: "Database ID", type: "text", required: true }
-  ], oauthCallback: "/api/integrations/notion/callback" },
-  { id: "googlesheets", name: "Google Sheets", description: "Feuilles de calcul Google", category: "database", tier: "standard", authMethod: "oauth", color: "#34A853", fields: [
-    { key: "spreadsheetId", label: "Spreadsheet ID", type: "text", required: true }
-  ], oauthCallback: "/api/integrations/google/callback" },
+  { id: "notion", name: "Notion", description: "Workspace tout-en-un", category: "database", tier: "standard", authMethod: "api_key", color: "#000000", fields: [
+    { key: "apiKey", label: "Integration Token", type: "password", placeholder: "secret_...", required: true },
+    { key: "databaseId", label: "Database ID", type: "text", placeholder: "ID de la base Notion", required: true }
+  ] },
+  { id: "googlesheets", name: "Google Sheets", description: "Feuilles de calcul Google", category: "database", tier: "standard", authMethod: "api_key", color: "#34A853", fields: [
+    { key: "apiKey", label: "Service Account JSON", type: "password", placeholder: "Clé JSON du compte de service", required: true },
+    { key: "spreadsheetId", label: "Spreadsheet ID", type: "text", placeholder: "ID de la feuille", required: true }
+  ] },
   { id: "postgresql", name: "PostgreSQL", description: "Base de données relationnelle", category: "database", tier: "premium", authMethod: "credentials", color: "#336791", fields: [
     { key: "host", label: "Host", type: "text", required: true },
     { key: "port", label: "Port", type: "text", placeholder: "5432", required: true },
@@ -293,14 +301,19 @@ export default function IntegrationHub() {
     setTestSuccess(null);
   };
 
+  // Seul HubSpot a un flux OAuth implémenté côté backend
+  const OAUTH_IMPLEMENTED = ["hubspot"];
+  
   const handleConnect = (integration: Integration) => {
     setSelectedIntegration(integration);
     setFormData({});
     setTestSuccess(null);
     
-    if (integration.authMethod === "oauth" && integration.oauthCallback) {
+    if (integration.authMethod === "oauth" && OAUTH_IMPLEMENTED.includes(integration.id)) {
+      // OAuth implémenté - redirection vers le flux OAuth
       window.location.href = `/api/integrations/oauth/${integration.id}/start`;
     } else {
+      // Tous les autres: ouvrir le dialog de connexion manuelle
       setIsConnectDialogOpen(true);
     }
   };
