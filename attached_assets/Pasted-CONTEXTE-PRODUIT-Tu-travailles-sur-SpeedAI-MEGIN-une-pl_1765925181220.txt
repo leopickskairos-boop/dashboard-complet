@@ -1,0 +1,164 @@
+CONTEXTE PRODUIT
+
+Tu travailles sur SpeedAI (MEGIN), une plateforme B2B premium d’agent réceptionniste vocal IA et de pilotage business.
+Ce qui suit n’est PAS une feature marketing mais un outil opérationnel interne à intégrer au système existant.
+
+Objectif : intégrer un outil de LISTE D’ATTENTE INTELLIGENTE pour la prise de rendez-vous lorsque les créneaux demandés sont indisponibles, sans utiliser n8n, en centralisant toute la logique dans le dashboard SpeedAI, avec accès aux calendriers connectés (CRM ou Google Calendar).
+
+PRINCIPES CLÉS À RESPECTER
+
+- Aucun n8n
+- Toute la logique est gérée par le dashboard SpeedAI
+- Le dashboard doit pouvoir consulter et modifier le calendrier du client
+- La confirmation finale du rendez-vous est toujours manuelle côté client
+- Canal principal : SMS avec lien
+- UX professionnelle, fluide, premium
+
+LOGIQUE FONCTIONNELLE GLOBALE
+
+1. Un appel entrant est traité par l’agent vocal.
+2. Le client demande un créneau précis (ex : demain à 19h30).
+3. Le système consulte le calendrier connecté.
+4. Si le créneau est indisponible :
+   - proposer d’autres créneaux
+   - et/ou proposer une inscription sur liste d’attente.
+5. Si le client accepte la liste d’attente :
+   - une fonction est déclenchée côté Retail
+   - cette fonction appelle le dashboard SpeedAI
+   - le dashboard envoie immédiatement un SMS avec un lien vers une page publique de liste d’attente.
+
+FONCTION À IMPLÉMENTER (TRIGGER)
+
+Nom recommandé : triggerWaitlistFlow()
+
+Déclenchement :
+- Appel API depuis le module Retail
+
+Payload minimal :
+{
+  "requested_slot": "2025-01-18T19:30:00",
+  "business_id": "xxx",
+  "phone": "+336XXXXXXXX",
+  "source": "voice_agent"
+}
+
+Effet :
+- Génération d’un token unique
+- Création d’une URL publique :
+  https://app.speedai.io/waitlist/{token}
+- Envoi immédiat d’un SMS contenant ce lien
+
+CONTENU DU SMS INITIAL
+
+"Votre créneau souhaité n’est pas disponible.
+Vous pouvez rejoindre la liste d’attente en quelques secondes ici :
+{{lien}}"
+
+PAGE PUBLIQUE – LISTE D’ATTENTE
+
+URL : /waitlist/{token}
+
+Objectif : permettre au client final de confirmer ses coordonnées, sélectionner ses créneaux de mise en attente et valider son inscription.
+
+STRUCTURE VISUELLE OBLIGATOIRE
+
+Header :
+- Logo de l’établissement
+- Titre : "Liste d’attente – Confirmation"
+
+Bloc rappel :
+"Vous avez demandé un rendez-vous le {{date}} à {{heure}}."
+
+Formulaire client :
+- Prénom
+- Nom
+- Téléphone (pré-rempli si possible)
+- Email
+
+Sélection des créneaux :
+- Créneau principal demandé (pré-coché)
+- Créneaux alternatifs proposés dynamiquement sur la même soirée
+- Sélection multiple autorisée
+
+Texte de réassurance :
+"Vous serez contacté par message si une place se libère.
+La réservation ne sera confirmée qu’après votre validation."
+
+Bouton :
+"S’inscrire sur la liste d’attente"
+
+LOGIQUE CALENDRIER BACKEND
+
+- Connexion à Google Calendar ou au calendrier CRM
+- Lecture des disponibilités
+- Détection d’annulation ou de libération de créneau
+- Polling léger ou webhook si disponible
+- Vérification périodique configurable
+
+QUAND UN CRÉNEAU SE LIBÈRE
+
+1. Le dashboard détecte qu’un créneau correspondant est libre.
+2. Il identifie les clients en liste d’attente sur ce créneau.
+3. Il sélectionne le premier selon l’ordre d’inscription.
+4. Il envoie un SMS de confirmation.
+
+CONTENU DU SMS DE CONFIRMATION
+
+"Une place s’est libérée pour {{date}} à {{heure}}.
+Confirmez-vous votre venue ?
+
+✅ Oui
+❌ Non"
+
+Les boutons doivent être cliquables.
+
+SI LE CLIENT CLIQUE OUI
+
+- Le dashboard crée la réservation dans le calendrier
+- Le client est retiré de la liste d’attente
+- Un SMS de confirmation finale est envoyé
+
+SI LE CLIENT CLIQUE NON OU NE RÉPOND PAS
+
+- Timeout configurable (ex : 15 minutes)
+- Passage automatique au client suivant sur la liste
+
+SÉCURITÉ ET QUALITÉ
+
+- Tokens uniques et temporaires
+- Aucune donnée accessible sans token valide
+- Pages publiques mobile-first
+- Logs visibles côté dashboard
+
+AJOUT DASHBOARD – SECTION “LISTE D’ATTENTE”
+
+Dans le dashboard SpeedAI, ajouter un bouton principal nommé :
+"Liste d’attente"
+
+Cette section doit afficher :
+
+- La liste de toutes les listes d’attente actives
+- Pour chaque entrée :
+  - Nom / Prénom du client
+  - Téléphone / Email
+  - Créneau demandé initial
+  - Créneaux alternatifs sélectionnés
+  - Statut (en attente / contacté / confirmé / refusé / expiré)
+  - Date d’inscription
+  - Priorité dans la file
+
+Fonctionnalités dashboard :
+- Filtrer par date, créneau, statut
+- Voir l’historique des actions
+- Forcer manuellement une notification si besoin
+- Supprimer une entrée
+- Voir les statistiques (taux de conversion liste d’attente)
+
+OBJECTIF PRODUIT FINAL
+
+- Réduire la frustration client
+- Maximiser le remplissage sans pression
+- Donner une image premium, organisée et moderne
+- Transformer un refus de créneau en opportunité business
+
+FIN DU PROMPT

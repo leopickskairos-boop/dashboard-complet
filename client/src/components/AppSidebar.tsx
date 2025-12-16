@@ -1,4 +1,4 @@
-import { LayoutDashboard, Bell, User, Shield, CreditCard, Calendar, History, Settings, Star, MessageSquare, BarChart3, Send, QrCode, Megaphone, Users, Mail, Filter, Workflow, TrendingUp, Database, FileText } from "lucide-react";
+import { LayoutDashboard, Bell, User, Shield, CreditCard, Calendar, History, Settings, Star, MessageSquare, BarChart3, Send, QrCode, Megaphone, Users, Mail, Filter, Workflow, TrendingUp, Database, FileText, Clock } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -130,6 +130,14 @@ const integrationItems = [
   },
 ];
 
+const waitlistItems = [
+  {
+    title: "Liste d'attente",
+    url: "/waitlist",
+    icon: Clock,
+  },
+];
+
 export function AppSidebar() {
   const [location] = useLocation();
   const { user } = useUser();
@@ -253,6 +261,27 @@ export function AppSidebar() {
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild isActive={location === item.url || (item.url === "/integrations" && location.startsWith("/integrations/") && !integrationItems.some(i => i.url !== "/integrations" && location === i.url))}>
                     <Link href={item.url} data-testid={`link-integration-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                      <item.icon />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel className="flex items-center gap-2 text-[#C8B88A]">
+            <Clock className="h-4 w-4" />
+            Réservations
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {waitlistItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild isActive={location === item.url}>
+                    <Link href={item.url} data-testid={`link-waitlist-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
                       <item.icon />
                       <span>{item.title}</span>
                     </Link>

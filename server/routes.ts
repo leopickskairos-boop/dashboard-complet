@@ -49,6 +49,7 @@ import {
 import { pushNotificationService } from "./push-notification.service";
 import { registerMarketingRoutes } from "./marketing-routes";
 import integrationRoutes from "./integration-routes";
+import waitlistRoutes from "./routes/waitlist.routes";
 import { sendCardRequestEmail, sendConfirmationEmail, isEmailConfigured } from "./services/guarantee-email.service";
 import { sendGuaranteeCardRequestSms, sendGuaranteeConfirmationSms, isSmsConfigured } from "./services/twilio-sms.service";
 import { sendThankYouMessage } from "./services/review-thank-you.service";
@@ -8122,6 +8123,9 @@ Réponds en JSON avec ce format exact:
   
   // Register integration routes
   app.use("/api/integrations", integrationRoutes);
+
+  // Register waitlist routes
+  app.use("/api/waitlist", waitlistRoutes);
 
   const httpServer = createServer(app);
 

@@ -2911,3 +2911,157 @@ export type InsertClientProfile = z.infer<typeof insertClientProfileSchema>;
 export type ClientProfile = typeof clientProfiles.$inferSelect;
 export type OnboardingFormData = z.infer<typeof onboardingFormSchema>;
 export type BrandingUpdateData = z.infer<typeof brandingUpdateSchema>;
+
+// ===== INTELLIGENT WAITLIST SYSTEM =====
+
+// Waitlist slot status enum
+export const waitlistSlotStatusEnum = pgEnum('waitlist_slot_status', [
+  'pending',      // Waiting for entries
+  'monitoring',   // Actively checking for availability
+  'available',    // Slot became available
+  'filled',       // Slot was filled
+  'expired',      // Past slot time
+  'cancelled'     // Manually cancelled
+]);
+
+// Waitlist entry status enum
+export const waitlistEntryStatusEnum = pgEnum('waitlist_entry_status', [
+  'pending',      // Waiting in queue
+  'notified',     // Notified about availability
+  'confirmed',    // Confirmed booking
+  'declined',     // Declined offer
+  'expired',      // No response timeout
+  'cancelled'     // Removed from waitlist
+]);
+
+// Waitlist slots table - represents a monitored time slot
+export const waitlistSlots = pgTable("waitlist_slots", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  
+  // Slot details
+  slotStart: timestamp("slot_start").notNull(),
+  slotEnd: timestamp("slot_end"),
+  calendarEventId: text("calendar_event_id"), // External calendar reference
+  
+  // Status and scheduling
+  status: waitlistSlotStatusEnum("status").notNull().default('pending'),
+  lastCheckAt: timestamp("last_check_at"),
+  nextCheckAt: timestamp("next_check_at"),
+  checkIntervalMinutes: integer("check_interval_minutes").default(10),
+  
+  // Metadata
+  businessName: text("business_name"),
+  serviceType: text("service_type"),
+  notes: text("notes"),
+  
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Waitlist entries table - customers waiting for a slot
+export const waitlistEntries = pgTable("waitlist_entries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  slotId: varchar("slot_id").notNull().references(() => waitlistSlots.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  
+  // Customer info
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
+  phone: text("phone").notNull(),
+  email: text("email"),
+  
+  // Request details
+  requestedSlot: timestamp("requested_slot").notNull(), // Original requested time
+  alternativeSlots: timestamp("alternative_slots").array(), // Other acceptable times
+  nbPersons: integer("nb_persons").default(1),
+  
+  // Status tracking
+  status: waitlistEntryStatusEnum("status").notNull().default('pending'),
+  priority: integer("priority").notNull().default(1), // Lower = higher priority
+  
+  // Notification tracking
+  smsMessageSid: text("sms_message_sid"), // Twilio message ID
+  notifiedAt: timestamp("notified_at"),
+  confirmedAt: timestamp("confirmed_at"),
+  responseDeadline: timestamp("response_deadline"), // Timeout for response
+  
+  // Source tracking
+  source: text("source").default('voice_agent'), // 'voice_agent', 'web', 'manual'
+  
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Waitlist tokens table - secure access tokens for public pages
+export const waitlistTokens = pgTable("waitlist_tokens", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  entryId: varchar("entry_id").notNull().references(() => waitlistEntries.id, { onDelete: 'cascade' }),
+  
+  // Token security
+  token: text("token").notNull().unique(), // Unique token for URL
+  tokenHash: text("token_hash").notNull(), // Hashed version for verification
+  tokenType: text("token_type").notNull().default('registration'), // 'registration', 'confirmation'
+  
+  // Expiration and usage
+  expiresAt: timestamp("expires_at").notNull(),
+  consumedAt: timestamp("consumed_at"),
+  
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Insert schemas
+export const insertWaitlistSlotSchema = createInsertSchema(waitlistSlots).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastCheckAt: true,
+});
+
+export const insertWaitlistEntrySchema = createInsertSchema(waitlistEntries).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  priority: true,
+  smsMessageSid: true,
+  notifiedAt: true,
+  confirmedAt: true,
+  responseDeadline: true,
+});
+
+export const insertWaitlistTokenSchema = createInsertSchema(waitlistTokens).omit({
+  id: true,
+  createdAt: true,
+  consumedAt: true,
+});
+
+// API schemas
+export const triggerWaitlistSchema = z.object({
+  requested_slot: z.string().transform(s => new Date(s)),
+  business_id: z.string().optional(), // User ID or tenant ID
+  phone: z.string().min(10, "Numéro de téléphone invalide"),
+  source: z.enum(['voice_agent', 'web', 'manual']).default('voice_agent'),
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+  email: z.string().email().optional(),
+  nbPersons: z.number().int().min(1).default(1),
+  alternativeSlots: z.array(z.string().transform(s => new Date(s))).optional(),
+});
+
+export const confirmWaitlistSchema = z.object({
+  firstName: z.string().min(1, "Le prénom est requis"),
+  lastName: z.string().min(1, "Le nom est requis"),
+  phone: z.string().min(10, "Numéro de téléphone invalide"),
+  email: z.string().email("Email invalide").optional(),
+  selectedSlots: z.array(z.string()).min(1, "Sélectionnez au moins un créneau"),
+});
+
+// Types
+export type InsertWaitlistSlot = z.infer<typeof insertWaitlistSlotSchema>;
+export type WaitlistSlot = typeof waitlistSlots.$inferSelect;
+export type InsertWaitlistEntry = z.infer<typeof insertWaitlistEntrySchema>;
+export type WaitlistEntry = typeof waitlistEntries.$inferSelect;
+export type InsertWaitlistToken = z.infer<typeof insertWaitlistTokenSchema>;
+export type WaitlistToken = typeof waitlistTokens.$inferSelect;
+export type TriggerWaitlistData = z.infer<typeof triggerWaitlistSchema>;
+export type ConfirmWaitlistData = z.infer<typeof confirmWaitlistSchema>;

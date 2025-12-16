@@ -96,6 +96,18 @@ The project utilizes a modern web stack for a responsive and professional user i
         -   Sync logs with status tracking (success, error, reviewsFetched)
         -   Platform connection UI in ReviewsSettings with status badges
         -   ReviewsList with platform, rating, and search filters
+-   **Intelligent Waitlist System**: Cost-optimized event-driven waitlist management with:
+    -   3-table architecture (waitlist_slots, waitlist_entries, waitlist_tokens) with efficient indexes
+    -   **Event-Driven Architecture**: No global polling - only per-slot dynamic timers
+    -   **Adaptive Check Frequency**: 30min (beyond D-1), 10min (D-1), 3min (within 6h of slot)
+    -   **Token-Based Public Confirmation**: Secure tokens for SMS links (format: wl_{timestamp}_{random})
+    -   **Automatic Cleanup**: Timers stop after slot expiration, expired entries auto-cleaned
+    -   **SMS Notifications**: Twilio integration for slot availability alerts
+    -   **N8N Integration**: Voice agent API endpoint for creating waitlist entries (POST /api/waitlist/n8n/trigger)
+    -   Dashboard page for waitlist management with filters and status tracking
+    -   Public confirmation page (/waitlist/:token) - no auth required
+    -   Scheduler stays completely idle when no active waitlists
+    -   Priority-based queue processing (FIFO within priority levels)
 
 ## Technical Documentation
 

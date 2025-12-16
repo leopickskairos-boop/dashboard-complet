@@ -10,6 +10,7 @@ import { initPushNotificationCrons } from "./push-notification.cron";
 import { startReviewSyncCron } from "./crons/review-sync.cron";
 import { startIntegrationSyncCron } from "./crons/integration-sync.cron";
 import { startAppointmentReminderCron } from "./crons/appointment-reminder.cron";
+import { waitlistScheduler } from "./services/waitlist-scheduler.service";
 
 const DISABLE_INTERNAL_CRONS = process.env.DISABLE_INTERNAL_CRONS === 'true';
 
@@ -97,6 +98,10 @@ app.use((req, res, next) => {
     // Start appointment reminder cron job
     startAppointmentReminderCron();
     console.log('[Server] Appointment reminder cron job initialized');
+
+    // Initialize waitlist scheduler (rehydrates active slots)
+    waitlistScheduler.initialize();
+    console.log('[Server] Waitlist scheduler initialized');
   }
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

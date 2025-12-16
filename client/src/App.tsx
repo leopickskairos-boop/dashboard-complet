@@ -58,6 +58,10 @@ import UnsubscribePage from "@/pages/marketing/UnsubscribePage";
 import IntegrationHub from "@/pages/integrations/IntegrationHub";
 import IntegrationCustomers from "@/pages/integrations/IntegrationCustomers";
 
+// Waitlist Pages
+import WaitlistConfirm from "@/pages/waitlist/WaitlistConfirm";
+import WaitlistDashboard from "@/pages/waitlist/WaitlistDashboard";
+
 // Short link redirect
 import ShortLink from "@/pages/ShortLink";
 
@@ -301,6 +305,18 @@ function Router() {
         <ProtectedRoute requireVerified={true} requireSubscription={true}>
           <DashboardLayout>
             <IntegrationCustomers />
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+
+      {/* Waitlist - Public confirmation page */}
+      <Route path="/waitlist/:token" component={WaitlistConfirm} />
+
+      {/* Waitlist - Protected dashboard page */}
+      <Route path="/waitlist">
+        <ProtectedRoute requireVerified={true} requireSubscription={true}>
+          <DashboardLayout>
+            <WaitlistDashboard />
           </DashboardLayout>
         </ProtectedRoute>
       </Route>
