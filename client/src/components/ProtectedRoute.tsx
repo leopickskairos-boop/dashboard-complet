@@ -4,20 +4,27 @@ import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import type { PublicUser } from "@shared/schema";
 
+interface UserWithOnboarding extends PublicUser {
+  onboardingCompleted?: boolean;
+  companyName?: string | null;
+}
+
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requireVerified?: boolean;
   requireSubscription?: boolean;
+  requireOnboarding?: boolean;
 }
 
 export function ProtectedRoute({ 
   children, 
   requireVerified = false, 
-  requireSubscription = false 
+  requireSubscription = false,
+  requireOnboarding = true
 }: ProtectedRouteProps) {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
 
-  const { data: user, isLoading, error } = useQuery<PublicUser>({
+  const { data: user, isLoading, error } = useQuery<UserWithOnboarding>({
     queryKey: ['/api/auth/me'],
   });
 
@@ -36,6 +43,12 @@ export function ProtectedRoute({
 
     if (requireVerified && !user.isVerified) {
       setLocation('/verify-email-sent');
+      return;
+    }
+
+    // Check onboarding status (before subscription check)
+    if (requireOnboarding && !user.onboardingCompleted && location !== '/onboarding') {
+      setLocation('/onboarding');
       return;
     }
 
@@ -73,7 +86,7 @@ export function ProtectedRoute({
         }
       }
     }
-  }, [user, isLoading, error, requireVerified, requireSubscription, setLocation]);
+  }, [user, isLoading, error, requireVerified, requireSubscription, requireOnboarding, location, setLocation]);
 
   if (isLoading) {
     return (

@@ -63,6 +63,9 @@ import IntegrationOrders from "@/pages/integrations/IntegrationOrders";
 // Short link redirect
 import ShortLink from "@/pages/ShortLink";
 
+// Onboarding
+import Onboarding from "@/pages/onboarding";
+
 function Router() {
   return (
     <Switch>
@@ -73,6 +76,13 @@ function Router() {
       <Route path="/reset-password" component={ResetPassword} />
       <Route path="/verify-email-sent" component={VerifyEmailSent} />
       <Route path="/verify-email" component={VerifyEmail} />
+      
+      {/* Onboarding - Protected but no onboarding check (to avoid infinite loop) */}
+      <Route path="/onboarding">
+        <ProtectedRoute requireVerified={true} requireOnboarding={false}>
+          <Onboarding />
+        </ProtectedRoute>
+      </Route>
       
       {/* Protected: requires verified email */}
       <Route path="/subscribe">
