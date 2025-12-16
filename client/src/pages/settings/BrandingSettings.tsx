@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,16 +16,28 @@ type BrandingData = {
   companyName: string | null;
 };
 
+const DEFAULT_PRIMARY = "#3b82f6";
+const DEFAULT_SECONDARY = "#10b981";
+
 export default function BrandingSettings() {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [primaryColor, setPrimaryColor] = useState("#3b82f6");
-  const [secondaryColor, setSecondaryColor] = useState("#10b981");
+  const [primaryColor, setPrimaryColor] = useState(DEFAULT_PRIMARY);
+  const [secondaryColor, setSecondaryColor] = useState(DEFAULT_SECONDARY);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   const { data: branding, isLoading } = useQuery<BrandingData>({
     queryKey: ['/api/client-branding'],
   });
+
+  useEffect(() => {
+    if (branding && !isInitialized) {
+      setPrimaryColor(branding.primaryColor || DEFAULT_PRIMARY);
+      setSecondaryColor(branding.secondaryColor || DEFAULT_SECONDARY);
+      setIsInitialized(true);
+    }
+  }, [branding, isInitialized]);
 
   const updateBrandingMutation = useMutation({
     mutationFn: async (data: { primaryColor?: string | null; secondaryColor?: string | null }) => {
@@ -213,13 +225,13 @@ export default function BrandingSettings() {
                   <input
                     type="color"
                     id="primaryColor"
-                    value={branding?.primaryColor || primaryColor}
+                    value={primaryColor}
                     onChange={(e) => setPrimaryColor(e.target.value)}
                     className="w-10 h-10 rounded cursor-pointer border-0"
                     data-testid="input-primary-color"
                   />
                   <Input
-                    value={branding?.primaryColor || primaryColor}
+                    value={primaryColor}
                     onChange={(e) => setPrimaryColor(e.target.value)}
                     placeholder="#3b82f6"
                     className="flex-1 font-mono text-sm"
@@ -234,13 +246,13 @@ export default function BrandingSettings() {
                   <input
                     type="color"
                     id="secondaryColor"
-                    value={branding?.secondaryColor || secondaryColor}
+                    value={secondaryColor}
                     onChange={(e) => setSecondaryColor(e.target.value)}
                     className="w-10 h-10 rounded cursor-pointer border-0"
                     data-testid="input-secondary-color"
                   />
                   <Input
-                    value={branding?.secondaryColor || secondaryColor}
+                    value={secondaryColor}
                     onChange={(e) => setSecondaryColor(e.target.value)}
                     placeholder="#10b981"
                     className="flex-1 font-mono text-sm"
@@ -283,7 +295,7 @@ export default function BrandingSettings() {
           <div 
             className="border rounded-lg p-6 bg-white dark:bg-gray-900"
             style={{ 
-              borderTopColor: branding?.primaryColor || primaryColor,
+              borderTopColor: primaryColor,
               borderTopWidth: '4px'
             }}
           >
@@ -308,7 +320,7 @@ export default function BrandingSettings() {
               </p>
               <Button 
                 size="sm"
-                style={{ backgroundColor: branding?.primaryColor || primaryColor }}
+                style={{ backgroundColor: primaryColor }}
                 className="text-white"
               >
                 Voir les détails

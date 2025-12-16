@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation, Link } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { SubscriptionExpirationBanner } from "@/components/SubscriptionExpirationBanner";
 import { PushNotificationPopup, usePushNotificationPrompt } from "@/components/PushNotificationPopup";
@@ -13,10 +14,18 @@ interface DashboardLayoutProps {
   children: React.ReactNode;
 }
 
+type UserData = {
+  companyName?: string | null;
+};
+
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { showPopup, closePopup } = usePushNotificationPrompt();
+
+  const { data: user } = useQuery<UserData>({
+    queryKey: ['/api/auth/me'],
+  });
 
   const handleLogout = async () => {
     try {
@@ -49,8 +58,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             <div className="flex items-center gap-4">
               <SidebarTrigger data-testid="button-sidebar-toggle" />
               <Link href="/dashboard" data-testid="link-logo">
-                <div className="cursor-pointer hover-elevate rounded-lg transition-colors">
+                <div className="cursor-pointer hover-elevate rounded-lg transition-colors flex items-center gap-2">
                   <Logo />
+                  {user?.companyName && (
+                    <span className="text-sm font-medium text-muted-foreground" data-testid="text-company-name">
+                      × {user.companyName}
+                    </span>
+                  )}
                 </div>
               </Link>
             </div>
