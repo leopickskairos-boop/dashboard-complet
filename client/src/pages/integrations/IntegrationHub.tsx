@@ -361,7 +361,7 @@ export default function IntegrationHub() {
               Connectez vos outils. Centralisez votre performance.
             </h1>
             <p className="text-muted-foreground text-lg mb-6 leading-relaxed">
-              Relier votre CRM, votre système de réservation ou votre base de données à SpeedAI permet de transformer chaque appel en donnée exploitable.
+              Relier votre CRM, votre système de réservation ou votre base de données à SpeedAI permet de centraliser les données clients qui ne passent pas par le téléphone : réservations en ligne, emails, commandes web...
             </p>
             <p className="text-muted-foreground mb-6">
               Vous gardez vos outils actuels. SpeedAI s'adapte à votre environnement et devient la couche intelligente qui unifie, sécurise et optimise votre activité.
