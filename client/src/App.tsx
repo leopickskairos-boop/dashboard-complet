@@ -56,9 +56,7 @@ import UnsubscribePage from "@/pages/marketing/UnsubscribePage";
 
 // Integration Hub Pages
 import IntegrationHub from "@/pages/integrations/IntegrationHub";
-import IntegrationConnections from "@/pages/integrations/IntegrationConnections";
 import IntegrationCustomers from "@/pages/integrations/IntegrationCustomers";
-import IntegrationOrders from "@/pages/integrations/IntegrationOrders";
 
 // Short link redirect
 import ShortLink from "@/pages/ShortLink";
@@ -299,26 +297,10 @@ function Router() {
         </ProtectedRoute>
       </Route>
 
-      <Route path="/integrations/connections">
-        <ProtectedRoute requireVerified={true} requireSubscription={true}>
-          <DashboardLayout>
-            <IntegrationConnections />
-          </DashboardLayout>
-        </ProtectedRoute>
-      </Route>
-
       <Route path="/integrations/customers">
         <ProtectedRoute requireVerified={true} requireSubscription={true}>
           <DashboardLayout>
             <IntegrationCustomers />
-          </DashboardLayout>
-        </ProtectedRoute>
-      </Route>
-
-      <Route path="/integrations/orders">
-        <ProtectedRoute requireVerified={true} requireSubscription={true}>
-          <DashboardLayout>
-            <IntegrationOrders />
           </DashboardLayout>
         </ProtectedRoute>
       </Route>

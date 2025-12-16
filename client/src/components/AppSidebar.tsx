@@ -1,4 +1,4 @@
-import { LayoutDashboard, Bell, User, Shield, CreditCard, Calendar, History, Settings, Star, MessageSquare, BarChart3, Send, QrCode, Megaphone, Users, Mail, Filter, Workflow, TrendingUp, Database, Plug, ShoppingCart, FileText } from "lucide-react";
+import { LayoutDashboard, Bell, User, Shield, CreditCard, Calendar, History, Settings, Star, MessageSquare, BarChart3, Send, QrCode, Megaphone, Users, Mail, Filter, Workflow, TrendingUp, Database, FileText } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -124,19 +124,9 @@ const integrationItems = [
     icon: Database,
   },
   {
-    title: "Connexions",
-    url: "/integrations/connections",
-    icon: Plug,
-  },
-  {
     title: "Clients",
     url: "/integrations/customers",
     icon: Users,
-  },
-  {
-    title: "Commandes",
-    url: "/integrations/orders",
-    icon: ShoppingCart,
   },
 ];
 

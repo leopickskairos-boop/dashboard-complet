@@ -1,310 +1,734 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Link } from "wouter";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import { 
   Database, 
-  Users, 
-  ShoppingCart, 
-  TrendingUp, 
   Plug, 
-  RefreshCw, 
+  CheckCircle, 
   AlertTriangle,
-  CheckCircle,
+  Key,
+  Building2,
+  Utensils,
+  Hotel,
+  ShoppingCart,
+  HardDrive,
+  Cog,
+  Shield,
+  Loader2,
+  Copy,
+  Webhook,
+  HelpCircle,
+  Upload,
+  Mail,
+  ExternalLink,
+  RefreshCw,
+  Trash2,
   Clock,
-  DollarSign,
-  Package,
-  Activity
+  Info
 } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
+import { 
+  SiHubspot, 
+  SiSalesforce, 
+  SiStripe, 
+  SiShopify, 
+  SiWoocommerce,
+  SiMysql,
+  SiPostgresql,
+  SiAirtable,
+  SiNotion,
+  SiGooglesheets
+} from "react-icons/si";
 
-interface IntegrationStats {
-  totalConnections: number;
-  activeConnections: number;
-  totalCustomers: number;
-  totalOrders: number;
-  totalRevenue: number;
+interface Connection {
+  id: string;
+  provider: string;
+  name: string;
+  status: string;
+  syncEnabled: boolean;
   lastSyncAt: string | null;
-  syncErrorsLast24h: number;
-  customersBySource: Record<string, number>;
-  revenueBySource: Record<string, number>;
+  lastError: string | null;
+  connectedAt: string | null;
 }
 
-export default function IntegrationHub() {
-  const { data: stats, isLoading } = useQuery<IntegrationStats>({
-    queryKey: ["/api/integrations/stats"],
-  });
+type IntegrationTier = "standard" | "premium" | "custom";
+type AuthMethod = "oauth" | "api_key" | "api_key_secret" | "credentials" | "csv_import" | "webhook";
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(amount);
-  };
+interface Integration {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  tier: IntegrationTier;
+  authMethod: AuthMethod;
+  color: string;
+  fields?: { key: string; label: string; type: string; placeholder?: string; required?: boolean }[];
+  oauthCallback?: string;
+}
 
-  const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return "Jamais";
-    return new Date(dateStr).toLocaleString('fr-FR');
+const INTEGRATIONS: Integration[] = [
+  // CRM Génériques
+  { id: "hubspot", name: "HubSpot", description: "CRM complet avec contacts, deals et pipelines", category: "crm", tier: "standard", authMethod: "oauth", color: "#FF7A59", oauthCallback: "/api/integrations/hubspot/callback" },
+  { id: "salesforce", name: "Salesforce", description: "Le leader mondial du CRM enterprise", category: "crm", tier: "premium", authMethod: "oauth", color: "#00A1E0", fields: [
+    { key: "environment", label: "Environnement", type: "select", placeholder: "Production", required: true }
+  ], oauthCallback: "/api/integrations/salesforce/callback" },
+  { id: "zoho", name: "Zoho CRM", description: "Solution CRM complète et abordable", category: "crm", tier: "standard", authMethod: "oauth", color: "#D32F2F", fields: [
+    { key: "region", label: "Région", type: "select", placeholder: "EU", required: true }
+  ], oauthCallback: "/api/integrations/zoho/callback" },
+  { id: "pipedrive", name: "Pipedrive", description: "CRM axé sur les ventes", category: "crm", tier: "standard", authMethod: "api_key", color: "#1A1A1A", fields: [
+    { key: "apiKey", label: "API Token", type: "password", placeholder: "Votre token API Pipedrive", required: true }
+  ] },
+  { id: "monday", name: "Monday.com", description: "Gestion de projets et CRM", category: "crm", tier: "standard", authMethod: "api_key", color: "#FF3D57", fields: [
+    { key: "apiKey", label: "API Token", type: "password", placeholder: "Votre token API Monday", required: true },
+    { key: "boardId", label: "Board ID", type: "text", placeholder: "ID du board", required: true }
+  ] },
+
+  // Restaurant & Hôtellerie
+  { id: "zenchef", name: "Zenchef", description: "Gestion de réservations restaurant", category: "restaurant", tier: "premium", authMethod: "api_key", color: "#00B894", fields: [
+    { key: "apiKey", label: "API Key", type: "password", placeholder: "Clé API Zenchef", required: false }
+  ] },
+  { id: "thefork", name: "TheFork Manager", description: "Réservations TheFork / LaFourchette", category: "restaurant", tier: "premium", authMethod: "csv_import", color: "#00A78E" },
+  { id: "opentable", name: "OpenTable", description: "Plateforme de réservation restaurant", category: "restaurant", tier: "premium", authMethod: "api_key_secret", color: "#DA3743", fields: [
+    { key: "apiKey", label: "API Key", type: "password", placeholder: "Clé API", required: true },
+    { key: "restaurantId", label: "Restaurant ID", type: "text", placeholder: "ID du restaurant", required: true }
+  ] },
+  { id: "resy", name: "Resy", description: "Réservations haut de gamme", category: "restaurant", tier: "premium", authMethod: "api_key_secret", color: "#FF5A5F", fields: [
+    { key: "apiKey", label: "API Key", type: "password", placeholder: "Clé API", required: true },
+    { key: "venueId", label: "Venue ID", type: "text", placeholder: "ID du lieu", required: true }
+  ] },
+  { id: "lightspeed", name: "Lightspeed Restaurant", description: "Caisse et gestion restaurant", category: "restaurant", tier: "premium", authMethod: "api_key", color: "#E61C3D", fields: [
+    { key: "apiKey", label: "API Key", type: "password", placeholder: "Clé API", required: true },
+    { key: "locationId", label: "Account / Location ID", type: "text", placeholder: "ID du compte", required: true }
+  ] },
+
+  // Hôtels
+  { id: "mews", name: "Mews", description: "PMS hôtelier moderne", category: "hotel", tier: "premium", authMethod: "api_key_secret", color: "#00A9E0", fields: [
+    { key: "clientToken", label: "Client Token", type: "password", required: true },
+    { key: "accessToken", label: "Access Token", type: "password", required: true },
+    { key: "hotelId", label: "Hotel ID", type: "text", required: true }
+  ] },
+  { id: "cloudbeds", name: "Cloudbeds", description: "Gestion hôtelière cloud", category: "hotel", tier: "premium", authMethod: "oauth", color: "#2A73CC", oauthCallback: "/api/integrations/cloudbeds/callback" },
+
+  // E-commerce
+  { id: "shopify", name: "Shopify", description: "Plateforme e-commerce leader", category: "ecommerce", tier: "standard", authMethod: "oauth", color: "#96BF48", fields: [
+    { key: "shopDomain", label: "Domaine boutique", type: "text", placeholder: "xxx.myshopify.com", required: true }
+  ], oauthCallback: "/api/integrations/shopify/callback" },
+  { id: "woocommerce", name: "WooCommerce", description: "E-commerce WordPress", category: "ecommerce", tier: "standard", authMethod: "api_key_secret", color: "#96588A", fields: [
+    { key: "siteUrl", label: "URL du site", type: "text", placeholder: "https://votre-site.com", required: true },
+    { key: "consumerKey", label: "Consumer Key", type: "password", required: true },
+    { key: "consumerSecret", label: "Consumer Secret", type: "password", required: true }
+  ] },
+  { id: "prestashop", name: "PrestaShop", description: "Solution e-commerce française", category: "ecommerce", tier: "standard", authMethod: "api_key", color: "#DF0067", fields: [
+    { key: "siteUrl", label: "URL du site", type: "text", placeholder: "https://votre-site.com", required: true },
+    { key: "apiKey", label: "API Key", type: "password", required: true }
+  ] },
+  { id: "stripe", name: "Stripe", description: "Paiements et abonnements", category: "ecommerce", tier: "standard", authMethod: "api_key_secret", color: "#635BFF", fields: [
+    { key: "secretKey", label: "Secret Key", type: "password", placeholder: "sk_live_...", required: true },
+    { key: "webhookSecret", label: "Webhook Secret", type: "password", placeholder: "whsec_...", required: false }
+  ] },
+
+  // Bases de données
+  { id: "airtable", name: "Airtable", description: "Base de données collaborative", category: "database", tier: "standard", authMethod: "api_key", color: "#18BFFF", fields: [
+    { key: "apiKey", label: "API Token", type: "password", required: true },
+    { key: "baseId", label: "Base ID", type: "text", required: true },
+    { key: "tableId", label: "Table ID", type: "text", required: true }
+  ] },
+  { id: "notion", name: "Notion", description: "Workspace tout-en-un", category: "database", tier: "standard", authMethod: "oauth", color: "#000000", fields: [
+    { key: "databaseId", label: "Database ID", type: "text", required: true }
+  ], oauthCallback: "/api/integrations/notion/callback" },
+  { id: "googlesheets", name: "Google Sheets", description: "Feuilles de calcul Google", category: "database", tier: "standard", authMethod: "oauth", color: "#34A853", fields: [
+    { key: "spreadsheetId", label: "Spreadsheet ID", type: "text", required: true }
+  ], oauthCallback: "/api/integrations/google/callback" },
+  { id: "postgresql", name: "PostgreSQL", description: "Base de données relationnelle", category: "database", tier: "premium", authMethod: "credentials", color: "#336791", fields: [
+    { key: "host", label: "Host", type: "text", required: true },
+    { key: "port", label: "Port", type: "text", placeholder: "5432", required: true },
+    { key: "database", label: "Database", type: "text", required: true },
+    { key: "user", label: "User", type: "text", required: true },
+    { key: "password", label: "Password", type: "password", required: true },
+    { key: "ssl", label: "SSL", type: "toggle", required: false }
+  ] },
+  { id: "mysql", name: "MySQL", description: "Base de données relationnelle", category: "database", tier: "premium", authMethod: "credentials", color: "#4479A1", fields: [
+    { key: "host", label: "Host", type: "text", required: true },
+    { key: "port", label: "Port", type: "text", placeholder: "3306", required: true },
+    { key: "database", label: "Database", type: "text", required: true },
+    { key: "user", label: "User", type: "text", required: true },
+    { key: "password", label: "Password", type: "password", required: true }
+  ] },
+
+  // Personnalisé
+  { id: "custom_api", name: "API personnalisée", description: "Connectez n'importe quelle API", category: "custom", tier: "custom", authMethod: "api_key_secret", color: "#6B7280", fields: [
+    { key: "baseUrl", label: "Base URL", type: "text", placeholder: "https://api.example.com", required: true },
+    { key: "authType", label: "Type d'auth", type: "select", required: true },
+    { key: "apiKey", label: "Clé / Token", type: "password", required: false },
+    { key: "apiSecret", label: "Secret", type: "password", required: false }
+  ] },
+  { id: "webhook", name: "Webhook", description: "Recevez des données en temps réel", category: "custom", tier: "standard", authMethod: "webhook", color: "#C8B88A" }
+];
+
+const CATEGORIES = [
+  { id: "crm", label: "CRM Génériques", icon: Building2 },
+  { id: "restaurant", label: "Restaurant & Hôtellerie", icon: Utensils },
+  { id: "hotel", label: "Hôtels", icon: Hotel },
+  { id: "ecommerce", label: "E-commerce", icon: ShoppingCart },
+  { id: "database", label: "Bases de données", icon: HardDrive },
+  { id: "custom", label: "Personnalisé", icon: Cog }
+];
+
+const ProviderLogo = ({ provider, color, size = "md" }: { provider: string; color: string; size?: "sm" | "md" | "lg" }) => {
+  const sizeClasses = { sm: "w-8 h-8", md: "w-10 h-10", lg: "w-12 h-12" };
+  const iconSizes = { sm: "h-4 w-4", md: "h-5 w-5", lg: "h-6 w-6" };
+  
+  const getIcon = () => {
+    switch (provider.toLowerCase()) {
+      case "hubspot": return <SiHubspot className={iconSizes[size]} />;
+      case "salesforce": return <SiSalesforce className={iconSizes[size]} />;
+      case "stripe": return <SiStripe className={iconSizes[size]} />;
+      case "shopify": return <SiShopify className={iconSizes[size]} />;
+      case "woocommerce": return <SiWoocommerce className={iconSizes[size]} />;
+      case "mysql": return <SiMysql className={iconSizes[size]} />;
+      case "postgresql": return <SiPostgresql className={iconSizes[size]} />;
+      case "airtable": return <SiAirtable className={iconSizes[size]} />;
+      case "notion": return <SiNotion className={iconSizes[size]} />;
+      case "googlesheets": return <SiGooglesheets className={iconSizes[size]} />;
+      case "pipedrive": return <span className="font-bold text-sm">P</span>;
+      case "monday": return <span className="font-bold text-sm">M</span>;
+      case "zoho": return <span className="font-bold text-sm">Z</span>;
+      case "zenchef": return <span className="font-bold text-sm">ZC</span>;
+      case "thefork": return <span className="font-bold text-sm">TF</span>;
+      case "resy": return <span className="font-bold text-sm">R</span>;
+      case "opentable": return <span className="font-bold text-sm">OT</span>;
+      case "lightspeed": return <span className="font-bold text-sm">LS</span>;
+      case "mews": return <span className="font-bold text-sm">MW</span>;
+      case "cloudbeds": return <span className="font-bold text-sm">CB</span>;
+      case "prestashop": return <span className="font-bold text-sm">PS</span>;
+      case "webhook": return <Webhook className={iconSizes[size]} />;
+      case "custom_api": return <Cog className={iconSizes[size]} />;
+      default: return <Database className={iconSizes[size]} />;
+    }
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Hub d'Intégrations</h1>
-          <p className="text-muted-foreground mt-1">
-            Connectez vos CRM, bases de données et systèmes métier
-          </p>
-        </div>
-        <Link href="/integrations/connections">
-          <Button data-testid="button-add-connection">
-            <Plug className="h-4 w-4 mr-2" />
-            Ajouter une connexion
-          </Button>
-        </Link>
-      </div>
+    <div className={`${sizeClasses[size]} rounded-lg flex items-center justify-center text-white shrink-0`} style={{ backgroundColor: color }}>
+      {getIcon()}
+    </div>
+  );
+};
 
-      {isLoading ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {[...Array(4)].map((_, i) => (
-            <Card key={i}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 gap-2">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-4 w-4" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-8 w-16 mb-2" />
-                <Skeleton className="h-3 w-32" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <>
-          {/* KPI Cards */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 gap-2">
-                <CardTitle className="text-sm font-medium">Connexions Actives</CardTitle>
-                <Plug className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold" data-testid="text-active-connections">
-                  {stats?.activeConnections || 0} / {stats?.totalConnections || 0}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {stats?.syncErrorsLast24h ? (
-                    <span className="text-destructive flex items-center gap-1">
-                      <AlertTriangle className="h-3 w-3" />
-                      {stats.syncErrorsLast24h} erreur(s) 24h
-                    </span>
-                  ) : (
-                    <span className="text-green-500 flex items-center gap-1">
-                      <CheckCircle className="h-3 w-3" />
-                      Tout fonctionne
-                    </span>
-                  )}
-                </p>
-              </CardContent>
-            </Card>
+const TierBadge = ({ tier }: { tier: IntegrationTier }) => {
+  switch (tier) {
+    case "premium":
+      return <Badge className="bg-[#C8B88A]/20 text-[#C8B88A] border-[#C8B88A]/30">Premium</Badge>;
+    case "custom":
+      return <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30">Sur mesure</Badge>;
+    default:
+      return <Badge variant="secondary">Standard</Badge>;
+  }
+};
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 gap-2">
-                <CardTitle className="text-sm font-medium">Clients Synchronisés</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold" data-testid="text-total-customers">
-                  {stats?.totalCustomers?.toLocaleString('fr-FR') || 0}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Depuis {Object.keys(stats?.customersBySource || {}).length} source(s)
-                </p>
-              </CardContent>
-            </Card>
+export default function IntegrationHub() {
+  const { toast } = useToast();
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedIntegration, setSelectedIntegration] = useState<Integration | null>(null);
+  const [isConnectDialogOpen, setIsConnectDialogOpen] = useState(false);
+  const [isWhyConnectOpen, setIsWhyConnectOpen] = useState(false);
+  const [formData, setFormData] = useState<Record<string, string>>({});
+  const [isTesting, setIsTesting] = useState(false);
+  const [testSuccess, setTestSuccess] = useState<boolean | null>(null);
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 gap-2">
-                <CardTitle className="text-sm font-medium">Commandes</CardTitle>
-                <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold" data-testid="text-total-orders">
-                  {stats?.totalOrders?.toLocaleString('fr-FR') || 0}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Toutes sources confondues
-                </p>
-              </CardContent>
-            </Card>
+  const { data: connections, isLoading: loadingConnections } = useQuery<Connection[]>({
+    queryKey: ["/api/integrations/connections"],
+  });
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 gap-2">
-                <CardTitle className="text-sm font-medium">Chiffre d'Affaires</CardTitle>
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-[#C8B88A]" data-testid="text-total-revenue">
-                  {formatCurrency(stats?.totalRevenue || 0)}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Cumulé depuis les intégrations
-                </p>
-              </CardContent>
-            </Card>
-          </div>
+  const connectMutation = useMutation({
+    mutationFn: async (data: { provider: string; credentials: Record<string, string> }) => {
+      const response = await apiRequest("POST", "/api/integrations/connect-apikey", {
+        provider: data.provider,
+        name: `Mon ${data.provider}`,
+        ...data.credentials
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/integrations/connections"] });
+      toast({ title: "Connexion réussie!", description: "L'intégration est maintenant active." });
+      closeConnectDialog();
+    },
+    onError: (error: Error) => {
+      toast({ title: "Erreur de connexion", description: error.message, variant: "destructive" });
+    }
+  });
 
-          {/* Last Sync Info */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <CardTitle className="text-base">Dernière synchronisation</CardTitle>
-                  <CardDescription>{formatDate(stats?.lastSyncAt || null)}</CardDescription>
-                </div>
-              </div>
-              <Button variant="outline" size="sm" data-testid="button-sync-all">
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Synchroniser tout
-              </Button>
-            </CardHeader>
-          </Card>
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => apiRequest("DELETE", `/api/integrations/connections/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/integrations/connections"] });
+      toast({ title: "Connexion supprimée" });
+    }
+  });
 
-          {/* Quick Links */}
-          <div className="grid gap-4 md:grid-cols-3">
-            <Link href="/integrations/connections">
-              <Card className="hover-elevate cursor-pointer h-full">
-                <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-primary/10">
-                      <Database className="h-6 w-6 text-primary" />
+  const syncMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest("POST", `/api/integrations/connections/${id}/sync`, { fullSync: true });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/integrations/connections"] });
+      toast({ title: data.success ? "Synchronisation réussie!" : "Synchronisation partielle", description: data.message });
+    }
+  });
+
+  const closeConnectDialog = () => {
+    setIsConnectDialogOpen(false);
+    setSelectedIntegration(null);
+    setFormData({});
+    setTestSuccess(null);
+  };
+
+  const handleConnect = (integration: Integration) => {
+    setSelectedIntegration(integration);
+    setFormData({});
+    setTestSuccess(null);
+    
+    if (integration.authMethod === "oauth" && integration.oauthCallback) {
+      window.location.href = `/api/integrations/oauth/${integration.id}/start`;
+    } else {
+      setIsConnectDialogOpen(true);
+    }
+  };
+
+  const handleTestConnection = async () => {
+    if (!selectedIntegration) return;
+    setIsTesting(true);
+    setTestSuccess(null);
+
+    try {
+      const response = await apiRequest("POST", "/api/integrations/test-credentials", {
+        provider: selectedIntegration.id,
+        ...formData
+      });
+      const result = await response.json();
+      setTestSuccess(result.success);
+      
+      if (result.success) {
+        toast({ title: "Test réussi!", description: result.message || "Connexion validée." });
+      } else {
+        toast({ title: "Test échoué", description: result.message, variant: "destructive" });
+      }
+    } catch (error) {
+      setTestSuccess(false);
+      toast({ title: "Erreur", description: error instanceof Error ? error.message : "Erreur de test", variant: "destructive" });
+    } finally {
+      setIsTesting(false);
+    }
+  };
+
+  const handleSubmitConnection = () => {
+    if (!selectedIntegration) return;
+    connectMutation.mutate({ provider: selectedIntegration.id, credentials: formData });
+  };
+
+  const isConnected = (integrationId: string) => 
+    connections?.some(c => c.provider.toLowerCase() === integrationId.toLowerCase() && c.status === "active");
+
+  const getConnection = (integrationId: string) => 
+    connections?.find(c => c.provider.toLowerCase() === integrationId.toLowerCase());
+
+  const filteredIntegrations = selectedCategory === "all" 
+    ? INTEGRATIONS 
+    : INTEGRATIONS.filter(i => i.category === selectedCategory);
+
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return "Jamais";
+    return new Date(dateStr).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  };
+
+  return (
+    <div className="space-y-8">
+      {/* Hero Marketing Block */}
+      <Card className="bg-gradient-to-br from-[#0A0A0A] to-[#1A1A1A] border-[#C8B88A]/20">
+        <CardContent className="p-8">
+          <div className="max-w-3xl">
+            <h1 className="text-3xl font-bold mb-4 bg-gradient-to-r from-white to-[#C8B88A] bg-clip-text text-transparent">
+              Connectez vos outils. Centralisez votre performance.
+            </h1>
+            <p className="text-muted-foreground text-lg mb-6 leading-relaxed">
+              Relier votre CRM, votre système de réservation ou votre base de données à SpeedAI permet de transformer chaque appel en donnée exploitable.
+            </p>
+            <p className="text-muted-foreground mb-6">
+              Vous gardez vos outils actuels. SpeedAI s'adapte à votre environnement et devient la couche intelligente qui unifie, sécurise et optimise votre activité.
+            </p>
+            <Dialog open={isWhyConnectOpen} onOpenChange={setIsWhyConnectOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" data-testid="button-why-connect">
+                  <HelpCircle className="h-4 w-4 mr-2" />
+                  Pourquoi connecter mon CRM ?
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-lg">
+                <DialogHeader>
+                  <DialogTitle>Pourquoi connecter votre CRM à SpeedAI ?</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="flex gap-3">
+                    <div className="h-8 w-8 rounded-full bg-[#C8B88A]/20 flex items-center justify-center shrink-0">
+                      <Database className="h-4 w-4 text-[#C8B88A]" />
                     </div>
                     <div>
-                      <CardTitle className="text-lg">Connexions</CardTitle>
-                      <CardDescription>Gérer vos CRM et bases de données</CardDescription>
+                      <h4 className="font-medium">Centralisation</h4>
+                      <p className="text-sm text-muted-foreground">Toutes vos données clients unifiées en un seul endroit</p>
                     </div>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex gap-2 flex-wrap">
-                    {Object.keys(stats?.customersBySource || {}).slice(0, 3).map(source => (
-                      <Badge key={source} variant="secondary">{source}</Badge>
-                    ))}
-                    {(stats?.totalConnections || 0) === 0 && (
-                      <Badge variant="outline">Aucune connexion</Badge>
+                  <div className="flex gap-3">
+                    <div className="h-8 w-8 rounded-full bg-[#4CEFAD]/20 flex items-center justify-center shrink-0">
+                      <CheckCircle className="h-4 w-4 text-[#4CEFAD]" />
+                    </div>
+                    <div>
+                      <h4 className="font-medium">Visibilité</h4>
+                      <p className="text-sm text-muted-foreground">Vue 360° de chaque interaction client</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-3">
+                    <div className="h-8 w-8 rounded-full bg-blue-500/20 flex items-center justify-center shrink-0">
+                      <Plug className="h-4 w-4 text-blue-400" />
+                    </div>
+                    <div>
+                      <h4 className="font-medium">Automatisation</h4>
+                      <p className="text-sm text-muted-foreground">Synchronisation automatique entre vos outils</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-3">
+                    <div className="h-8 w-8 rounded-full bg-purple-500/20 flex items-center justify-center shrink-0">
+                      <Shield className="h-4 w-4 text-purple-400" />
+                    </div>
+                    <div>
+                      <h4 className="font-medium">ROI mesurable</h4>
+                      <p className="text-sm text-muted-foreground">Suivez l'impact réel sur votre chiffre d'affaires</p>
+                    </div>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Active Connections */}
+      {connections && connections.length > 0 && (
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold">Connexions actives</h2>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {connections.map((conn) => (
+              <Card key={conn.id} className="relative">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-3">
+                      <ProviderLogo provider={conn.provider} color={INTEGRATIONS.find(i => i.id === conn.provider.toLowerCase())?.color || "#6B7280"} />
+                      <div>
+                        <CardTitle className="text-base">{conn.name}</CardTitle>
+                        <CardDescription className="text-xs capitalize">{conn.provider}</CardDescription>
+                      </div>
+                    </div>
+                    {conn.status === "active" ? (
+                      <Badge className="bg-green-500/10 text-green-500 border-green-500/20">
+                        <CheckCircle className="h-3 w-3 mr-1" />Actif
+                      </Badge>
+                    ) : conn.status === "error" ? (
+                      <Badge variant="destructive">
+                        <AlertTriangle className="h-3 w-3 mr-1" />Erreur
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary">
+                        <Clock className="h-3 w-3 mr-1" />{conn.status}
+                      </Badge>
                     )}
                   </div>
-                </CardContent>
-              </Card>
-            </Link>
-
-            <Link href="/integrations/customers">
-              <Card className="hover-elevate cursor-pointer h-full">
-                <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-[#4CEFAD]/10">
-                      <Users className="h-6 w-6 text-[#4CEFAD]" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg">Clients</CardTitle>
-                      <CardDescription>Vue unifiée de vos clients</CardDescription>
-                    </div>
-                  </div>
                 </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {stats?.totalCustomers?.toLocaleString('fr-FR') || 0}
+                <CardContent className="pt-0">
+                  <div className="text-xs text-muted-foreground mb-3">
+                    Dernière sync : {formatDate(conn.lastSyncAt)}
                   </div>
-                  <p className="text-sm text-muted-foreground">clients synchronisés</p>
+                  <div className="flex gap-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => syncMutation.mutate(conn.id)}
+                      disabled={syncMutation.isPending}
+                      data-testid={`button-sync-${conn.id}`}
+                    >
+                      <RefreshCw className={`h-3 w-3 mr-1 ${syncMutation.isPending ? 'animate-spin' : ''}`} />
+                      Sync
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => deleteMutation.mutate(conn.id)}
+                      data-testid={`button-delete-${conn.id}`}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
-            </Link>
-
-            <Link href="/integrations/orders">
-              <Card className="hover-elevate cursor-pointer h-full">
-                <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-[#C8B88A]/10">
-                      <ShoppingCart className="h-6 w-6 text-[#C8B88A]" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg">Commandes</CardTitle>
-                      <CardDescription>Historique des transactions</CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {formatCurrency(stats?.totalRevenue || 0)}
-                  </div>
-                  <p className="text-sm text-muted-foreground">de chiffre d'affaires</p>
-                </CardContent>
-              </Card>
-            </Link>
+            ))}
           </div>
-
-          {/* Revenue by Source */}
-          {stats?.revenueBySource && Object.keys(stats.revenueBySource).length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5" />
-                  Répartition du CA par source
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {Object.entries(stats.revenueBySource).map(([source, revenue]) => {
-                    const percentage = stats.totalRevenue > 0 
-                      ? (revenue / stats.totalRevenue) * 100 
-                      : 0;
-                    return (
-                      <div key={source} className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="capitalize">{source}</Badge>
-                            <span className="text-sm text-muted-foreground">
-                              {stats.customersBySource?.[source] || 0} clients
-                            </span>
-                          </div>
-                          <span className="font-semibold">{formatCurrency(revenue)}</span>
-                        </div>
-                        <div className="h-2 rounded-full bg-muted overflow-hidden">
-                          <div 
-                            className="h-full bg-[#C8B88A] rounded-full transition-all"
-                            style={{ width: `${percentage}%` }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Empty State */}
-          {(stats?.totalConnections || 0) === 0 && (
-            <Card className="border-dashed">
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <div className="p-4 rounded-full bg-muted mb-4">
-                  <Database className="h-8 w-8 text-muted-foreground" />
-                </div>
-                <h3 className="text-lg font-semibold mb-2">Aucune intégration configurée</h3>
-                <p className="text-muted-foreground text-center mb-4 max-w-md">
-                  Connectez vos CRM, systèmes de réservation ou bases de données pour centraliser 
-                  toutes vos données clients et transactions dans SpeedAI.
-                </p>
-                <Link href="/integrations/connections">
-                  <Button data-testid="button-setup-first-integration">
-                    <Plug className="h-4 w-4 mr-2" />
-                    Configurer ma première intégration
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          )}
-        </>
+        </div>
       )}
+
+      {/* Category Tabs */}
+      <Tabs value={selectedCategory} onValueChange={setSelectedCategory}>
+        <TabsList className="flex flex-wrap h-auto gap-1 bg-transparent p-0">
+          <TabsTrigger value="all" className="data-[state=active]:bg-[#C8B88A] data-[state=active]:text-black">
+            Toutes
+          </TabsTrigger>
+          {CATEGORIES.map((cat) => (
+            <TabsTrigger 
+              key={cat.id} 
+              value={cat.id}
+              className="data-[state=active]:bg-[#C8B88A] data-[state=active]:text-black"
+            >
+              <cat.icon className="h-4 w-4 mr-2" />
+              {cat.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+
+        <TabsContent value={selectedCategory} className="mt-6">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {filteredIntegrations.map((integration) => {
+              const connected = isConnected(integration.id);
+              return (
+                <Card key={integration.id} className={`relative ${connected ? 'border-green-500/30' : ''}`}>
+                  {connected && (
+                    <div className="absolute top-2 right-2">
+                      <CheckCircle className="h-5 w-5 text-green-500" />
+                    </div>
+                  )}
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center gap-3">
+                      <ProviderLogo provider={integration.id} color={integration.color} />
+                      <div className="min-w-0">
+                        <CardTitle className="text-base truncate">{integration.name}</CardTitle>
+                        <TierBadge tier={integration.tier} />
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{integration.description}</p>
+                    <Button 
+                      className="w-full" 
+                      variant={connected ? "outline" : "default"}
+                      onClick={() => handleConnect(integration)}
+                      disabled={connected}
+                      data-testid={`button-connect-${integration.id}`}
+                    >
+                      {connected ? (
+                        <>
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          Connecté
+                        </>
+                      ) : (
+                        <>
+                          <Plug className="h-4 w-4 mr-2" />
+                          Connecter
+                        </>
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      {/* Connect Dialog */}
+      <Dialog open={isConnectDialogOpen} onOpenChange={setIsConnectDialogOpen}>
+        <DialogContent className="max-w-md">
+          {selectedIntegration && (
+            <>
+              <DialogHeader>
+                <div className="flex items-center gap-3 mb-2">
+                  <ProviderLogo provider={selectedIntegration.id} color={selectedIntegration.color} size="lg" />
+                  <div>
+                    <DialogTitle>Connecter {selectedIntegration.name}</DialogTitle>
+                    <DialogDescription>{selectedIntegration.description}</DialogDescription>
+                  </div>
+                </div>
+              </DialogHeader>
+
+              <div className="space-y-4 py-4">
+                {selectedIntegration.authMethod === "csv_import" ? (
+                  <div className="space-y-4">
+                    <div className="border-2 border-dashed rounded-lg p-6 text-center">
+                      <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                      <p className="text-sm text-muted-foreground">
+                        Glissez un fichier CSV ou cliquez pour sélectionner
+                      </p>
+                      <Input type="file" accept=".csv" className="mt-2" data-testid="input-csv-upload" />
+                    </div>
+                    <div className="text-center text-sm text-muted-foreground">
+                      <p>OU</p>
+                    </div>
+                    <div className="p-4 bg-muted rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Mail className="h-4 w-4" />
+                        <span className="font-medium">Email parsing</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mb-2">
+                        Transférez vos confirmations de réservation à :
+                      </p>
+                      <code className="text-xs bg-background px-2 py-1 rounded">
+                        import@speedai.fr
+                      </code>
+                    </div>
+                  </div>
+                ) : selectedIntegration.authMethod === "webhook" ? (
+                  <div className="space-y-4">
+                    <div className="p-4 bg-muted rounded-lg">
+                      <Label className="text-sm font-medium mb-2 block">URL du Webhook</Label>
+                      <div className="flex gap-2">
+                        <Input 
+                          value={`${window.location.origin}/api/webhooks/${selectedIntegration.id}/inbound`}
+                          readOnly 
+                          className="font-mono text-xs"
+                        />
+                        <Button 
+                          size="icon" 
+                          variant="outline"
+                          onClick={() => {
+                            navigator.clipboard.writeText(`${window.location.origin}/api/webhooks/${selectedIntegration.id}/inbound`);
+                            toast({ title: "Copié!" });
+                          }}
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    <Button className="w-full" onClick={closeConnectDialog}>
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      C'est noté
+                    </Button>
+                  </div>
+                ) : (
+                  <>
+                    {selectedIntegration.fields?.map((field) => (
+                      <div key={field.key} className="space-y-2">
+                        <Label htmlFor={field.key}>{field.label} {field.required && <span className="text-destructive">*</span>}</Label>
+                        {field.type === "select" ? (
+                          <Select 
+                            value={formData[field.key] || ""} 
+                            onValueChange={(v) => setFormData(prev => ({ ...prev, [field.key]: v }))}
+                          >
+                            <SelectTrigger data-testid={`select-${field.key}`}>
+                              <SelectValue placeholder={field.placeholder || "Sélectionner..."} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {field.key === "region" && (
+                                <>
+                                  <SelectItem value="eu">Europe (EU)</SelectItem>
+                                  <SelectItem value="us">États-Unis (US)</SelectItem>
+                                </>
+                              )}
+                              {field.key === "environment" && (
+                                <>
+                                  <SelectItem value="production">Production</SelectItem>
+                                  <SelectItem value="sandbox">Sandbox</SelectItem>
+                                </>
+                              )}
+                              {field.key === "authType" && (
+                                <>
+                                  <SelectItem value="bearer">Bearer Token</SelectItem>
+                                  <SelectItem value="basic">Basic Auth</SelectItem>
+                                  <SelectItem value="hmac">HMAC</SelectItem>
+                                </>
+                              )}
+                            </SelectContent>
+                          </Select>
+                        ) : field.type === "toggle" ? (
+                          <div className="flex items-center gap-2">
+                            <Switch 
+                              checked={formData[field.key] === "true"}
+                              onCheckedChange={(v) => setFormData(prev => ({ ...prev, [field.key]: v ? "true" : "false" }))}
+                              data-testid={`switch-${field.key}`}
+                            />
+                            <span className="text-sm text-muted-foreground">Activer SSL</span>
+                          </div>
+                        ) : (
+                          <Input
+                            id={field.key}
+                            type={field.type}
+                            placeholder={field.placeholder}
+                            value={formData[field.key] || ""}
+                            onChange={(e) => setFormData(prev => ({ ...prev, [field.key]: e.target.value }))}
+                            data-testid={`input-${field.key}`}
+                          />
+                        )}
+                      </div>
+                    ))}
+
+                    <div className="flex gap-2 pt-4">
+                      <Button 
+                        variant="outline" 
+                        onClick={handleTestConnection}
+                        disabled={isTesting}
+                        className="flex-1"
+                        data-testid="button-test-connection"
+                      >
+                        {isTesting ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : testSuccess === true ? (
+                          <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
+                        ) : testSuccess === false ? (
+                          <AlertTriangle className="h-4 w-4 mr-2 text-destructive" />
+                        ) : (
+                          <Key className="h-4 w-4 mr-2" />
+                        )}
+                        Tester
+                      </Button>
+                      <Button 
+                        onClick={handleSubmitConnection}
+                        disabled={connectMutation.isPending || !selectedIntegration.fields?.every(f => !f.required || formData[f.key])}
+                        className="flex-1"
+                        data-testid="button-submit-connection"
+                      >
+                        {connectMutation.isPending ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <Plug className="h-4 w-4 mr-2" />
+                        )}
+                        Connecter
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Footer Note */}
+      <Card className="border-dashed">
+        <CardContent className="py-6">
+          <div className="flex items-start gap-3">
+            <Info className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+            <p className="text-sm text-muted-foreground">
+              L'intégration exacte dépend de votre environnement métier et de vos outils existants.
+              Notre équipe adapte SpeedAI à votre stack pour garantir performance et fiabilité.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

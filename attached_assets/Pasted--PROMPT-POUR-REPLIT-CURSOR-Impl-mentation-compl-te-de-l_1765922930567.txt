@@ -1,0 +1,318 @@
+🧠 PROMPT POUR REPLIT / CURSOR
+
+Implémentation complète de la page Intégrations – SpeedAI (MEGIN)
+
+⸻
+
+CONTEXTE PRODUIT
+
+Tu travailles sur SpeedAI, une plateforme B2B premium d’agent réceptionniste IA et de pilotage business.
+La page Intégrations permet aux clients de connecter leurs outils (CRM, réservation, e-commerce, bases de données) afin de centraliser leur activité dans SpeedAI.
+
+⚠️ Règle absolue :
+Le dashboard SpeedAI ne dépend jamais directement des APIs externes.
+Toutes les intégrations passent par une couche interne SpeedAI (auth → stockage sécurisé → statut → usage interne).
+
+⸻
+
+🎯 OBJECTIFS DE LA PAGE INTÉGRATIONS
+	1.	Permettre la connexion simple et sécurisée des outils clients
+	2.	Donner une image enterprise / premium / scalable
+	3.	Justifier le prix élevé du produit
+	4.	Montrer que SpeedAI s’adapte à l’existant du client
+
+⸻
+
+🧩 STRUCTURE UI – PAGE INTÉGRATIONS
+
+1️⃣ Bloc introductif (marketing – AU-DESSUS de la liste)
+
+Afficher un encadré visuel premium avec le texte suivant (ou équivalent) :
+
+Connectez vos outils. Centralisez votre performance.
+
+Relier votre CRM, votre système de réservation ou votre base de données à SpeedAI permet de transformer chaque appel en donnée exploitable.
+
+Vous gardez vos outils actuels.
+SpeedAI s’adapte à votre environnement et devient la couche intelligente qui unifie, sécurise et optimise votre activité.
+
+Bouton secondaire :
+“Pourquoi connecter mon CRM ?”
+→ ouvre une modale expliquant :
+	•	centralisation
+	•	visibilité
+	•	automatisation
+	•	ROI mesurable
+
+⸻
+
+2️⃣ Catégories d’intégrations (UI)
+	•	CRM génériques
+	•	Restaurant & Hôtellerie
+	•	Hôtels
+	•	E-commerce
+	•	Bases de données
+	•	Personnalisé
+
+Chaque carte doit afficher :
+	•	logo
+	•	nom
+	•	badge : Standard / Premium / Sur mesure
+	•	bouton Connecter
+
+⸻
+
+3️⃣ LISTE DES INTÉGRATIONS À IMPLÉMENTER
+
+⸻
+
+🔹 CRM GÉNÉRIQUES
+
+HubSpot — Standard
+Méthode : OAuth 2.0
+UI : bouton “Connecter HubSpot”
+
+Implémentation :
+	•	OAuth popup
+	•	Callback /api/integrations/hubspot/callback
+	•	Stocker access_token, refresh_token, portal_id (chiffrés)
+	•	Bouton “Tester la connexion”
+	•	Statut : connecté / expiré / erreur
+
+⸻
+
+Salesforce — Premium
+Méthode : OAuth 2.0
+UI : bouton + mention “Intégration Premium”
+
+Champs optionnels (admin) :
+	•	Client ID
+	•	Client Secret
+	•	Environnement (sandbox / prod)
+
+Callback :
+/api/integrations/salesforce/callback
+
+⸻
+
+Zoho CRM — Standard
+Méthode : OAuth 2.0
+Champ requis :
+	•	Région (EU / US)
+
+Callback :
+/api/integrations/zoho/callback
+
+⸻
+
+Pipedrive — Standard
+Méthode : API Token
+Champs UI :
+	•	API Token (input sécurisé)
+
+Action :
+	•	Test API
+	•	Sauvegarde chiffrée
+
+⸻
+
+Monday.com — Standard
+Méthode : API Token
+Champs UI :
+	•	API Token
+	•	Board ID
+
+⸻
+
+🍽️ RESTAURATION & HÔTELLERIE
+
+Zenchef — Premium
+Méthode :
+	•	API (si dispo)
+	•	OU Import CSV
+
+UI :
+	•	Choix : “Connexion API” ou “Import”
+	•	Champs dynamiques selon choix
+
+⸻
+
+TheFork Manager — Premium
+Méthode :
+	•	Import CSV
+	•	OU Email parsing
+
+UI :
+	•	Upload fichier
+	•	OU affichage d’une adresse email SpeedAI à configurer
+
+⸻
+
+OpenTable — Premium
+Méthode : API sous contrat
+Champs UI :
+	•	API Key
+	•	Restaurant ID
+
+⸻
+
+Resy — Premium
+Méthode : API sous contrat
+Champs UI :
+	•	API Key
+	•	Venue ID
+
+⸻
+
+Lightspeed Restaurant — Premium
+Méthode : API REST
+Champs UI :
+	•	API Key
+	•	Account / Location ID
+
+⸻
+
+🏨 HÔTELS
+
+Mews — Premium
+Méthode : API REST
+Champs UI :
+	•	Client Token
+	•	Access Token
+	•	Hotel ID
+
+⸻
+
+Cloudbeds — Premium
+Méthode : OAuth 2.0
+Callback :
+/api/integrations/cloudbeds/callback
+
+⸻
+
+🛒 E-COMMERCE
+
+Shopify — Standard
+Méthode : OAuth 2.0
+Champ initial :
+	•	Domaine boutique (xxx.myshopify.com)
+
+Callback :
+/api/integrations/shopify/callback
+
+⸻
+
+WooCommerce — Standard
+Méthode : REST API
+Champs UI :
+	•	Site URL
+	•	Consumer Key
+	•	Consumer Secret
+
+⸻
+
+PrestaShop — Standard
+Méthode : API Key
+Champs UI :
+	•	Site URL
+	•	API Key
+
+⸻
+
+Stripe — Standard
+Méthode : API + Webhook
+Champs UI :
+	•	Secret Key
+	•	Webhook Secret
+
+Webhook endpoint :
+/api/integrations/stripe/webhook
+
+⸻
+
+🗄️ BASES DE DONNÉES
+
+Airtable — Standard
+Méthode : API Token
+Champs UI :
+	•	Token
+	•	Base ID
+	•	Table ID
+
+⸻
+
+Notion — Standard
+Méthode : OAuth
+Callback :
+/api/integrations/notion/callback
+
+Champ complémentaire :
+	•	Database ID
+
+⸻
+
+Google Sheets — Standard
+Méthode : OAuth
+Callback :
+/api/integrations/google/callback
+
+Champ :
+	•	Spreadsheet ID
+
+⸻
+
+PostgreSQL — Premium
+Méthode : Connexion directe
+Champs UI :
+	•	Host
+	•	Port
+	•	Database
+	•	User
+	•	Password
+	•	SSL toggle
+
+⸻
+
+MySQL — Premium
+Même logique que PostgreSQL.
+
+⸻
+
+⚙️ PERSONNALISÉ
+
+API personnalisée — Sur mesure
+Champs UI :
+	•	Base URL
+	•	Type d’auth (Bearer / Basic / HMAC)
+	•	Clé / Secret
+	•	Headers optionnels
+
+⸻
+
+Webhook — Standard
+UI :
+	•	Générer une URL unique
+	•	Générer un secret
+	•	Bouton “Tester webhook”
+
+⸻
+
+🔐 SÉCURITÉ & UX (OBLIGATOIRE)
+	•	Tous les secrets sont chiffrés en base
+	•	Aucun secret affiché après sauvegarde
+	•	Bouton “Tester la connexion” pour chaque intégration
+	•	Statut visible : connecté / erreur / action requise
+	•	Logs d’erreur simples côté client
+
+⸻
+
+🧠 RÈGLE FINALE PRODUIT
+
+Afficher en bas de page :
+
+L’intégration exacte dépend de votre environnement métier et de vos outils existants.
+Notre équipe adapte SpeedAI à votre stack pour garantir performance et fiabilité.
+
+⸻
+
+FIN DU PROMPT
