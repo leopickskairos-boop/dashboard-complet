@@ -77,7 +77,9 @@ interface Integration {
 
 const INTEGRATIONS: Integration[] = [
   // CRM Génériques
-  { id: "hubspot", name: "HubSpot", description: "CRM complet avec contacts, deals et pipelines", category: "crm", tier: "standard", authMethod: "oauth", color: "#FF7A59", oauthCallback: "/api/integrations/hubspot/callback" },
+  { id: "hubspot", name: "HubSpot", description: "CRM complet avec contacts, deals et pipelines", category: "crm", tier: "standard", authMethod: "api_key", color: "#FF7A59", fields: [
+    { key: "apiKey", label: "Private App Access Token", type: "password", placeholder: "pat-...", required: true }
+  ] },
   { id: "salesforce", name: "Salesforce", description: "Le leader mondial du CRM enterprise", category: "crm", tier: "premium", authMethod: "api_key_secret", color: "#00A1E0", fields: [
     { key: "instanceUrl", label: "Instance URL", type: "text", placeholder: "https://votre-org.my.salesforce.com", required: true },
     { key: "apiKey", label: "Access Token", type: "password", placeholder: "Votre access token Salesforce", required: true }
@@ -301,8 +303,8 @@ export default function IntegrationHub() {
     setTestSuccess(null);
   };
 
-  // Seul HubSpot a un flux OAuth implémenté côté backend
-  const OAUTH_IMPLEMENTED = ["hubspot"];
+  // Liste des providers avec OAuth implémenté côté backend (aucun pour l'instant)
+  const OAUTH_IMPLEMENTED: string[] = [];
   
   const handleConnect = (integration: Integration) => {
     setSelectedIntegration(integration);
