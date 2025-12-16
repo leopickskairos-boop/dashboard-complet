@@ -7,6 +7,8 @@ import puppeteer, { type Browser, type Page } from "puppeteer";
 import crypto from "crypto";
 import { MbrV1 } from "@shared/mbr-types";
 import { generateMbrReportHTML } from "../templates/mbr-report.template";
+import { generateAiReportHTML } from "../templates/ai-report.template";
+import { generateAiReport, type AiReportNarrative } from "./ai-report.service";
 
 export interface MbrPdfResult {
   buffer: Buffer;
@@ -150,6 +152,79 @@ export class MbrPdfService {
       }
     } catch (error) {
       console.error("[MbrPdfService] Failed to generate PDF:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Generate AI-enhanced PDF with consultant-style narrative
+   * Uses OpenAI to generate professional text content
+   */
+  async generateAiPdf(mbr: MbrV1): Promise<MbrPdfResult & { tokenUsage: number; cached: boolean }> {
+    try {
+      await this.initialize();
+
+      if (!this.browser) {
+        throw new Error("Browser not initialized");
+      }
+
+      console.log(`[MbrPdfService] Generating AI-enhanced PDF for ${mbr.tenant.name} (${mbr.tenant.period.month_label})`);
+
+      // Step 1: Generate AI narrative (cached if already exists)
+      const aiResult = await generateAiReport(mbr);
+      console.log(`[MbrPdfService] AI narrative ready (cached: ${aiResult.cached}, tokens: ${aiResult.tokenUsage})`);
+
+      const page = await this.browser.newPage();
+
+      try {
+        // Step 2: Generate HTML with AI narrative
+        const html = generateAiReportHTML(mbr, aiResult.narrative);
+
+        await page.setViewport({
+          width: 1200,
+          height: 1600,
+          deviceScaleFactor: 2,
+        });
+
+        await page.setContent(html, {
+          waitUntil: 'networkidle0',
+          timeout: 30000,
+        });
+
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // Step 3: Generate PDF
+        const pdfData = await page.pdf({
+          format: 'A4',
+          printBackground: true,
+          margin: {
+            top: '0',
+            right: '0',
+            bottom: '0',
+            left: '0',
+          },
+          displayHeaderFooter: false,
+          preferCSSPageSize: true,
+        });
+
+        const buffer = Buffer.from(pdfData);
+        const checksum = crypto.createHash('md5').update(buffer).digest('hex');
+
+        console.log(`[MbrPdfService] AI PDF generated successfully (${buffer.length} bytes)`);
+
+        return {
+          buffer,
+          checksum,
+          sizeBytes: buffer.length,
+          generatedAt: new Date().toISOString(),
+          tokenUsage: aiResult.tokenUsage,
+          cached: aiResult.cached,
+        };
+      } finally {
+        await page.close();
+      }
+    } catch (error) {
+      console.error("[MbrPdfService] Failed to generate AI PDF:", error);
       throw error;
     }
   }

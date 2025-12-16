@@ -8,6 +8,7 @@ import { sendEmail } from './gmail-email';
 import { generateReportEmailHTML, generateReportEmailText } from './templates/monthly-report-email.template';
 import type { MonthlyReportMetrics } from './report-data.service';
 import { MbrJobService } from './services/mbr-job.service';
+import { mbrPdfService } from './services/mbr-pdf.service';
 
 /**
  * Monthly Report Cron Job Service
@@ -133,8 +134,24 @@ export class MonthlyReportCronService {
         return;
       }
 
-      // Step 2: Generate PDF
-      const pdfBuffer = await pdfGenerator.generateMonthlyReportPDF(metrics, userEmail);
+      // Step 2: Generate PDF (AI-enhanced if mbr_v1 available, legacy fallback otherwise)
+      let pdfBuffer: Buffer;
+      let aiTokenUsage = 0;
+      
+      if (mbrJson) {
+        try {
+          console.log(`[MonthlyReportCron] Using AI-enhanced PDF for user ${userId}`);
+          const aiPdfResult = await mbrPdfService.generateAiPdf(mbrJson);
+          pdfBuffer = aiPdfResult.buffer;
+          aiTokenUsage = aiPdfResult.tokenUsage;
+          console.log(`[MonthlyReportCron] AI PDF generated (tokens: ${aiTokenUsage}, cached: ${aiPdfResult.cached})`);
+        } catch (aiError) {
+          console.warn(`[MonthlyReportCron] AI PDF failed, falling back to legacy:`, aiError instanceof Error ? aiError.message : aiError);
+          pdfBuffer = await pdfGenerator.generateMonthlyReportPDF(metrics, userEmail);
+        }
+      } else {
+        pdfBuffer = await pdfGenerator.generateMonthlyReportPDF(metrics, userEmail);
+      }
 
       // Step 3: Calculate checksum
       const pdfChecksum = crypto.createHash('md5').update(pdfBuffer).digest('hex');
