@@ -35,7 +35,12 @@ import {
   n8nLogFiltersSchema,
   n8nCallWebhookSchema,
   insertReviewAutomationSchema,
+  onboardingFormSchema,
+  brandingUpdateSchema,
+  clientProfiles,
 } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 import {
   notifySubscriptionAlert,
@@ -269,9 +274,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get current user
+  // Get current user (includes onboarding status)
   app.get("/api/auth/me", requireAuth, async (req, res) => {
     const user = (req as any).user;
+
+    // Get client profile to check onboarding status
+    const [profile] = await db
+      .select()
+      .from(clientProfiles)
+      .where(eq(clientProfiles.userId, user.id))
+      .limit(1);
+
+    const publicUser = toPublicUser(user);
+    const responseData = {
+      ...publicUser,
+      onboardingCompleted: profile?.onboardingCompleted ?? false,
+      companyName: profile?.companyName ?? null,
+    };
 
     // DEBUG LOG: Track /api/auth/me response (development only)
     if (process.env.NODE_ENV === "development") {
@@ -283,16 +302,218 @@ export async function registerRoutes(app: Express): Promise<Server> {
         subscriptionStatus: user.subscriptionStatus,
         plan: user.plan,
         subscriptionCurrentPeriodEnd: user.subscriptionCurrentPeriodEnd,
+        onboardingCompleted: responseData.onboardingCompleted,
+        companyName: responseData.companyName,
       });
     }
 
-    res.json(toPublicUser(user));
+    res.json(responseData);
   });
 
   // Logout
   app.post("/api/auth/logout", (req, res) => {
     res.clearCookie("auth_token");
     res.json({ message: "Déconnexion réussie" });
+  });
+
+  // ===== CLIENT PROFILE & ONBOARDING =====
+
+  // Get client profile
+  app.get("/api/client-profile", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      
+      const [profile] = await db
+        .select()
+        .from(clientProfiles)
+        .where(eq(clientProfiles.userId, user.id))
+        .limit(1);
+      
+      res.json(profile || null);
+    } catch (error) {
+      console.error("Get client profile error:", error);
+      res.status(500).json({ message: "Erreur lors de la récupération du profil" });
+    }
+  });
+
+  // Complete onboarding (create or update profile)
+  app.put("/api/client-profile", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const data = onboardingFormSchema.parse(req.body);
+      
+      // Check if profile exists
+      const [existingProfile] = await db
+        .select()
+        .from(clientProfiles)
+        .where(eq(clientProfiles.userId, user.id))
+        .limit(1);
+      
+      let profile;
+      if (existingProfile) {
+        // Update existing profile
+        const [updated] = await db
+          .update(clientProfiles)
+          .set({
+            firstName: data.firstName,
+            lastName: data.lastName,
+            phone: data.phone,
+            companyName: data.companyName,
+            contactEmail: data.contactEmail,
+            onboardingCompleted: true,
+            updatedAt: new Date(),
+          })
+          .where(eq(clientProfiles.userId, user.id))
+          .returning();
+        profile = updated;
+      } else {
+        // Create new profile
+        const [created] = await db
+          .insert(clientProfiles)
+          .values({
+            userId: user.id,
+            firstName: data.firstName,
+            lastName: data.lastName,
+            phone: data.phone,
+            companyName: data.companyName,
+            contactEmail: data.contactEmail,
+            onboardingCompleted: true,
+          })
+          .returning();
+        profile = created;
+      }
+      
+      res.json({ 
+        message: "Profil mis à jour avec succès",
+        profile 
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Données invalides", 
+          errors: error.errors 
+        });
+      }
+      console.error("Update client profile error:", error);
+      res.status(500).json({ message: "Erreur lors de la mise à jour du profil" });
+    }
+  });
+
+  // ===== CLIENT BRANDING (for outbound communications only) =====
+
+  // Get branding settings
+  app.get("/api/client-branding", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      
+      const [profile] = await db
+        .select({
+          logoUrl: clientProfiles.logoUrl,
+          primaryColor: clientProfiles.primaryColor,
+          secondaryColor: clientProfiles.secondaryColor,
+          companyName: clientProfiles.companyName,
+        })
+        .from(clientProfiles)
+        .where(eq(clientProfiles.userId, user.id))
+        .limit(1);
+      
+      res.json(profile || { logoUrl: null, primaryColor: null, secondaryColor: null, companyName: null });
+    } catch (error) {
+      console.error("Get branding error:", error);
+      res.status(500).json({ message: "Erreur lors de la récupération du branding" });
+    }
+  });
+
+  // Update branding settings
+  app.put("/api/client-branding", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const data = brandingUpdateSchema.parse(req.body);
+      
+      // Update profile branding fields
+      const [updated] = await db
+        .update(clientProfiles)
+        .set({
+          logoUrl: data.logoUrl,
+          primaryColor: data.primaryColor,
+          secondaryColor: data.secondaryColor,
+          updatedAt: new Date(),
+        })
+        .where(eq(clientProfiles.userId, user.id))
+        .returning();
+      
+      if (!updated) {
+        return res.status(404).json({ 
+          message: "Profil non trouvé. Veuillez d'abord compléter l'onboarding." 
+        });
+      }
+      
+      res.json({ 
+        message: "Branding mis à jour avec succès",
+        branding: {
+          logoUrl: updated.logoUrl,
+          primaryColor: updated.primaryColor,
+          secondaryColor: updated.secondaryColor,
+        }
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Données invalides", 
+          errors: error.errors 
+        });
+      }
+      console.error("Update branding error:", error);
+      res.status(500).json({ message: "Erreur lors de la mise à jour du branding" });
+    }
+  });
+
+  // Upload logo
+  app.post("/api/client-branding/logo", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      
+      // Check if profile exists
+      const [profile] = await db
+        .select()
+        .from(clientProfiles)
+        .where(eq(clientProfiles.userId, user.id))
+        .limit(1);
+      
+      if (!profile) {
+        return res.status(404).json({ 
+          message: "Profil non trouvé. Veuillez d'abord compléter l'onboarding." 
+        });
+      }
+      
+      // Handle file upload with fileStorage
+      const result = await fileStorage.handleUpload(req, {
+        folder: `logos/${user.id}`,
+        allowedTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'],
+        maxSize: 2 * 1024 * 1024, // 2MB max
+      });
+      
+      if (!result.success || !result.url) {
+        return res.status(400).json({ message: result.error || "Erreur lors de l'upload" });
+      }
+      
+      // Update profile with logo URL
+      await db
+        .update(clientProfiles)
+        .set({
+          logoUrl: result.url,
+          updatedAt: new Date(),
+        })
+        .where(eq(clientProfiles.userId, user.id));
+      
+      res.json({ 
+        message: "Logo uploadé avec succès",
+        logoUrl: result.url 
+      });
+    } catch (error) {
+      console.error("Upload logo error:", error);
+      res.status(500).json({ message: "Erreur lors de l'upload du logo" });
+    }
   });
 
   // Verify email
