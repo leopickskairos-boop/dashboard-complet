@@ -2857,3 +2857,57 @@ export const updateTenantSchema = createTenantSchema.partial();
 // Types
 export type CreateTenantInput = z.infer<typeof createTenantSchema>;
 export type UpdateTenantInput = z.infer<typeof updateTenantSchema>;
+
+// ===== CLIENT PROFILES (ONBOARDING & BRANDING) =====
+
+// Client profiles table - stores onboarding data and branding for communications
+export const clientProfiles = pgTable("client_profiles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }).unique(),
+  
+  // Onboarding fields (required)
+  firstName: text("first_name"),
+  lastName: text("last_name"),
+  phone: text("phone"),
+  companyName: text("company_name"),
+  contactEmail: text("contact_email"),
+  onboardingCompleted: boolean("onboarding_completed").notNull().default(false),
+  
+  // Branding fields (optional - for outbound communications only)
+  logoUrl: text("logo_url"),
+  primaryColor: text("primary_color"),
+  secondaryColor: text("secondary_color"),
+  
+  // Timestamps
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Insert schema for client_profiles
+export const insertClientProfileSchema = createInsertSchema(clientProfiles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Onboarding form schema (required fields validation)
+export const onboardingFormSchema = z.object({
+  firstName: z.string().min(1, "Le prénom est requis"),
+  lastName: z.string().min(1, "Le nom est requis"),
+  phone: z.string().min(10, "Numéro de téléphone invalide").regex(/^[\d\s\+\-\.()]+$/, "Format de téléphone invalide"),
+  companyName: z.string().min(1, "Le nom de l'entreprise est requis"),
+  contactEmail: z.string().email("Email invalide"),
+});
+
+// Branding update schema (optional fields)
+export const brandingUpdateSchema = z.object({
+  logoUrl: z.string().url().optional().nullable(),
+  primaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Couleur hexadécimale invalide").optional().nullable(),
+  secondaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Couleur hexadécimale invalide").optional().nullable(),
+});
+
+// Types for client_profiles
+export type InsertClientProfile = z.infer<typeof insertClientProfileSchema>;
+export type ClientProfile = typeof clientProfiles.$inferSelect;
+export type OnboardingFormData = z.infer<typeof onboardingFormSchema>;
+export type BrandingUpdateData = z.infer<typeof brandingUpdateSchema>;

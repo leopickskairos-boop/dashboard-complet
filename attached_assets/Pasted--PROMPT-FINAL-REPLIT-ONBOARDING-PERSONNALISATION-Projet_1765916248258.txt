@@ -1,0 +1,219 @@
+🔹 PROMPT FINAL REPLIT — ONBOARDING & PERSONNALISATION
+
+Projet Megan — Speed AI
+
+🎭 Rôle
+
+Tu es un développeur full-stack senior travaillant sur un SaaS B2B multi-tenant appelé Speed AI (projet Megan).
+
+Ton objectif est d’implémenter :
+	1.	Un onboarding obligatoire à la première connexion
+	2.	Une collecte de logo et palette de couleurs, utilisée exclusivement pour les communications sortantes (emails, messages, notifications)
+
+⚠️ Le dashboard reste 100 % à l’identité visuelle actuelle de Speed AI.
+Aucune personnalisation graphique globale du dashboard n’est autorisée.
+
+⸻
+
+🧩 PARTIE 1 — ONBOARDING OBLIGATOIRE (PREMIÈRE CONNEXION)
+
+🎯 Objectif
+
+Lorsqu’un client se connecte pour la première fois :
+	•	Une page unique d’onboarding s’affiche automatiquement
+	•	Aucune autre page du dashboard n’est accessible
+	•	Cette page :
+	•	n’apparaît qu’une seule fois
+	•	ne se réaffiche jamais après validation
+	•	Les données sont stockées en base par client
+	•	Un flag onboarding_completed = true débloque définitivement le dashboard
+
+⸻
+
+🧱 Données à collecter (strict minimum)
+
+Champs obligatoires :
+	•	Prénom
+	•	Nom
+	•	Numéro de téléphone
+	•	Nom de l’entreprise
+	•	Adresse email de contact
+
+👉 Pas de champ superflu
+👉 Validation simple (non-vide + format email / téléphone)
+
+⸻
+
+🗄️ Base de données (optimisée)
+
+Table exemple : client_profile
+
+Champs :
+	•	id
+	•	user_id
+	•	first_name
+	•	last_name
+	•	phone
+	•	company_name
+	•	contact_email
+	•	onboarding_completed (boolean, default false)
+	•	created_at
+	•	updated_at
+
+➡️ Une seule écriture DB
+➡️ Une seule lecture DB par session
+➡️ Pas de jointures lourdes
+
+⸻
+
+🔐 Logique d’accès globale
+
+À chaque chargement du dashboard :
+	•	Si onboarding_completed = false
+→ redirection forcée vers /onboarding
+	•	Si true
+→ accès normal à toutes les pages
+
+⚠️ Vérification centralisée, simple et peu coûteuse
+
+⸻
+
+🧩 PARTIE 2 — LOGO & PALETTE DE COULEURS (COMMUNICATIONS UNIQUEMENT)
+
+🎯 Objectif
+
+Permettre au client de :
+	•	Importer son logo
+	•	Définir sa palette de couleurs
+
+Ces éléments sont utilisés uniquement pour :
+	•	Les emails envoyés à ses clients
+	•	Les messages automatisés
+	•	Les confirmations, notifications et communications sortantes
+
+❌ Aucun impact sur le design du dashboard
+❌ Aucun co-branding graphique
+❌ Speed AI reste l’unique identité UI
+
+⸻
+
+🎨 Données à collecter
+	•	Logo de l’entreprise
+	•	Upload image simple (léger, compressé)
+	•	Palette de couleurs
+	•	1 couleur principale
+	•	1 couleur secondaire
+
+👉 Champs optionnels
+👉 Complétables plus tard
+👉 Aucune contrainte bloquante
+
+⸻
+
+🗄️ Stockage
+
+Table dédiée ou extension du profil client :
+	•	logo_url
+	•	primary_color
+	•	secondary_color
+
+➡️ Appelées uniquement lors des envois d’emails
+➡️ Jamais chargées inutilement
+➡️ Compatible multi-tenant
+
+⸻
+
+✉️ Usage UNIQUE — Communications sortantes
+
+Les données logo / couleurs servent à :
+	•	Personnaliser les emails au nom de l’entreprise
+	•	Apporter une signature visuelle crédible
+	•	Améliorer l’expérience et la confiance client
+
+👉 Aucun effet sur l’UI du dashboard
+👉 Aucun override du design Speed AI
+
+⸻
+
+🧭 HEADER DU DASHBOARD — RÈGLE PRÉCISE
+
+Le design du dashboard reste strictement inchangé (layout, couleurs, typographies Speed AI).
+
+👉 Seul le texte du header évolue dynamiquement, sans modification graphique.
+
+Format du header :
+	•	Par défaut :
+
+Speed AI
+
+	•	Si le client a renseigné un nom d’entreprise :
+
+Speed AI × NomEntreprise
+
+Règles strictes :
+	•	Aucun logo client dans le header
+	•	Aucune couleur client dans le header
+	•	Aucune modification de typographie
+	•	Le × est purement textuel
+	•	“Speed AI” reste toujours en premier et dominant
+
+👉 Il s’agit d’un co-label textuel, pas d’un co-branding visuel.
+
+⸻
+
+⚙️ Logique technique attendue
+	•	Lire company_name depuis client_profile
+	•	Si présent :
+	•	afficher Speed AI × company_name
+	•	Sinon :
+	•	afficher Speed AI
+
+➡️ Simple condition côté render
+➡️ Aucun recalcul
+➡️ Coût minimal
+
+⸻
+
+🪄 ENCARt UX — EXPLICATION & INCITATION (PAGE LOGO / COULEURS)
+
+Ajouter un encart stylisé, élégant et sobre, à l’image de Speed AI.
+
+Contenu indicatif :
+
+Personnalisez vos communications
+
+En ajoutant votre logo et vos couleurs, Speed AI peut envoyer des emails et messages à vos clients à votre image.
+
+Résultat :
+– plus de crédibilité
+– une marque reconnaissable
+– une meilleure expérience client
+
+Ces éléments sont utilisés uniquement pour vos communications, sans modifier l’interface Speed AI.
+
+👉 Ton rassurant
+👉 Pédagogique
+👉 Orienté valeur métier
+👉 Incitatif, sans obligation
+
+⸻
+
+⚙️ Contraintes techniques (IMPORTANT)
+	•	Code simple et lisible
+	•	Peu de dépendances
+	•	Faible coût Replit
+	•	Pas de logique inutile
+	•	Pensé pour :
+	•	montée en charge
+	•	multi-clients
+	•	maintenance facile
+
+⸻
+
+✅ Résultat attendu
+	•	Onboarding clair et fluide
+	•	Données client propres
+	•	Emails brandés client
+	•	Dashboard inchangé
+	•	Identité Speed AI forte
+	•	Produit premium, cohérent et scalable
