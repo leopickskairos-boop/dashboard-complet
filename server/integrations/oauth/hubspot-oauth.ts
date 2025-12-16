@@ -36,7 +36,7 @@ export function getHubSpotAuthUrl(connectionId: string, userId: string): string 
 router.get("/start", async (req: Request, res: Response) => {
   try {
     if (!HUBSPOT_CLIENT_ID || !HUBSPOT_CLIENT_SECRET) {
-      return res.redirect('/integrations/connections?error=oauth_not_configured');
+      return res.redirect('/integrations?error=oauth_not_configured');
     }
     
     const state = Buffer.from(JSON.stringify({ 
@@ -55,7 +55,7 @@ router.get("/start", async (req: Request, res: Response) => {
     res.redirect(`https://app.hubspot.com/oauth/authorize?${params.toString()}`);
   } catch (error) {
     console.error("HubSpot OAuth start error:", error);
-    res.redirect('/integrations/connections?error=oauth_start_failed');
+    res.redirect('/integrations?error=oauth_start_failed');
   }
 });
 
@@ -65,22 +65,22 @@ router.get("/callback", async (req: Request, res: Response) => {
     
     if (error) {
       console.error("HubSpot OAuth error:", error);
-      return res.redirect('/integrations/connections?error=oauth_denied');
+      return res.redirect('/integrations?error=oauth_denied');
     }
     
     if (!code || !state) {
-      return res.redirect('/integrations/connections?error=missing_params');
+      return res.redirect('/integrations?error=missing_params');
     }
     
     if (!HUBSPOT_CLIENT_ID || !HUBSPOT_CLIENT_SECRET) {
-      return res.redirect('/integrations/connections?error=oauth_not_configured');
+      return res.redirect('/integrations?error=oauth_not_configured');
     }
     
     let stateData: { connectionId: string; userId: string };
     try {
       stateData = JSON.parse(Buffer.from(state as string, 'base64').toString('utf-8'));
     } catch {
-      return res.redirect('/integrations/connections?error=invalid_state');
+      return res.redirect('/integrations?error=invalid_state');
     }
     
     const { connectionId, userId } = stateData;
@@ -102,7 +102,7 @@ router.get("/callback", async (req: Request, res: Response) => {
     if (!tokenResponse.ok) {
       const errorData = await tokenResponse.json();
       console.error("HubSpot token exchange error:", errorData);
-      return res.redirect('/integrations/connections?error=token_exchange_failed');
+      return res.redirect('/integrations?error=token_exchange_failed');
     }
     
     const tokens = await tokenResponse.json();
@@ -117,10 +117,10 @@ router.get("/callback", async (req: Request, res: Response) => {
       connectedAt: new Date()
     });
     
-    res.redirect('/integrations/connections?success=hubspot_connected');
+    res.redirect('/integrations?success=hubspot_connected');
   } catch (error) {
     console.error("HubSpot OAuth callback error:", error);
-    res.redirect('/integrations/connections?error=callback_error');
+    res.redirect('/integrations?error=callback_error');
   }
 });
 
