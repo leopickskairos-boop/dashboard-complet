@@ -18,10 +18,23 @@ import {
   RefreshCw,
   TrendingUp,
   ListOrdered,
-  Timer
+  Timer,
+  Settings,
+  Link2,
+  Link2Off,
+  ExternalLink
 } from 'lucide-react';
+import { SiGoogle } from 'react-icons/si';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+
+interface CalendarConfig {
+  id: string;
+  googleCalendarId?: string;
+  googleCalendarName?: string;
+  isConnected: boolean;
+  lastSyncAt?: string;
+}
 
 interface WaitlistSlot {
   id: string;
@@ -102,6 +115,40 @@ export default function WaitlistDashboard() {
   const { data: slotsData, isLoading: slotsLoading } = useQuery<{ success: boolean; slots: WaitlistSlot[] }>({
     queryKey: ['/api/waitlist/slots'],
   });
+
+  const { data: calendarData, isLoading: calendarLoading } = useQuery<{ success: boolean; config: CalendarConfig | null }>({
+    queryKey: ['/api/waitlist/calendar/config'],
+  });
+
+  const disconnectCalendarMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('DELETE', '/api/waitlist/calendar/disconnect');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/waitlist/calendar'] });
+      toast({ title: 'Google Calendar déconnecté' });
+    },
+    onError: () => {
+      toast({ title: 'Erreur', description: 'Impossible de déconnecter le calendrier', variant: 'destructive' });
+    }
+  });
+
+  const handleConnectCalendar = async () => {
+    try {
+      const response = await fetch('/api/waitlist/calendar/oauth/google/start', {
+        credentials: 'include'
+      });
+      const data = await response.json();
+      if (data.success && data.oauthUrl) {
+        window.location.href = data.oauthUrl;
+      } else {
+        toast({ title: 'Erreur', description: 'Impossible de démarrer la connexion', variant: 'destructive' });
+      }
+    } catch (error) {
+      toast({ title: 'Erreur', description: 'Erreur de connexion', variant: 'destructive' });
+    }
+  };
 
   const cancelMutation = useMutation({
     mutationFn: async (entryId: string) => {
@@ -251,6 +298,10 @@ export default function WaitlistDashboard() {
           <TabsTrigger value="slots" data-testid="tab-slots">
             <Timer className="h-4 w-4 mr-2" />
             Créneaux surveillés ({slots.filter(s => s.status === 'monitoring').length})
+          </TabsTrigger>
+          <TabsTrigger value="settings" data-testid="tab-settings">
+            <Settings className="h-4 w-4 mr-2" />
+            Paramètres
           </TabsTrigger>
         </TabsList>
 
@@ -415,6 +466,121 @@ export default function WaitlistDashboard() {
               ))}
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="settings" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <SiGoogle className="h-5 w-5" />
+                Connexion Google Calendar
+              </CardTitle>
+              <CardDescription>
+                Connectez votre Google Calendar pour détecter automatiquement les créneaux libérés
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {calendarLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : calendarData?.config?.isConnected ? (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 p-4 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900">
+                    <Link2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+                    <div className="flex-1">
+                      <p className="font-medium text-green-800 dark:text-green-300">Calendrier connecté</p>
+                      <p className="text-sm text-green-600 dark:text-green-400">
+                        {calendarData.config.googleCalendarName || 'Calendrier principal'}
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => disconnectCalendarMutation.mutate()}
+                      disabled={disconnectCalendarMutation.isPending}
+                      data-testid="button-disconnect-calendar"
+                    >
+                      <Link2Off className="h-4 w-4 mr-2" />
+                      Déconnecter
+                    </Button>
+                  </div>
+                  {calendarData.config.lastSyncAt && (
+                    <p className="text-sm text-muted-foreground">
+                      Dernière vérification : {formatDateTime(calendarData.config.lastSyncAt)}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50 border">
+                    <Link2Off className="h-5 w-5 text-muted-foreground" />
+                    <div className="flex-1">
+                      <p className="font-medium">Aucun calendrier connecté</p>
+                      <p className="text-sm text-muted-foreground">
+                        Connectez Google Calendar pour la surveillance automatique des créneaux
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={handleConnectCalendar}
+                    className="gap-2"
+                    data-testid="button-connect-calendar"
+                  >
+                    <SiGoogle className="h-4 w-4" />
+                    Connecter Google Calendar
+                    <ExternalLink className="h-4 w-4 ml-1" />
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Fonctionnement</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="p-4 rounded-lg bg-muted/30 space-y-2">
+                  <div className="flex items-center gap-2 font-medium">
+                    <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-sm">1</span>
+                    Demande client
+                  </div>
+                  <p className="text-sm text-muted-foreground pl-8">
+                    Le client demande un créneau indisponible via l'agent vocal
+                  </p>
+                </div>
+                <div className="p-4 rounded-lg bg-muted/30 space-y-2">
+                  <div className="flex items-center gap-2 font-medium">
+                    <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-sm">2</span>
+                    SMS d'inscription
+                  </div>
+                  <p className="text-sm text-muted-foreground pl-8">
+                    Le client reçoit un SMS avec un lien pour s'inscrire sur liste d'attente
+                  </p>
+                </div>
+                <div className="p-4 rounded-lg bg-muted/30 space-y-2">
+                  <div className="flex items-center gap-2 font-medium">
+                    <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-sm">3</span>
+                    Surveillance automatique
+                  </div>
+                  <p className="text-sm text-muted-foreground pl-8">
+                    SpeedAI surveille votre Google Calendar pour détecter les annulations
+                  </p>
+                </div>
+                <div className="p-4 rounded-lg bg-muted/30 space-y-2">
+                  <div className="flex items-center gap-2 font-medium">
+                    <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-sm">4</span>
+                    Notification instantanée
+                  </div>
+                  <p className="text-sm text-muted-foreground pl-8">
+                    Dès qu'une place se libère, le client reçoit un SMS pour confirmer
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

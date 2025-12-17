@@ -80,6 +80,11 @@ class WaitlistService {
         ));
       const priority = (existingEntries[0]?.count || 0) + 1;
 
+      // Generate alternative slots for the same evening if not provided
+      const generatedAlternatives = alternativeSlots && alternativeSlots.length > 0 
+        ? alternativeSlots.map(s => typeof s === 'string' ? new Date(s) : s)
+        : this.generateEveningAlternatives(requestedSlot).map(s => new Date(s));
+
       // Create waitlist entry
       const [entry] = await db.insert(waitlistEntries).values({
         slotId: slot.id,
@@ -89,7 +94,7 @@ class WaitlistService {
         phone,
         email,
         requestedSlot,
-        alternativeSlots: alternativeSlots || [],
+        alternativeSlots: generatedAlternatives,
         nbPersons,
         status: 'pending',
         priority,
@@ -199,6 +204,34 @@ class WaitlistService {
     } else {
       return 10; // 10 minutes otherwise
     }
+  }
+
+  /**
+   * Generate alternative time slots for the same evening
+   * Creates slots every 30 minutes from 18:00 to 22:00 on the same day
+   */
+  private generateEveningAlternatives(requestedSlot: Date): string[] {
+    const alternatives: string[] = [];
+    const slotDate = new Date(requestedSlot);
+    
+    // Define evening window: 18:00 to 22:00 (restaurant typical hours)
+    const eveningStart = new Date(slotDate);
+    eveningStart.setHours(18, 0, 0, 0);
+    
+    const eveningEnd = new Date(slotDate);
+    eveningEnd.setHours(22, 0, 0, 0);
+    
+    // Generate 30-minute interval slots
+    const currentSlot = new Date(eveningStart);
+    while (currentSlot <= eveningEnd) {
+      // Don't include the originally requested slot
+      if (Math.abs(currentSlot.getTime() - requestedSlot.getTime()) > 15 * 60 * 1000) {
+        alternatives.push(currentSlot.toISOString());
+      }
+      currentSlot.setMinutes(currentSlot.getMinutes() + 30);
+    }
+    
+    return alternatives;
   }
 
   private async activateSlotMonitoring(slotId: string, slotStart: Date): Promise<void> {
@@ -452,15 +485,20 @@ class WaitlistService {
       }
 
       // Create confirmation token
-      const tokenData = await this.createToken(entryId, 'confirmation');
-      if (!tokenData) {
-        return { success: false, error: 'Erreur création token' };
-      }
+      const token = this.generateToken();
+      const tokenHash = this.hashToken(token);
+      const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
+
+      await db.insert(waitlistTokens).values({
+        entryId,
+        token,
+        tokenHash,
+        tokenType: 'confirmation',
+        expiresAt
+      });
 
       // Build confirmation URL
-      const frontendUrl = process.env.FRONTEND_URL || 
-        `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`;
-      const confirmUrl = `${frontendUrl}/waitlist/${tokenData.token}`;
+      const confirmUrl = `${FRONTEND_URL}/waitlist/${token}`;
 
       // Send SMS notification
       const { sendWaitlistAvailabilitySms } = await import('./twilio-sms.service');
