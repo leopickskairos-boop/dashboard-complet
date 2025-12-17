@@ -9,6 +9,8 @@ import { useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { SubscriptionExpirationBanner } from "@/components/SubscriptionExpirationBanner";
 import { PushNotificationPopup, usePushNotificationPrompt } from "@/components/PushNotificationPopup";
+import { MobileBottomNav } from "@/components/MobileNavigation";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -22,6 +24,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { showPopup, closePopup } = usePushNotificationPrompt();
+  const isMobile = useIsMobile();
 
   const { data: user } = useQuery<UserData>({
     queryKey: ['/api/auth/me'],
@@ -30,10 +33,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const handleLogout = async () => {
     try {
       await apiRequest("POST", "/api/auth/logout");
-      
-      // CRITICAL FIX: Invalidate cached user data to prevent cross-user data leak
       queryClient.removeQueries({ queryKey: ['/api/auth/me'] });
-      
       setLocation("/login");
     } catch (error) {
       toast({
@@ -49,6 +49,42 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     "--sidebar-width-icon": "3rem",
   };
 
+  // Mobile Layout
+  if (isMobile) {
+    return (
+      <div className="flex flex-col min-h-screen w-full bg-background">
+        {/* Mobile Header */}
+        <header className="sticky top-0 z-40 flex items-center justify-between gap-3 px-4 py-3 border-b bg-background/95 backdrop-blur-lg" data-testid="header-mobile">
+          <Link href="/dashboard" data-testid="link-logo-mobile">
+            <Logo />
+          </Link>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleLogout}
+            data-testid="button-logout-mobile"
+            title="Déconnexion"
+          >
+            <LogOut className="h-5 w-5" />
+          </Button>
+        </header>
+        
+        <SubscriptionExpirationBanner />
+        
+        {/* Main Content with padding for bottom nav */}
+        <main className="flex-1 overflow-auto pb-20">
+          {children}
+        </main>
+        
+        {/* Bottom Navigation */}
+        <MobileBottomNav />
+        
+        <PushNotificationPopup show={showPopup} onClose={closePopup} />
+      </div>
+    );
+  }
+
+  // Desktop Layout
   return (
     <SidebarProvider style={style as React.CSSProperties}>
       <div className="flex h-screen w-full">
@@ -61,7 +97,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 <div className="cursor-pointer hover-elevate rounded-lg transition-colors flex items-center gap-2">
                   <Logo />
                   {user?.companyName && (
-                    <span className="text-sm font-medium text-muted-foreground" data-testid="text-company-name">
+                    <span className="text-sm font-medium text-muted-foreground hidden lg:inline" data-testid="text-company-name">
                       × {user.companyName}
                     </span>
                   )}

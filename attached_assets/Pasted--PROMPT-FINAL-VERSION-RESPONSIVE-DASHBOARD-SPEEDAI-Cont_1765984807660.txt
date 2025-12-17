@@ -1,0 +1,96 @@
+
+⸻
+
+🎯 PROMPT FINAL – VERSION RESPONSIVE DASHBOARD SPEEDAI
+
+Contexte
+
+Tu travailles sur le dashboard B2B premium SpeedAI, une plateforme de pilotage business pour agents réceptionnistes IA.
+Le dashboard existe déjà en version desktop et doit maintenant devenir 100 % responsive, avec une vraie logique produit, pas un simple redimensionnement.
+
+⸻
+
+Objectif global
+
+Créer une expérience responsive intelligente qui :
+	•	adapte automatiquement l’interface selon le device (desktop vs mobile)
+	•	respecte les usages réels des clients
+	•	conserve toutes les fonctionnalités clés
+	•	privilégie la rapidité et la lisibilité sur mobile
+	•	garde la profondeur d’analyse et de travail sur desktop
+
+⸻
+
+Logique par device
+
+🖥️ Version Desktop (PC) – Mode “Travail & Réflexion”
+	•	Interface complète et dense
+	•	Accès à toutes les fonctionnalités avancées :
+	•	analyse détaillée des KPI
+	•	filtres complexes
+	•	historiques complets
+	•	configurations avancées
+	•	Layout large avec :
+	•	sidebar fixe
+	•	tableaux détaillés
+	•	graphiques étendus
+	•	Pensée pour :
+	•	réfléchir
+	•	paramétrer
+	•	analyser
+	•	piloter le business
+
+👉 Aucune perte fonctionnelle sur desktop
+
+⸻
+
+📱 Version Mobile – Mode “Consultation rapide + Actions express”
+⚠️ Important : le mobile n’est PAS une version au rabais.
+
+Objectifs mobile :
+	•	Consultation rapide des informations clés
+	•	Actions possibles en quelques taps
+	•	Zéro surcharge cognitive
+
+Principes UX mobile :
+	•	Navigation via hamburger menu ou bottom navigation
+	•	Priorité aux KPI essentiels
+	•	Sections empilées verticalement
+	•	Cartes (cards) plutôt que tableaux larges
+	•	Scroll fluide, peu profond
+
+Fonctionnalités mobile conservées (version simplifiée) :
+	•	Voir les KPI clés
+	•	Consulter les appels / notifications
+	•	Lancer des actions rapides :
+	•	créer une campagne SMS / email
+	•	activer / désactiver une option
+	•	répondre à un avis
+	•	Accès aux paramètres essentiels uniquement
+	•	Pas de configurations complexes longues sur mobile
+
+👉 Le mobile sert à voir vite + agir vite, pas à tout paramétrer en profondeur.
+
+⸻
+
+Comportement responsive attendu
+	•	Détection automatique du device (desktop / mobile)
+	•	Layout, navigation et hiérarchie des informations adaptées dynamiquement
+	•	Même base de données, même logique métier
+	•	Différence uniquement au niveau UX / UI / priorisation
+
+⸻
+
+Contraintes de design
+	•	Style premium B2B
+	•	Interface claire, lisible, professionnelle
+	•	Boutons et zones tactiles optimisées pour le doigt
+	•	Pas de surcharge visuelle
+	•	Performance prioritaire (mobile first en rapidité)
+
+⸻
+
+Livrable attendu
+	•	Une version responsive complète
+	•	Une UX cohérente entre mobile et desktop
+	•	Un dashboard qui donne une impression de produit sérieux, mature et scalable

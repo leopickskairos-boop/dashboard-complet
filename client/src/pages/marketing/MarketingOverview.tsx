@@ -69,15 +69,15 @@ export default function MarketingOverview() {
   const hasData = stats && (stats.totalEmailsSent > 0 || stats.totalCampaigns > 0);
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-4 md:space-y-6 p-4 md:p-0 pb-8">
       {/* Header */}
-      <div className="flex items-center justify-between pl-1">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-lg font-semibold text-foreground">Marketing</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">Gérez vos campagnes et analysez vos performances</p>
+          <h1 className="text-xl md:text-lg font-semibold text-foreground">Marketing</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">Gérez vos campagnes</p>
         </div>
         <Select value={period} onValueChange={(v) => setPeriod(v as any)}>
-          <SelectTrigger className="w-[160px] h-9 text-xs">
+          <SelectTrigger className="w-full md:w-[160px] h-9 text-xs">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -89,7 +89,7 @@ export default function MarketingOverview() {
       </div>
 
       {/* ZONE A — PILOTAGE RAPIDE */}
-      <div className="grid gap-4 md:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-5">
         {statsLoading ? (
           <>
             {[...Array(5)].map((_, i) => (

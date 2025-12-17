@@ -32,7 +32,10 @@ import {
   FileText,
   Sparkles,
   Target,
-  MessageSquare
+  MessageSquare,
+  Bell,
+  Star,
+  CreditCard
 } from "lucide-react";
 import { Line, LineChart, XAxis, YAxis, Tooltip, ResponsiveContainer, Bar, BarChart, CartesianGrid, Area, AreaChart } from "recharts";
 import type { Call, PublicUser } from "@shared/schema";
@@ -246,11 +249,11 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-screen-2xl mx-auto px-6 py-8">
+      <div className="max-w-screen-2xl mx-auto px-4 md:px-6 py-4 md:py-8">
         {/* Header - Premium Design */}
-        <div className="mb-10">
-          <h1 className="text-3xl font-semibold tracking-tight mb-1.5">Dashboard</h1>
-          <p className="text-[15px] text-muted-foreground">
+        <div className="mb-6 md:mb-10">
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight mb-1">Dashboard</h1>
+          <p className="text-sm md:text-[15px] text-muted-foreground">
             Vue d'ensemble de votre activité
           </p>
         </div>
@@ -259,10 +262,10 @@ export default function Dashboard() {
         {user && <div className="mb-8"><TrialCountdown user={user} /></div>}
 
         {/* Global Time Filter */}
-        <div className="mb-8 flex items-center gap-3">
-          <span className="text-[13px] font-medium text-muted-foreground">Période :</span>
+        <div className="mb-6 md:mb-8 flex items-center gap-2 md:gap-3">
+          <span className="text-xs md:text-[13px] font-medium text-muted-foreground">Période :</span>
           <Select value={globalTimeFilter} onValueChange={setGlobalTimeFilter}>
-            <SelectTrigger className="w-[180px] h-9 text-[13px]" data-testid="select-global-time-filter">
+            <SelectTrigger className="w-[140px] md:w-[180px] h-8 md:h-9 text-xs md:text-[13px]" data-testid="select-global-time-filter">
               <SelectValue placeholder="Toutes les périodes" />
             </SelectTrigger>
             <SelectContent>
@@ -282,19 +285,19 @@ export default function Dashboard() {
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-12">
+          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-5 mb-8 md:mb-12">
             {/* Total Calls - Clickable */}
             <Card 
               className="group relative overflow-hidden cursor-pointer bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] transition-all duration-200 ease-out hover:translate-y-[-2px] hover:shadow-[0_0_16px_rgba(200,184,138,0.15)]" 
               onClick={() => setChartDialog('total')}
               data-testid="card-total-calls"
             >
-              <CardContent className="relative p-7">
-                <div className="flex items-start justify-between mb-5">
-                  <div className="p-2 rounded-xl bg-white/5 flex items-center justify-center">
-                    <Phone className="w-5 h-5 text-[#C8B88A] transition-opacity duration-150 hover:opacity-80" />
+              <CardContent className="relative p-4 md:p-7">
+                <div className="flex items-start justify-between mb-3 md:mb-5">
+                  <div className="p-1.5 md:p-2 rounded-lg md:rounded-xl bg-white/5 flex items-center justify-center">
+                    <Phone className="w-4 h-4 md:w-5 md:h-5 text-[#C8B88A]" />
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="hidden md:flex items-center gap-2">
                     <Button
                       size="sm"
                       variant="ghost"
@@ -310,15 +313,15 @@ export default function Dashboard() {
                     </Button>
                   </div>
                 </div>
-                <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-2 font-medium">
-                  Total des appels
+                <div className="text-[10px] md:text-[11px] text-muted-foreground uppercase tracking-wider mb-1 md:mb-2 font-medium">
+                  Total appels
                 </div>
                 <div className="flex items-end justify-between">
-                  <div className="text-[28px] font-semibold tracking-tight" data-testid="stat-total-calls">
+                  <div className="text-xl md:text-[28px] font-semibold tracking-tight" data-testid="stat-total-calls">
                     {stats?.totalCalls || 0}
                   </div>
-                  <div className="flex items-center gap-1 text-emerald-400 text-xs font-medium">
-                    <TrendingUp className="w-3.5 h-3.5 transition-opacity duration-150 hover:opacity-80" />
+                  <div className="flex items-center gap-0.5 md:gap-1 text-emerald-400 text-[10px] md:text-xs font-medium">
+                    <TrendingUp className="w-3 h-3 md:w-3.5 md:h-3.5" />
                     <span>+12%</span>
                   </div>
                 </div>
@@ -327,20 +330,20 @@ export default function Dashboard() {
 
             {/* Reminders Sent - Not Clickable */}
             <Card className="relative overflow-hidden bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] transition-all duration-200 ease-out hover:translate-y-[-2px] hover:shadow-[0_0_16px_rgba(200,184,138,0.15)]" data-testid="card-reminders-sent">
-              <CardContent className="relative p-7">
-                <div className="flex items-start justify-between mb-5">
-                  <div className="p-2 rounded-xl bg-white/5 flex items-center justify-center">
-                    <MessageSquare className="w-5 h-5 text-[#C8B88A] transition-opacity duration-150 hover:opacity-80" />
+              <CardContent className="relative p-4 md:p-7">
+                <div className="flex items-start justify-between mb-3 md:mb-5">
+                  <div className="p-1.5 md:p-2 rounded-lg md:rounded-xl bg-white/5 flex items-center justify-center">
+                    <MessageSquare className="w-4 h-4 md:w-5 md:h-5 text-[#C8B88A]" />
                   </div>
                 </div>
-                <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-2 font-medium">
-                  Rappels envoyés
+                <div className="text-[10px] md:text-[11px] text-muted-foreground uppercase tracking-wider mb-1 md:mb-2 font-medium">
+                  Rappels
                 </div>
                 <div className="flex items-end justify-between">
-                  <div className="text-[28px] font-semibold tracking-tight" data-testid="stat-reminders-sent">
+                  <div className="text-xl md:text-[28px] font-semibold tracking-tight" data-testid="stat-reminders-sent">
                     {stats?.remindersSent || 0}
                   </div>
-                  <div className="text-xs text-muted-foreground">SMS</div>
+                  <div className="text-[10px] md:text-xs text-muted-foreground">SMS</div>
                 </div>
               </CardContent>
             </Card>
@@ -351,12 +354,12 @@ export default function Dashboard() {
               onClick={() => setChartDialog('conversion')}
               data-testid="card-conversion-rate"
             >
-              <CardContent className="relative p-7">
-                <div className="flex items-start justify-between mb-5">
-                  <div className="p-2 rounded-xl bg-white/5 flex items-center justify-center">
-                    <TrendingUp className="w-5 h-5 text-[#C8B88A] transition-opacity duration-150 hover:opacity-80" />
+              <CardContent className="relative p-4 md:p-7">
+                <div className="flex items-start justify-between mb-3 md:mb-5">
+                  <div className="p-1.5 md:p-2 rounded-lg md:rounded-xl bg-white/5 flex items-center justify-center">
+                    <TrendingUp className="w-4 h-4 md:w-5 md:h-5 text-[#C8B88A]" />
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="hidden md:flex items-center gap-2">
                     <Button
                       size="sm"
                       variant="ghost"
@@ -372,15 +375,15 @@ export default function Dashboard() {
                     </Button>
                   </div>
                 </div>
-                <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-2 font-medium">
-                  Taux de conversion
+                <div className="text-[10px] md:text-[11px] text-muted-foreground uppercase tracking-wider mb-1 md:mb-2 font-medium">
+                  Conversion
                 </div>
                 <div className="flex items-end justify-between">
-                  <div className="text-[28px] font-semibold tracking-tight" data-testid="stat-conversion-rate">
+                  <div className="text-xl md:text-[28px] font-semibold tracking-tight" data-testid="stat-conversion-rate">
                     {stats?.conversionRate || 0}%
                   </div>
-                  <div className="flex items-center gap-1 text-rose-400 text-xs font-medium">
-                    <TrendingDown className="w-3.5 h-3.5 transition-opacity duration-150 hover:opacity-80" />
+                  <div className="flex items-center gap-0.5 md:gap-1 text-rose-400 text-[10px] md:text-xs font-medium">
+                    <TrendingDown className="w-3 h-3 md:w-3.5 md:h-3.5" />
                     <span>-3%</span>
                   </div>
                 </div>
@@ -393,12 +396,12 @@ export default function Dashboard() {
               onClick={() => setChartDialog('duration')}
               data-testid="card-average-duration"
             >
-              <CardContent className="relative p-7">
-                <div className="flex items-start justify-between mb-5">
-                  <div className="p-2 rounded-xl bg-white/5 flex items-center justify-center">
-                    <Clock className="w-5 h-5 text-[#C8B88A] transition-opacity duration-150 hover:opacity-80" />
+              <CardContent className="relative p-4 md:p-7">
+                <div className="flex items-start justify-between mb-3 md:mb-5">
+                  <div className="p-1.5 md:p-2 rounded-lg md:rounded-xl bg-white/5 flex items-center justify-center">
+                    <Clock className="w-4 h-4 md:w-5 md:h-5 text-[#C8B88A]" />
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="hidden md:flex items-center gap-2">
                     <Button
                       size="sm"
                       variant="ghost"
@@ -414,15 +417,15 @@ export default function Dashboard() {
                     </Button>
                   </div>
                 </div>
-                <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-2 font-medium">
-                  Durée moyenne
+                <div className="text-[10px] md:text-[11px] text-muted-foreground uppercase tracking-wider mb-1 md:mb-2 font-medium">
+                  Durée moy.
                 </div>
                 <div className="flex items-end justify-between">
-                  <div className="text-[28px] font-semibold tracking-tight" data-testid="stat-average-duration">
+                  <div className="text-xl md:text-[28px] font-semibold tracking-tight" data-testid="stat-average-duration">
                     {formatDuration(stats?.averageDuration)}
                   </div>
-                  <div className="flex items-center gap-1 text-emerald-400 text-xs font-medium">
-                    <TrendingUp className="w-3.5 h-3.5 transition-opacity duration-150 hover:opacity-80" />
+                  <div className="flex items-center gap-0.5 md:gap-1 text-emerald-400 text-[10px] md:text-xs font-medium">
+                    <TrendingUp className="w-3 h-3 md:w-3.5 md:h-3.5" />
                     <span>+8%</span>
                   </div>
                 </div>
@@ -431,41 +434,41 @@ export default function Dashboard() {
 
             {/* Hours Saved - Not Clickable */}
             <Card className="relative overflow-hidden bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] transition-all duration-200 ease-out hover:translate-y-[-2px] hover:shadow-[0_0_16px_rgba(200,184,138,0.15)]" data-testid="card-hours-saved">
-              <CardContent className="relative p-7">
-                <div className="flex items-start justify-between mb-5">
-                  <div className="p-2 rounded-xl bg-white/5 flex items-center justify-center">
-                    <Timer className="w-5 h-5 text-[#C8B88A] transition-opacity duration-150 hover:opacity-80" />
+              <CardContent className="relative p-4 md:p-7">
+                <div className="flex items-start justify-between mb-3 md:mb-5">
+                  <div className="p-1.5 md:p-2 rounded-lg md:rounded-xl bg-white/5 flex items-center justify-center">
+                    <Timer className="w-4 h-4 md:w-5 md:h-5 text-[#C8B88A]" />
                   </div>
                 </div>
-                <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-2 font-medium">
-                  Heures économisées
+                <div className="text-[10px] md:text-[11px] text-muted-foreground uppercase tracking-wider mb-1 md:mb-2 font-medium">
+                  Heures éco.
                 </div>
                 <div className="flex items-end justify-between">
-                  <div className="text-[28px] font-semibold tracking-tight" data-testid="stat-hours-saved">
+                  <div className="text-xl md:text-[28px] font-semibold tracking-tight" data-testid="stat-hours-saved">
                     {formatHours(stats?.hoursSaved)}
                   </div>
-                  <div className="text-xs text-muted-foreground">Ce mois</div>
+                  <div className="hidden md:block text-xs text-muted-foreground">Ce mois</div>
                 </div>
               </CardContent>
             </Card>
 
             {/* Estimated Revenue - Not Clickable */}
             <Card className="relative overflow-hidden bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] transition-all duration-200 ease-out hover:translate-y-[-2px] hover:shadow-[0_0_16px_rgba(200,184,138,0.15)]" data-testid="card-estimated-revenue">
-              <CardContent className="relative p-7">
-                <div className="flex items-start justify-between mb-5">
-                  <div className="p-2 rounded-xl bg-white/5 flex items-center justify-center">
-                    <Euro className="w-5 h-5 text-[#C8B88A] transition-opacity duration-150 hover:opacity-80" />
+              <CardContent className="relative p-4 md:p-7">
+                <div className="flex items-start justify-between mb-3 md:mb-5">
+                  <div className="p-1.5 md:p-2 rounded-lg md:rounded-xl bg-white/5 flex items-center justify-center">
+                    <Euro className="w-4 h-4 md:w-5 md:h-5 text-[#C8B88A]" />
                   </div>
                 </div>
-                <div className="text-[11px] text-muted-foreground uppercase tracking-wider mb-2 font-medium">
-                  Revenus estimés
+                <div className="text-[10px] md:text-[11px] text-muted-foreground uppercase tracking-wider mb-1 md:mb-2 font-medium">
+                  Revenus
                 </div>
                 <div className="flex items-end justify-between">
-                  <div className="text-[28px] font-semibold tracking-tight" data-testid="stat-estimated-revenue">
+                  <div className="text-xl md:text-[28px] font-semibold tracking-tight" data-testid="stat-estimated-revenue">
                     {formatCurrency(stats?.estimatedRevenue)}
                   </div>
-                  <div className="flex items-center gap-1 text-[#C8B88A] text-xs font-medium">
-                    <TrendingUp className="w-3.5 h-3.5 transition-opacity duration-150 hover:opacity-80" />
+                  <div className="flex items-center gap-0.5 md:gap-1 text-[#C8B88A] text-[10px] md:text-xs font-medium">
+                    <TrendingUp className="w-3 h-3 md:w-3.5 md:h-3.5" />
                   </div>
                 </div>
               </CardContent>
@@ -474,20 +477,21 @@ export default function Dashboard() {
         )}
 
         {/* AI Insights & Trends Section - Premium Consulting Style */}
-        <div className="mb-12 mt-6 relative rounded-[14px] bg-gradient-to-b from-[#111111] to-[#151515] border border-white/[0.06] p-6 shadow-[0_4px_24px_rgba(0,0,0,0.35)]" data-testid="section-insights">
+        {/* On mobile: show simplified version with only hero insight */}
+        <div className={`mb-8 md:mb-12 mt-4 md:mt-6 relative rounded-xl md:rounded-[14px] bg-gradient-to-b from-[#111111] to-[#151515] border border-white/[0.06] p-4 md:p-6 shadow-[0_4px_24px_rgba(0,0,0,0.35)] ${isMobile ? 'hidden md:block' : ''}`} data-testid="section-insights">
           
           {/* Premium Header - No "Voir plus" */}
-          <div className="flex items-center pb-4 mb-5 border-b border-white/[0.04]">
-            <div className="flex items-center gap-4">
-              <div className="w-[44px] h-[44px] rounded-xl flex items-center justify-center relative" style={{ background: 'radial-gradient(circle, rgba(140,120,255,0.15) 0%, transparent 70%)' }}>
-                <Brain className="w-6 h-6 text-violet-400" />
-                <div className="absolute inset-0 rounded-xl" style={{ boxShadow: '0 0 20px rgba(140,120,255,0.2)' }} />
+          <div className="flex items-center pb-3 md:pb-4 mb-4 md:mb-5 border-b border-white/[0.04]">
+            <div className="flex items-center gap-3 md:gap-4">
+              <div className="w-10 h-10 md:w-[44px] md:h-[44px] rounded-lg md:rounded-xl flex items-center justify-center relative" style={{ background: 'radial-gradient(circle, rgba(140,120,255,0.15) 0%, transparent 70%)' }}>
+                <Brain className="w-5 h-5 md:w-6 md:h-6 text-violet-400" />
+                <div className="absolute inset-0 rounded-lg md:rounded-xl" style={{ boxShadow: '0 0 20px rgba(140,120,255,0.2)' }} />
               </div>
               <div>
-                <h2 className="text-[20px] font-semibold tracking-tight text-[#EDEDED]">
-                  Insights IA & Tendances
+                <h2 className="text-base md:text-[20px] font-semibold tracking-tight text-[#EDEDED]">
+                  Insights IA
                 </h2>
-                <p className="text-[13px] text-[#A0A0A0] mt-0.5">
+                <p className="text-xs md:text-[13px] text-[#A0A0A0] mt-0.5 hidden md:block">
                   Recommandations basées sur vos données en temps réel
                 </p>
               </div>
@@ -553,11 +557,11 @@ export default function Dashboard() {
                 );
               })()}
 
-              {/* ZONE B: Secondary Insights (3 columns: 2 insights + 1 chart card) */}
+              {/* ZONE B: Secondary Insights (3 columns on desktop, 1 on mobile) */}
               <div 
-                className="grid gap-4" 
+                className="grid gap-3 md:gap-4" 
                 style={{ 
-                  gridTemplateColumns: 'repeat(3, 1fr)',
+                  gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
                   gridAutoRows: '1fr'
                 }}
               >
@@ -1142,8 +1146,66 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Calls List Section - Premium Design */}
-        <Card className="border-white/[0.06]">
+        {/* MOBILE ONLY: Quick Actions & Summary Section */}
+        {isMobile && (
+          <div className="space-y-4 mb-6">
+            {/* Mobile insight summary */}
+            {!insightsLoading && aiInsights[0] && (
+              <div className="p-4 rounded-xl bg-gradient-to-b from-[#111111] to-[#151515] border border-white/[0.06]">
+                <div className="flex items-center gap-2 mb-2">
+                  <Brain className="w-4 h-4 text-violet-400" />
+                  <span className="text-xs font-medium text-violet-400">Insight IA</span>
+                </div>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {aiInsights[0].text}
+                </p>
+              </div>
+            )}
+            
+            {/* Quick Actions */}
+            <div className="grid grid-cols-2 gap-3">
+              <Button
+                variant="outline"
+                className="flex flex-col items-center gap-2 h-auto py-4 px-3"
+                onClick={() => window.location.href = '/notifications'}
+                data-testid="button-quick-notifications"
+              >
+                <Bell className="w-5 h-5" />
+                <span className="text-xs">Notifications</span>
+              </Button>
+              <Button
+                variant="outline"
+                className="flex flex-col items-center gap-2 h-auto py-4 px-3"
+                onClick={() => window.location.href = '/guarantee/reservations'}
+                data-testid="button-quick-guarantee"
+              >
+                <CreditCard className="w-5 h-5" />
+                <span className="text-xs">Garanties CB</span>
+              </Button>
+              <Button
+                variant="outline"
+                className="flex flex-col items-center gap-2 h-auto py-4 px-3"
+                onClick={() => window.location.href = '/reviews'}
+                data-testid="button-quick-reviews"
+              >
+                <Star className="w-5 h-5" />
+                <span className="text-xs">Avis clients</span>
+              </Button>
+              <Button
+                variant="outline"
+                className="flex flex-col items-center gap-2 h-auto py-4 px-3"
+                onClick={() => window.location.href = '/account'}
+                data-testid="button-quick-account"
+              >
+                <User className="w-5 h-5" />
+                <span className="text-xs">Mon compte</span>
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Calls List Section - Premium Design (HIDDEN ON MOBILE) */}
+        <Card className={`border-white/[0.06] ${isMobile ? 'hidden' : ''}`}>
           <CardHeader className="pb-4">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div>
