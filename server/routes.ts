@@ -2749,6 +2749,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         cancellationReason: meta.cancellation_reason,
         cancellationTime: meta.cancellation_time ? new Date(meta.cancellation_time) : undefined,
         
+        // Waitlist info from N8N
+        wantsWaitlist: data.wants_waitlist ?? meta.wants_waitlist,
+        waitlistSlotRequested: parseFlexibleDate(data.waitlist_slot_requested ?? meta.waitlist_slot_requested),
+        
         // Technical from metadata
         calendarId: meta.calendar_id,
         timezone: meta.timezone,

@@ -243,6 +243,10 @@ export const calls = pgTable("calls", {
   cancellationReason: text("cancellation_reason"),
   cancellationTime: timestamp("cancellation_time"),
   
+  // Waitlist info (from N8N)
+  wantsWaitlist: boolean("wants_waitlist"), // Client wants to be on waitlist if slot unavailable
+  waitlistSlotRequested: timestamp("waitlist_slot_requested"), // The slot they want to wait for
+  
   // Technical
   calendarId: text("calendar_id"),
   timezone: text("timezone"),
@@ -323,6 +327,10 @@ export const n8nCallWebhookSchema = z.object({
   dashboard_url: z.string().nullable().optional(),
   collected_at: z.union([z.string(), z.number()]).nullable().optional(),
   
+  // Waitlist info (indicates if client wants to be on waitlist for unavailable slot)
+  wants_waitlist: z.boolean().nullable().optional(),
+  waitlist_slot_requested: flexibleDateTime, // The slot they want to wait for
+  
   // Rich metadata from N8N (all fields extracted)
   metadata: z.object({
     event_type: z.string().nullable().optional(),
@@ -355,6 +363,9 @@ export const n8nCallWebhookSchema = z.object({
     calendar_id: z.string().nullable().optional(),
     timezone: z.string().nullable().optional(),
     recording_url: z.string().nullable().optional(),
+    // Waitlist info can also be in metadata
+    wants_waitlist: z.boolean().nullable().optional(),
+    waitlist_slot_requested: z.union([z.string(), z.number()]).nullable().optional(),
   }).passthrough().nullable().optional(), // passthrough allows additional unknown fields
 });
 

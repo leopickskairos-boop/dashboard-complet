@@ -29,11 +29,13 @@ import { queryClient, apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 
 interface CalendarConfig {
-  id: string;
-  googleCalendarId?: string;
-  googleCalendarName?: string;
-  isConnected: boolean;
+  provider?: string;
+  calendarId?: string;
+  calendarName?: string;
+  isEnabled?: boolean;
+  checkIntervalMinutes?: number;
   lastSyncAt?: string;
+  lastError?: string;
 }
 
 interface WaitlistSlot {
@@ -116,17 +118,17 @@ export default function WaitlistDashboard() {
     queryKey: ['/api/waitlist/slots'],
   });
 
-  const { data: calendarData, isLoading: calendarLoading } = useQuery<{ success: boolean; config: CalendarConfig | null }>({
+  const { data: calendarData, isLoading: calendarLoading } = useQuery<{ success: boolean; config: CalendarConfig | null; isConnected: boolean }>({
     queryKey: ['/api/waitlist/calendar/config'],
   });
 
   const disconnectCalendarMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest('DELETE', '/api/waitlist/calendar/disconnect');
+      const response = await apiRequest('POST', '/api/waitlist/calendar/disconnect');
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/waitlist/calendar'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/waitlist/calendar/config'] });
       toast({ title: 'Google Calendar déconnecté' });
     },
     onError: () => {
@@ -156,7 +158,8 @@ export default function WaitlistDashboard() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/waitlist'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/waitlist/entries'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/waitlist/stats'] });
       toast({ title: 'Entrée annulée' });
     },
   });
@@ -167,7 +170,8 @@ export default function WaitlistDashboard() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/waitlist'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/waitlist/entries'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/waitlist/stats'] });
       toast({ title: 'Entrée supprimée' });
     },
   });
@@ -484,14 +488,14 @@ export default function WaitlistDashboard() {
                 <div className="flex items-center justify-center py-8">
                   <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
                 </div>
-              ) : calendarData?.config?.isConnected ? (
+              ) : calendarData?.isConnected ? (
                 <div className="space-y-4">
                   <div className="flex items-center gap-3 p-4 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900">
                     <Link2 className="h-5 w-5 text-green-600 dark:text-green-400" />
                     <div className="flex-1">
                       <p className="font-medium text-green-800 dark:text-green-300">Calendrier connecté</p>
                       <p className="text-sm text-green-600 dark:text-green-400">
-                        {calendarData.config.googleCalendarName || 'Calendrier principal'}
+                        {calendarData?.config?.calendarName || 'Calendrier principal'}
                       </p>
                     </div>
                     <Button
@@ -505,9 +509,9 @@ export default function WaitlistDashboard() {
                       Déconnecter
                     </Button>
                   </div>
-                  {calendarData.config.lastSyncAt && (
+                  {calendarData?.config?.lastSyncAt && (
                     <p className="text-sm text-muted-foreground">
-                      Dernière vérification : {formatDateTime(calendarData.config.lastSyncAt)}
+                      Dernière vérification : {formatDateTime(calendarData.config!.lastSyncAt!)}
                     </p>
                   )}
                 </div>

@@ -58,16 +58,16 @@ class WaitlistScheduler {
     }
 
     // Calculate check interval based on proximity to slot time
-    // Adaptive frequency per spec: D-1 = 10min, Day-D (<=6h) = 3min
+    // Cost-optimized adaptive frequency: >24h = 60min, D-1 = 30min, <6h = 10min
     const hoursUntilSlot = (slot.slotStart.getTime() - now.getTime()) / (1000 * 60 * 60);
     let intervalMinutes: number;
 
     if (hoursUntilSlot <= 6) {
-      intervalMinutes = 3; // Day of slot (within 6 hours): every 3 minutes
+      intervalMinutes = 10; // Day of slot (within 6 hours): every 10 minutes
     } else if (hoursUntilSlot <= 24) {
-      intervalMinutes = 10; // D-1 (within 24 hours): every 10 minutes
+      intervalMinutes = 30; // D-1 (within 24 hours): every 30 minutes
     } else {
-      intervalMinutes = 30; // Beyond D-1: every 30 minutes (minimal checks)
+      intervalMinutes = 60; // Beyond D-1: every 60 minutes (minimal checks)
     }
 
     // Schedule next check
