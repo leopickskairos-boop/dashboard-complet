@@ -47,6 +47,7 @@ import {
   Target,
   ArrowRight,
   HelpCircle,
+  MessageSquare,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -371,31 +372,33 @@ export default function MarketingAudience() {
             {/* TAB CONTACTS */}
             <TabsContent value="contacts" className="space-y-4 mt-0">
               {/* Barre de recherche et filtres */}
-              <div className="flex items-center gap-3">
-                <div className="relative flex-1 min-w-[200px]">
+              <div className="flex flex-col md:flex-row gap-2 md:items-center md:gap-3">
+                <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Rechercher par nom, email, téléphone..."
+                    placeholder="Rechercher..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     className="pl-10 h-9 text-xs"
                   />
                 </div>
-                <Select value={filterOptIn} onValueChange={setFilterOptIn}>
-                  <SelectTrigger className="w-[180px] h-9 text-xs">
-                    <Filter className="h-3.5 w-3.5 mr-2" />
-                    <SelectValue placeholder="Filtrer" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Tous les contacts</SelectItem>
-                    <SelectItem value="email_optin">Opt-in email</SelectItem>
-                    <SelectItem value="sms_optin">Opt-in SMS</SelectItem>
-                    <SelectItem value="no_optin">Sans opt-in</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Button variant="ghost" size="icon" onClick={() => refetch()} className="h-9 w-9">
-                  <RefreshCw className="h-4 w-4" />
-                </Button>
+                <div className="flex gap-2">
+                  <Select value={filterOptIn} onValueChange={setFilterOptIn}>
+                    <SelectTrigger className="flex-1 md:w-[140px] h-9 text-xs">
+                      <Filter className="h-3.5 w-3.5 mr-1 md:mr-2" />
+                      <SelectValue placeholder="Filtrer" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Tous</SelectItem>
+                      <SelectItem value="email_optin">Opt-in email</SelectItem>
+                      <SelectItem value="sms_optin">Opt-in SMS</SelectItem>
+                      <SelectItem value="no_optin">Sans opt-in</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button variant="ghost" size="icon" onClick={() => refetch()} className="h-9 w-9 flex-shrink-0">
+                    <RefreshCw className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
 
               {/* Table ou Empty State */}
@@ -442,23 +445,33 @@ export default function MarketingAudience() {
                     {data.contacts.map((contact: any) => (
                       <div
                         key={contact.id}
-                        className="flex items-center gap-4 p-4 hover:bg-muted/20 transition-colors group"
+                        className="flex items-center gap-3 p-3 md:p-4 hover:bg-muted/20 transition-colors group"
                       >
-                        <div className="h-10 w-10 rounded-full bg-[#C8B88A]/20 flex items-center justify-center text-[#C8B88A] font-medium text-sm">
+                        <div className="h-9 w-9 md:h-10 md:w-10 rounded-full bg-[#C8B88A]/20 flex items-center justify-center text-[#C8B88A] font-medium text-xs md:text-sm flex-shrink-0">
                           {(contact.firstName?.[0] || '?').toUpperCase()}
                           {(contact.lastName?.[0] || '').toUpperCase()}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate text-sm">
-                            {contact.firstName} {contact.lastName}
-                          </p>
-                          <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
-                            {contact.email && (
-                              <span className="flex items-center gap-1 truncate">
-                                <Mail className="h-3 w-3" />
-                                {contact.email}
-                              </span>
-                            )}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-medium text-sm truncate">
+                              {contact.firstName} {contact.lastName}
+                            </p>
+                            <div className="hidden md:flex items-center gap-1">
+                              {contact.optInEmail && (
+                                <Badge variant="outline" className="text-[#4CEFAD] border-[#4CEFAD]/50 bg-[#4CEFAD]/10 text-[10px] px-1.5 py-0">
+                                  <CheckCircle className="h-2.5 w-2.5 mr-0.5" />
+                                  Email
+                                </Badge>
+                              )}
+                              {contact.optInSms && (
+                                <Badge variant="outline" className="text-[#4CEFAD] border-[#4CEFAD]/50 bg-[#4CEFAD]/10 text-[10px] px-1.5 py-0">
+                                  <CheckCircle className="h-2.5 w-2.5 mr-0.5" />
+                                  SMS
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex flex-col md:flex-row md:items-center gap-0.5 md:gap-3 text-xs text-muted-foreground mt-0.5">
                             {contact.phone && (
                               <span className="flex items-center gap-1">
                                 <Phone className="h-3 w-3" />
@@ -467,27 +480,15 @@ export default function MarketingAudience() {
                             )}
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          {contact.optInEmail ? (
-                            <Badge variant="outline" className="text-[#4CEFAD] border-[#4CEFAD]/50 bg-[#4CEFAD]/10 text-[10px]">
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                              Email
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-muted-foreground/70 border-border/40 text-[10px]">
-                              <XCircle className="h-3 w-3 mr-1" />
-                              Email
+                        <div className="flex md:hidden items-center gap-1">
+                          {contact.optInEmail && (
+                            <Badge variant="outline" className="text-[#4CEFAD] border-[#4CEFAD]/50 bg-[#4CEFAD]/10 text-[9px] px-1 py-0">
+                              <CheckCircle className="h-2.5 w-2.5" />
                             </Badge>
                           )}
-                          {contact.optInSms ? (
-                            <Badge variant="outline" className="text-[#4CEFAD] border-[#4CEFAD]/50 bg-[#4CEFAD]/10 text-[10px]">
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                              SMS
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-muted-foreground/70 border-border/40 text-[10px]">
-                              <XCircle className="h-3 w-3 mr-1" />
-                              SMS
+                          {contact.optInSms && (
+                            <Badge variant="outline" className="text-[#4CEFAD] border-[#4CEFAD]/50 bg-[#4CEFAD]/10 text-[9px] px-1 py-0">
+                              <MessageSquare className="h-2.5 w-2.5" />
                             </Badge>
                           )}
                         </div>
