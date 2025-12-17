@@ -1,4 +1,35 @@
-import { LayoutDashboard, Bell, User, Shield, CreditCard, Calendar, History, Settings, Star, MessageSquare, BarChart3, Send, QrCode, Megaphone, Users, Mail, Filter, Workflow, TrendingUp, Database, FileText, Clock } from "lucide-react";
+import { 
+  LayoutDashboard, 
+  Bell, 
+  User, 
+  Shield, 
+  CreditCard, 
+  Calendar, 
+  History, 
+  Settings, 
+  Star, 
+  MessageSquare, 
+  BarChart3, 
+  Send, 
+  QrCode, 
+  Megaphone, 
+  Users, 
+  Mail, 
+  Workflow, 
+  TrendingUp, 
+  Database, 
+  FileText, 
+  Clock,
+  Phone,
+  PhoneMissed,
+  Lightbulb,
+  AlertTriangle,
+  Target,
+  Banknote,
+  ChevronDown,
+  Plug,
+  CalendarClock
+} from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -13,130 +44,185 @@ import { Link, useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { useUser } from "@/hooks/use-user";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useState } from "react";
 
-const menuItems = [
+const piloterItems = [
   {
-    title: "Dashboard",
+    title: "Aujourd'hui",
     url: "/dashboard",
     icon: LayoutDashboard,
+    description: "Vue d'ensemble",
+  },
+  {
+    title: "Activité",
+    icon: Phone,
+    children: [
+      { title: "Appels", url: "/dashboard", icon: Phone },
+      { title: "Liste d'attente", url: "/waitlist", icon: Clock },
+    ],
+  },
+  {
+    title: "Recommandations",
+    url: "/dashboard#insights",
+    icon: Lightbulb,
+    description: "Insights IA",
+  },
+  {
+    title: "Protection",
+    icon: Shield,
+    children: [
+      { title: "Garantie CB", url: "/settings/guarantee", icon: CreditCard },
+      { title: "Réservations", url: "/guarantee/reservations", icon: Calendar },
+      { title: "No-shows", url: "/guarantee/history", icon: History },
+    ],
+  },
+  {
+    title: "Réputation",
+    icon: Star,
+    children: [
+      { title: "Tous les avis", url: "/reviews", icon: MessageSquare },
+      { title: "Campagnes", url: "/reviews/campaigns", icon: Send },
+      { title: "Statistiques", url: "/reviews/stats", icon: BarChart3 },
+      { title: "Configuration", url: "/reviews/settings", icon: Settings },
+      { title: "Widgets", url: "/reviews/widgets", icon: QrCode },
+    ],
+  },
+];
+
+const developperItems = [
+  {
+    title: "Croissance",
+    icon: TrendingUp,
+    children: [
+      { title: "Vue d'ensemble", url: "/marketing", icon: Megaphone },
+      { title: "Audience", url: "/marketing/contacts", icon: Users },
+      { title: "Campagnes", url: "/marketing/campaigns", icon: Mail },
+      { title: "Automations", url: "/marketing/automations", icon: Workflow },
+      { title: "Analytics", url: "/marketing/analytics", icon: TrendingUp },
+    ],
   },
   {
     title: "Rapports",
     url: "/reports",
     icon: FileText,
-  },
-  {
-    title: "Notifications",
-    url: "/notifications",
-    icon: Bell,
-    showBadge: true,
-  },
-  {
-    title: "Mon compte",
-    url: "/account",
-    icon: User,
+    description: "Rapports mensuels",
   },
 ];
 
-const guaranteeItems = [
+const systemeItems = [
   {
-    title: "Configuration",
-    url: "/settings/guarantee",
+    title: "Intégrations",
+    icon: Plug,
+    children: [
+      { title: "Vue d'ensemble", url: "/integrations", icon: Database },
+      { title: "Clients sync", url: "/integrations/customers", icon: Users },
+    ],
+  },
+  {
+    title: "Préférences",
     icon: Settings,
-  },
-  {
-    title: "Réservations",
-    url: "/guarantee/reservations",
-    icon: Calendar,
-  },
-  {
-    title: "Historique",
-    url: "/guarantee/history",
-    icon: History,
+    children: [
+      { title: "Mon compte", url: "/account", icon: User },
+      { title: "Notifications", url: "/notifications", icon: Bell, showBadge: true },
+    ],
   },
 ];
 
-const reviewsItems = [
-  {
-    title: "Configuration",
-    url: "/reviews/settings",
-    icon: Settings,
-  },
-  {
-    title: "Campagnes",
-    url: "/reviews/campaigns",
-    icon: Send,
-  },
-  {
-    title: "QR & Widgets",
-    url: "/reviews/widgets",
-    icon: QrCode,
-  },
-  {
-    title: "Tous les avis",
-    url: "/reviews",
-    icon: MessageSquare,
-  },
-  {
-    title: "Statistiques",
-    url: "/reviews/stats",
-    icon: BarChart3,
-  },
-];
+function NavSection({ 
+  title, 
+  items, 
+  location, 
+  unreadCount,
+  color = "text-muted-foreground"
+}: { 
+  title: string; 
+  items: any[]; 
+  location: string;
+  unreadCount?: number;
+  color?: string;
+}) {
+  const [openItems, setOpenItems] = useState<string[]>([]);
 
-const marketingItems = [
-  {
-    title: "Vue d'ensemble",
-    url: "/marketing",
-    icon: Megaphone,
-  },
-  {
-    title: "Audience",
-    url: "/marketing/contacts",
-    icon: Users,
-  },
-  {
-    title: "Campagnes",
-    url: "/marketing/campaigns",
-    icon: Mail,
-  },
-  {
-    title: "Templates",
-    url: "/marketing/templates",
-    icon: Send,
-  },
-  {
-    title: "Automations",
-    url: "/marketing/automations",
-    icon: Workflow,
-  },
-      {
-        title: "Analytics",
-        url: "/marketing/analytics",
-        icon: TrendingUp,
-      },
-];
+  const toggleItem = (itemTitle: string) => {
+    setOpenItems(prev => 
+      prev.includes(itemTitle) 
+        ? prev.filter(t => t !== itemTitle)
+        : [...prev, itemTitle]
+    );
+  };
 
-const integrationItems = [
-  {
-    title: "Vue d'ensemble",
-    url: "/integrations",
-    icon: Database,
-  },
-  {
-    title: "Clients",
-    url: "/integrations/customers",
-    icon: Users,
-  },
-];
+  const isChildActive = (children?: any[]) => {
+    if (!children) return false;
+    return children.some(child => location === child.url || location.startsWith(child.url + '/'));
+  };
 
-const waitlistItems = [
-  {
-    title: "Liste d'attente",
-    url: "/waitlist",
-    icon: Clock,
-  },
-];
+  return (
+    <SidebarGroup>
+      <SidebarGroupLabel className={`text-xs font-semibold uppercase tracking-wider ${color}`}>
+        {title}
+      </SidebarGroupLabel>
+      <SidebarGroupContent>
+        <SidebarMenu>
+          {items.map((item) => {
+            if (item.children) {
+              const isOpen = openItems.includes(item.title) || isChildActive(item.children);
+              return (
+                <Collapsible key={item.title} open={isOpen}>
+                  <SidebarMenuItem>
+                    <CollapsibleTrigger asChild>
+                      <SidebarMenuButton 
+                        onClick={() => toggleItem(item.title)}
+                        className={isChildActive(item.children) ? "bg-sidebar-accent text-sidebar-accent-foreground" : ""}
+                      >
+                        <item.icon className="h-4 w-4" />
+                        <span>{item.title}</span>
+                        <ChevronDown className={`ml-auto h-4 w-4 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                      </SidebarMenuButton>
+                    </CollapsibleTrigger>
+                  </SidebarMenuItem>
+                  <CollapsibleContent>
+                    <div className="ml-4 border-l border-border/40 pl-2 mt-1 space-y-1">
+                      {item.children.map((child: any) => (
+                        <SidebarMenuItem key={child.url}>
+                          <SidebarMenuButton asChild isActive={location === child.url}>
+                            <Link href={child.url} data-testid={`link-${child.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                              <child.icon className="h-3.5 w-3.5" />
+                              <span className="text-sm">{child.title}</span>
+                              {child.showBadge && unreadCount && unreadCount > 0 && (
+                                <Badge 
+                                  variant="destructive" 
+                                  className="ml-auto h-5 min-w-5 px-1 flex items-center justify-center text-xs"
+                                >
+                                  {unreadCount > 99 ? '99+' : unreadCount}
+                                </Badge>
+                              )}
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      ))}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+              );
+            }
+
+            return (
+              <SidebarMenuItem key={item.title}>
+                <SidebarMenuButton asChild isActive={location === item.url}>
+                  <Link href={item.url} data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                    <item.icon className="h-4 w-4" />
+                    <span>{item.title}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            );
+          })}
+        </SidebarMenu>
+      </SidebarGroupContent>
+    </SidebarGroup>
+  );
+}
 
 export function AppSidebar() {
   const [location] = useLocation();
@@ -149,148 +235,46 @@ export function AppSidebar() {
 
   return (
     <Sidebar>
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {menuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={location === item.url}>
-                    <Link href={item.url} data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                      {item.showBadge && unreadCount && unreadCount > 0 && (
-                        <Badge 
-                          variant="destructive" 
-                          className="ml-auto h-5 min-w-5 px-1 flex items-center justify-center text-xs"
-                          data-testid="badge-unread-count"
-                        >
-                          {unreadCount > 99 ? '99+' : unreadCount}
-                        </Badge>
-                      )}
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-              
-              {user?.role === "admin" && (
+      <SidebarContent className="py-2">
+        <NavSection 
+          title="Piloter" 
+          items={piloterItems} 
+          location={location}
+          unreadCount={unreadCount}
+          color="text-[#C8B88A]"
+        />
+        
+        <NavSection 
+          title="Développer" 
+          items={developperItems} 
+          location={location}
+          color="text-muted-foreground"
+        />
+        
+        <NavSection 
+          title="Système" 
+          items={systemeItems} 
+          location={location}
+          unreadCount={unreadCount}
+          color="text-muted-foreground/70"
+        />
+
+        {user?.role === "admin" && (
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <SidebarMenu>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={location === "/admin"}>
                     <Link href="/admin" data-testid="link-administration">
-                      <Shield />
+                      <Shield className="h-4 w-4" />
                       <span>Administration</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-              )}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel className="flex items-center gap-2 text-[#C8B88A]">
-            <CreditCard className="h-4 w-4" />
-            Garantie CB
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {guaranteeItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={location === item.url}>
-                    <Link href={item.url} data-testid={`link-guarantee-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel className="flex items-center gap-2 text-[#C8B88A]">
-            <Star className="h-4 w-4" />
-            Avis & Réputation
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {reviewsItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={location === item.url || (item.url === "/reviews" && location.startsWith("/reviews/") && !reviewsItems.some(i => i.url !== "/reviews" && location === i.url))}>
-                    <Link href={item.url} data-testid={`link-reviews-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel className="flex items-center gap-2 text-[#C8B88A]">
-            <Megaphone className="h-4 w-4" />
-            Marketing
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {marketingItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={location === item.url || (item.url === "/marketing" && location.startsWith("/marketing/") && !marketingItems.some(i => i.url !== "/marketing" && location === i.url))}>
-                    <Link href={item.url} data-testid={`link-marketing-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel className="flex items-center gap-2 text-[#C8B88A]">
-            <Database className="h-4 w-4" />
-            Intégrations
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {integrationItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={location === item.url || (item.url === "/integrations" && location.startsWith("/integrations/") && !integrationItems.some(i => i.url !== "/integrations" && location === i.url))}>
-                    <Link href={item.url} data-testid={`link-integration-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel className="flex items-center gap-2 text-[#C8B88A]">
-            <Clock className="h-4 w-4" />
-            Réservations
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {waitlistItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={location === item.url}>
-                    <Link href={item.url} data-testid={`link-waitlist-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
     </Sidebar>
   );

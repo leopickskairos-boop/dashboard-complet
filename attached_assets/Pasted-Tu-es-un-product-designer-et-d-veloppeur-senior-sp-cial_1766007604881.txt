@@ -1,0 +1,130 @@
+Tu es un product designer et développeur senior spécialisé en SaaS B2B premium.
+Tu travailles sur MEGIN, une plateforme d’accompagnement business par IA,
+centrée sur la gestion des appels, la protection du chiffre d’affaires,
+la réputation et la prise de décision.
+
+OBJECTIF :
+Refondre la navigation et la structure globale du dashboard MEGIN
+pour réduire la surcharge cognitive, renforcer la sensation d’accompagnement,
+et permettre à un dirigeant de comprendre la situation en moins de 10 secondes.
+
+PRINCIPE FONDAMENTAL :
+La navigation ne reflète PAS les features techniques.
+Elle reflète l’état mental du dirigeant :
+- Où j’en suis
+- Ce que MEGIN observe pour moi
+- Ce que je dois faire maintenant
+
+---
+
+## STRUCTURE DE NAVIGATION À IMPLÉMENTER
+
+### 🔵 NIVEAU 1 — PILOTER (navigation principale, fixe)
+
+1. **Aujourd’hui**
+   (Dashboard principal – centre du produit)
+   - Vue d’ensemble
+   - Message IA prioritaire (ton humain et rassurant)
+   - 5 KPI maximum
+   - 1 action recommandée par MEGIN
+
+2. **Activité**
+   - Appels
+   - Historique
+   - Appels manqués
+   - Liste d’attente
+   Objectif : comprendre ce qui se passe concrètement
+
+3. **Recommandations**
+   - Insights IA
+   - Points d’attention
+   - Actions priorisées
+   Objectif : guider la décision
+
+4. **Protection**
+   - Garantie CB
+   - No-shows
+   - Argent protégé / récupéré
+   - Échecs de paiement
+   Objectif : montrer l’impact financier direct
+
+5. **Réputation**
+   - Avis clients
+   - Campagnes d’avis
+   - Réponses
+   - Statistiques
+   Objectif : image de marque et confiance
+
+---
+
+### 🟡 NIVEAU 2 — DÉVELOPPER (navigation secondaire)
+
+6. **Croissance**
+   - Marketing
+   - Campagnes SMS / Email
+   - Automations
+   - Audience
+   Objectif : aller plus loin quand le business est stable
+
+7. **Rapports**
+   - Rapports mensuels PDF
+   - Historique
+   - Comparaisons
+   Objectif : suivi long terme et justification du ROI
+
+---
+
+### ⚪ NIVEAU 3 — SYSTÈME (menu ⚙️ discret)
+
+8. **Intégrations**
+   - CRM
+   - Calendriers
+   - API
+   - Zapier
+
+9. **Préférences**
+   - Compte
+   - Abonnement
+   - Notifications
+   - Sécurité
+
+---
+
+## RÈGLES UI & UX À RESPECTER PARTOUT
+
+- Design calme, premium, structuré
+- Cartes KPI avec angles arrondis
+- Beaucoup d’espace blanc
+- Palette sobre noir / blanc
+- L’orange est utilisé UNIQUEMENT pour :
+  - actions recommandées
+  - alertes importantes
+  - argent protégé ou généré
+
+- Jamais plus d’une action principale par écran
+- Les écrans secondaires ne doivent jamais surcharger l’utilisateur
+
+---
+
+## TON & NARRATION
+
+MEGIN n’est pas un logiciel froid.
+MEGIN est un copilote business.
+
+Utiliser des micro-textes humains :
+- “MEGIN observe que…”
+- “Un point d’attention aujourd’hui…”
+- “Action recommandée pour améliorer vos résultats…”
+
+Éviter tout jargon technique inutile.
+
+---
+
+## OBJECTIF FINAL
+
+Créer une plateforme qui donne au dirigeant la sensation que :
+- son business est sous contrôle
+- quelqu’un veille sur lui
+- il sait toujours quoi faire ensuite
+
+Tout le design et la navigation doivent servir cet objectif.

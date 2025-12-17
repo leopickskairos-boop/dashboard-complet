@@ -5,7 +5,6 @@ import {
   User, 
   CreditCard,
   Star,
-  Megaphone,
   Menu,
   X,
   Settings,
@@ -22,7 +21,12 @@ import {
   Database,
   Clock,
   FileText,
-  Shield
+  Shield,
+  Phone,
+  Lightbulb,
+  Plug,
+  Megaphone,
+  ChevronRight
 } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -42,59 +46,52 @@ const bottomNavItems = [
 
 const menuSections = [
   {
-    title: "Principal",
+    title: "Piloter",
+    color: "#C8B88A",
     items: [
-      { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-      { title: "Rapports", url: "/reports", icon: FileText },
-      { title: "Notifications", url: "/notifications", icon: Bell },
-      { title: "Mon compte", url: "/account", icon: User },
+      { title: "Aujourd'hui", url: "/dashboard", icon: LayoutDashboard, description: "Vue d'ensemble" },
+      { title: "Liste d'attente", url: "/waitlist", icon: Clock },
+      { title: "Recommandations", url: "/dashboard", icon: Lightbulb },
     ]
   },
   {
-    title: "Garantie CB",
+    title: "Protection",
     color: "#C8B88A",
     items: [
       { title: "Configuration", url: "/settings/guarantee", icon: Settings },
       { title: "Réservations", url: "/guarantee/reservations", icon: Calendar },
-      { title: "Historique", url: "/guarantee/history", icon: History },
+      { title: "No-shows", url: "/guarantee/history", icon: History },
     ]
   },
   {
-    title: "Avis & Réputation",
+    title: "Réputation",
     color: "#C8B88A",
     items: [
-      { title: "Configuration", url: "/reviews/settings", icon: Settings },
-      { title: "Campagnes", url: "/reviews/campaigns", icon: Send },
-      { title: "QR & Widgets", url: "/reviews/widgets", icon: QrCode },
       { title: "Tous les avis", url: "/reviews", icon: MessageSquare },
+      { title: "Campagnes", url: "/reviews/campaigns", icon: Send },
       { title: "Statistiques", url: "/reviews/stats", icon: BarChart3 },
+      { title: "Configuration", url: "/reviews/settings", icon: Settings },
+      { title: "Widgets", url: "/reviews/widgets", icon: QrCode },
     ]
   },
   {
-    title: "Marketing",
-    color: "#C8B88A",
+    title: "Développer",
     items: [
-      { title: "Vue d'ensemble", url: "/marketing", icon: Megaphone },
+      { title: "Croissance", url: "/marketing", icon: Megaphone },
       { title: "Audience", url: "/marketing/contacts", icon: Users },
       { title: "Campagnes", url: "/marketing/campaigns", icon: Mail },
-      { title: "Templates", url: "/marketing/templates", icon: Send },
       { title: "Automations", url: "/marketing/automations", icon: Workflow },
       { title: "Analytics", url: "/marketing/analytics", icon: TrendingUp },
+      { title: "Rapports", url: "/reports", icon: FileText },
     ]
   },
   {
-    title: "Intégrations",
-    color: "#C8B88A",
+    title: "Système",
     items: [
-      { title: "Vue d'ensemble", url: "/integrations", icon: Database },
-      { title: "Clients", url: "/integrations/customers", icon: Users },
-    ]
-  },
-  {
-    title: "Réservations",
-    color: "#C8B88A",
-    items: [
-      { title: "Liste d'attente", url: "/waitlist", icon: Clock },
+      { title: "Intégrations", url: "/integrations", icon: Plug },
+      { title: "Clients sync", url: "/integrations/customers", icon: Database },
+      { title: "Mon compte", url: "/account", icon: User },
+      { title: "Notifications", url: "/notifications", icon: Bell },
     ]
   },
 ];
@@ -121,7 +118,6 @@ export function MobileBottomNav() {
 
   return (
     <>
-      {/* Bottom Navigation Bar */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-lg border-t border-border safe-area-pb" data-testid="nav-mobile-bottom">
         <div className="flex items-center justify-around h-16 px-2">
           {bottomNavItems.map((item) => {
@@ -132,9 +128,9 @@ export function MobileBottomNav() {
                 href={item.url}
                 data-testid={`nav-${item.title.toLowerCase()}`}
               >
-                <div className={`flex flex-col items-center justify-center min-w-[60px] py-1 px-2 rounded-lg transition-colors ${active ? 'text-primary' : 'text-muted-foreground'}`}>
+                <div className={`flex flex-col items-center justify-center min-w-[60px] py-1 px-2 rounded-lg transition-colors ${active ? 'text-[#C8B88A]' : 'text-muted-foreground'}`}>
                   <div className="relative">
-                    <item.icon className={`w-5 h-5 ${active ? 'text-primary' : ''}`} />
+                    <item.icon className={`w-5 h-5 ${active ? 'text-[#C8B88A]' : ''}`} />
                     {item.showBadge && unreadCount && unreadCount > 0 && (
                       <Badge 
                         variant="destructive" 
@@ -144,7 +140,7 @@ export function MobileBottomNav() {
                       </Badge>
                     )}
                   </div>
-                  <span className={`text-[10px] mt-1 font-medium ${active ? 'text-primary' : ''}`}>
+                  <span className={`text-[10px] mt-1 font-medium ${active ? 'text-[#C8B88A]' : ''}`}>
                     {item.title}
                   </span>
                 </div>
@@ -152,7 +148,6 @@ export function MobileBottomNav() {
             );
           })}
           
-          {/* Menu Button */}
           <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
             <SheetTrigger asChild>
               <button 
@@ -165,33 +160,37 @@ export function MobileBottomNav() {
             </SheetTrigger>
             <SheetContent side="right" className="w-[300px] p-0">
               <SheetHeader className="p-4 border-b">
-                <SheetTitle className="text-left">Menu</SheetTitle>
+                <SheetTitle className="text-left flex items-center gap-2">
+                  <span className="text-[#C8B88A] font-bold">MEGIN</span>
+                  <span className="text-xs text-muted-foreground">Copilote Business</span>
+                </SheetTitle>
               </SheetHeader>
               <ScrollArea className="h-[calc(100vh-80px)]">
-                <div className="p-4 space-y-6">
+                <div className="p-4 space-y-5">
                   {menuSections.map((section, index) => (
                     <div key={section.title}>
                       {index > 0 && <Separator className="mb-4" />}
-                      <div className="mb-3">
+                      <div className="mb-2">
                         <span 
-                          className="text-xs font-semibold uppercase tracking-wider"
-                          style={{ color: section.color || 'inherit' }}
+                          className="text-[10px] font-semibold uppercase tracking-wider"
+                          style={{ color: section.color || 'var(--muted-foreground)' }}
                         >
                           {section.title}
                         </span>
                       </div>
-                      <div className="space-y-1">
+                      <div className="space-y-0.5">
                         {section.items.map((item) => {
                           const active = location === item.url;
                           return (
                             <Link 
-                              key={item.url} 
+                              key={item.url + item.title} 
                               href={item.url}
                               onClick={() => setMenuOpen(false)}
                             >
-                              <div className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${active ? 'bg-primary/10 text-primary' : 'text-foreground hover:bg-muted'}`}>
-                                <item.icon className="w-4 h-4" />
-                                <span className="text-sm font-medium">{item.title}</span>
+                              <div className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${active ? 'bg-[#C8B88A]/10 text-[#C8B88A]' : 'text-foreground hover:bg-muted/50'}`}>
+                                <item.icon className="w-4 h-4 flex-shrink-0" />
+                                <span className="text-sm">{item.title}</span>
+                                {active && <ChevronRight className="w-3.5 h-3.5 ml-auto text-[#C8B88A]/50" />}
                               </div>
                             </Link>
                           );
@@ -200,7 +199,6 @@ export function MobileBottomNav() {
                     </div>
                   ))}
                   
-                  {/* Admin link if applicable */}
                   {user?.role === "admin" && (
                     <>
                       <Separator />
@@ -208,7 +206,7 @@ export function MobileBottomNav() {
                         href="/admin"
                         onClick={() => setMenuOpen(false)}
                       >
-                        <div className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${location === '/admin' ? 'bg-primary/10 text-primary' : 'text-foreground hover:bg-muted'}`}>
+                        <div className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${location === '/admin' ? 'bg-[#C8B88A]/10 text-[#C8B88A]' : 'text-foreground hover:bg-muted/50'}`}>
                           <Shield className="w-4 h-4" />
                           <span className="text-sm font-medium">Administration</span>
                         </div>
@@ -222,7 +220,6 @@ export function MobileBottomNav() {
         </div>
       </nav>
       
-      {/* Spacer for bottom nav */}
       <div className="h-16" />
     </>
   );
