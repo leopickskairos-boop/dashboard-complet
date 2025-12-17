@@ -58,13 +58,13 @@ const piloterItems = [
     title: "Activité",
     icon: Phone,
     children: [
-      { title: "Appels", url: "/dashboard", icon: Phone },
+      { title: "Appels", url: "/activity", icon: Phone },
       { title: "Liste d'attente", url: "/waitlist", icon: Clock },
     ],
   },
   {
     title: "Recommandations",
-    url: "/dashboard#insights",
+    url: "/recommendations",
     icon: Lightbulb,
     description: "Insights IA",
   },

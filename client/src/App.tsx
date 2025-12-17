@@ -62,6 +62,12 @@ import IntegrationCustomers from "@/pages/integrations/IntegrationCustomers";
 import WaitlistConfirm from "@/pages/waitlist/WaitlistConfirm";
 import WaitlistDashboard from "@/pages/waitlist/WaitlistDashboard";
 
+// Activity Pages
+import ActivityCalls from "@/pages/activity/ActivityCalls";
+
+// Recommendations Page
+import RecommendationsPage from "@/pages/recommendations/RecommendationsPage";
+
 // Short link redirect
 import ShortLink from "@/pages/ShortLink";
 
@@ -105,6 +111,22 @@ function Router() {
         <ProtectedRoute requireVerified={true} requireSubscription={true}>
           <DashboardLayout>
             <Dashboard />
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/activity">
+        <ProtectedRoute requireVerified={true} requireSubscription={true}>
+          <DashboardLayout>
+            <ActivityCalls />
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/recommendations">
+        <ProtectedRoute requireVerified={true} requireSubscription={true}>
+          <DashboardLayout>
+            <RecommendationsPage />
           </DashboardLayout>
         </ProtectedRoute>
       </Route>
