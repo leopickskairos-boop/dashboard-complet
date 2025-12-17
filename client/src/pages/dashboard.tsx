@@ -251,18 +251,44 @@ export default function Dashboard() {
     <div className="min-h-screen bg-background">
       <div className="max-w-screen-2xl mx-auto px-4 md:px-6 py-4 md:py-8">
         {/* Header - Premium Design */}
-        <div className="mb-6 md:mb-10">
-          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight mb-1">Dashboard</h1>
+        <div className="mb-4 md:mb-6">
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight mb-1">Aujourd'hui</h1>
           <p className="text-sm md:text-[15px] text-muted-foreground">
-            Vue d'ensemble de votre activité
+            Votre copilote business veille sur vous
           </p>
         </div>
 
         {/* Trial Countdown Banner */}
-        {user && <div className="mb-8"><TrialCountdown user={user} /></div>}
+        {user && <div className="mb-6"><TrialCountdown user={user} /></div>}
+
+        {/* MEGIN Priority Message - Human tone */}
+        <Card className="mb-6 md:mb-8 bg-gradient-to-r from-[#1A1C1F] via-[#1A1C1F] to-[#151618] border-[#C8B88A]/20 shadow-[0_0_20px_rgba(200,184,138,0.08)]">
+          <CardContent className="p-4 md:p-5">
+            <div className="flex items-start gap-3 md:gap-4">
+              <div className="p-2 md:p-2.5 rounded-xl bg-[#C8B88A]/10 flex-shrink-0">
+                <Sparkles className="w-5 h-5 md:w-6 md:h-6 text-[#C8B88A]" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs md:text-sm font-medium text-[#C8B88A] mb-1">
+                  MEGIN observe que...
+                </p>
+                <p className="text-sm md:text-[15px] text-foreground leading-relaxed">
+                  {stats && stats.totalCalls > 0 
+                    ? stats.conversionRate >= 70 
+                      ? `Votre taux de conversion est excellent à ${stats.conversionRate}%. Continuez ainsi, votre business est sur la bonne voie.`
+                      : stats.conversionRate >= 50
+                        ? `Votre activité se porte bien avec ${stats.totalCalls} appels traités. Un point d'attention : optimisez vos créneaux pour améliorer la conversion.`
+                        : `${stats.totalCalls} appels ont été traités. MEGIN vous recommande de revoir vos disponibilités pour améliorer votre taux de conversion.`
+                    : "Bienvenue ! MEGIN analyse votre activité pour vous fournir des recommandations personnalisées."
+                  }
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Global Time Filter */}
-        <div className="mb-6 md:mb-8 flex items-center gap-2 md:gap-3">
+        <div className="mb-4 md:mb-6 flex items-center gap-2 md:gap-3">
           <span className="text-xs md:text-[13px] font-medium text-muted-foreground">Période :</span>
           <Select value={globalTimeFilter} onValueChange={setGlobalTimeFilter}>
             <SelectTrigger className="w-[140px] md:w-[180px] h-8 md:h-9 text-xs md:text-[13px]" data-testid="select-global-time-filter">
@@ -324,26 +350,6 @@ export default function Dashboard() {
                     <TrendingUp className="w-3 h-3 md:w-3.5 md:h-3.5" />
                     <span>+12%</span>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Reminders Sent - Not Clickable */}
-            <Card className="relative overflow-hidden bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] transition-all duration-200 ease-out hover:translate-y-[-2px] hover:shadow-[0_0_16px_rgba(200,184,138,0.15)]" data-testid="card-reminders-sent">
-              <CardContent className="relative p-4 md:p-7">
-                <div className="flex items-start justify-between mb-3 md:mb-5">
-                  <div className="p-1.5 md:p-2 rounded-lg md:rounded-xl bg-white/5 flex items-center justify-center">
-                    <MessageSquare className="w-4 h-4 md:w-5 md:h-5 text-[#C8B88A]" />
-                  </div>
-                </div>
-                <div className="text-[10px] md:text-[11px] text-muted-foreground uppercase tracking-wider mb-1 md:mb-2 font-medium">
-                  Rappels
-                </div>
-                <div className="flex items-end justify-between">
-                  <div className="text-xl md:text-[28px] font-semibold tracking-tight" data-testid="stat-reminders-sent">
-                    {stats?.remindersSent || 0}
-                  </div>
-                  <div className="text-[10px] md:text-xs text-muted-foreground">SMS</div>
                 </div>
               </CardContent>
             </Card>
