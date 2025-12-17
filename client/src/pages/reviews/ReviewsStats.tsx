@@ -347,15 +347,15 @@ export default function ReviewsStats() {
   const sentimentBreakdown = getSentimentBreakdown();
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-4 md:space-y-6 pb-8 p-4 md:p-0">
       {/* Header */}
-      <div className="flex items-center justify-between pl-1">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pl-0 md:pl-1">
         <div>
-          <h1 className="text-lg font-semibold text-foreground">Statistiques des avis</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">Analysez votre réputation en ligne</p>
+          <h1 className="text-xl md:text-lg font-semibold text-foreground">Statistiques avis</h1>
+          <p className="text-sm md:text-xs text-muted-foreground mt-0.5">Analysez votre réputation</p>
         </div>
         <Select value={period} onValueChange={setPeriod}>
-          <SelectTrigger className="w-[160px] h-9 text-xs">
+          <SelectTrigger className="w-full md:w-[160px] h-9 text-xs">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -369,11 +369,11 @@ export default function ReviewsStats() {
 
       {/* ZONE 1 — HERO SCORE */}
       <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_20px_rgba(0,0,0,0.4)] border-white/[0.08] overflow-hidden">
-        <CardContent className="p-8">
-          <div className="text-center space-y-4">
-            <div className="space-y-2">
+        <CardContent className="p-4 md:p-8">
+          <div className="text-center space-y-3 md:space-y-4">
+            <div className="space-y-1 md:space-y-2">
               <p className={cn(
-                "text-7xl font-bold transition-all duration-1000",
+                "text-5xl md:text-7xl font-bold transition-all duration-1000",
                 reputationScore?.score >= 80 ? "text-[#4CEFAD]" :
                 reputationScore?.score >= 60 ? "text-[#C8B88A]" :
                 reputationScore?.score >= 40 ? "text-orange-400" :
@@ -381,7 +381,7 @@ export default function ReviewsStats() {
               )}>
                 {scoreDisplay}
               </p>
-              <p className="text-lg text-muted-foreground">/ 100</p>
+              <p className="text-base md:text-lg text-muted-foreground">/ 100</p>
               <p className={cn(
                 "text-xl font-semibold",
                 reputationScore?.score >= 80 ? "text-[#4CEFAD]" :
@@ -423,7 +423,7 @@ export default function ReviewsStats() {
       </Card>
 
       {/* ZONE 2 — KPI BUSINESS */}
-      <div className="grid gap-4 md:grid-cols-5">
+      <div className="grid gap-3 md:gap-4 grid-cols-2 md:grid-cols-5">
         <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">

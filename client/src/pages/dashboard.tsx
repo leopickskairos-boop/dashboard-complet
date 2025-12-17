@@ -478,7 +478,7 @@ export default function Dashboard() {
 
         {/* AI Insights & Trends Section - Premium Consulting Style */}
         {/* On mobile: show simplified version with only hero insight */}
-        <div className={`mb-8 md:mb-12 mt-4 md:mt-6 relative rounded-xl md:rounded-[14px] bg-gradient-to-b from-[#111111] to-[#151515] border border-white/[0.06] p-4 md:p-6 shadow-[0_4px_24px_rgba(0,0,0,0.35)] ${isMobile ? 'hidden md:block' : ''}`} data-testid="section-insights">
+        <div className="mb-8 md:mb-12 mt-4 md:mt-6 relative rounded-xl md:rounded-[14px] bg-gradient-to-b from-[#111111] to-[#151515] border border-white/[0.06] p-4 md:p-6 shadow-[0_4px_24px_rgba(0,0,0,0.35)]" data-testid="section-insights">
           
           {/* Premium Header - No "Voir plus" */}
           <div className="flex items-center pb-3 md:pb-4 mb-4 md:mb-5 border-b border-white/[0.04]">
@@ -557,11 +557,11 @@ export default function Dashboard() {
                 );
               })()}
 
-              {/* ZONE B: Secondary Insights (3 columns on desktop, 1 on mobile) */}
+              {/* ZONE B: Secondary Insights (hidden on mobile, 3 columns on desktop) */}
               <div 
-                className="grid gap-3 md:gap-4" 
+                className="hidden md:grid gap-3 md:gap-4" 
                 style={{ 
-                  gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
+                  gridTemplateColumns: 'repeat(3, 1fr)',
                   gridAutoRows: '1fr'
                 }}
               >

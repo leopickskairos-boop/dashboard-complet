@@ -367,18 +367,21 @@ export default function IntegrationHub() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4 md:space-y-8 p-4 md:p-0">
       {/* Hero Marketing Block */}
       <Card className="bg-gradient-to-br from-[#0A0A0A] to-[#1A1A1A] border-[#C8B88A]/20">
-        <CardContent className="p-8">
+        <CardContent className="p-4 md:p-8">
           <div className="max-w-3xl">
-            <h1 className="text-3xl font-bold mb-4 bg-gradient-to-r from-white to-[#C8B88A] bg-clip-text text-transparent">
-              Connectez vos outils. Centralisez votre performance.
+            <h1 className="text-xl md:text-3xl font-bold mb-3 md:mb-4 bg-gradient-to-r from-white to-[#C8B88A] bg-clip-text text-transparent">
+              Connectez vos outils
             </h1>
-            <p className="text-muted-foreground text-lg mb-6 leading-relaxed">
+            <p className="text-sm md:text-lg text-muted-foreground mb-4 md:mb-6 leading-relaxed hidden md:block">
               Relier votre CRM, votre système de réservation ou votre base de données à SpeedAI permet de centraliser les données clients qui ne passent pas par le téléphone : réservations en ligne, emails, commandes web...
             </p>
-            <p className="text-muted-foreground mb-6">
+            <p className="text-sm text-muted-foreground mb-4 md:hidden">
+              Centralisez vos données clients avec SpeedAI.
+            </p>
+            <p className="text-muted-foreground mb-6 hidden md:block">
               Vous gardez vos outils actuels. SpeedAI s'adapte à votre environnement et devient la couche intelligente qui unifie, sécurise et optimise votre activité.
             </p>
             <Dialog open={isWhyConnectOpen} onOpenChange={setIsWhyConnectOpen}>
@@ -438,9 +441,9 @@ export default function IntegrationHub() {
 
       {/* Active Connections */}
       {connections && connections.length > 0 && (
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold">Connexions actives</h2>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="space-y-3 md:space-y-4">
+          <h2 className="text-lg md:text-xl font-semibold">Connexions actives</h2>
+          <div className="grid gap-3 md:gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
             {connections.map((conn) => (
               <Card key={conn.id} className="relative">
                 <CardHeader className="pb-3">
@@ -501,24 +504,25 @@ export default function IntegrationHub() {
 
       {/* Category Tabs */}
       <Tabs value={selectedCategory} onValueChange={setSelectedCategory}>
-        <TabsList className="flex flex-wrap h-auto gap-1 bg-transparent p-0">
-          <TabsTrigger value="all" className="data-[state=active]:bg-[#C8B88A] data-[state=active]:text-black">
+        <TabsList className="flex flex-wrap h-auto gap-1 bg-transparent p-0 overflow-x-auto">
+          <TabsTrigger value="all" className="text-xs md:text-sm data-[state=active]:bg-[#C8B88A] data-[state=active]:text-black">
             Toutes
           </TabsTrigger>
           {CATEGORIES.map((cat) => (
             <TabsTrigger 
               key={cat.id} 
               value={cat.id}
-              className="data-[state=active]:bg-[#C8B88A] data-[state=active]:text-black"
+              className="text-xs md:text-sm data-[state=active]:bg-[#C8B88A] data-[state=active]:text-black"
             >
-              <cat.icon className="h-4 w-4 mr-2" />
-              {cat.label}
+              <cat.icon className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1 md:mr-2" />
+              <span className="hidden md:inline">{cat.label}</span>
+              <span className="md:hidden">{cat.label.split(' ')[0]}</span>
             </TabsTrigger>
           ))}
         </TabsList>
 
-        <TabsContent value={selectedCategory} className="mt-6">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <TabsContent value={selectedCategory} className="mt-4 md:mt-6">
+          <div className="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {filteredIntegrations.map((integration) => {
               const connected = isConnected(integration.id);
               return (

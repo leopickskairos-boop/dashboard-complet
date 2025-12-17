@@ -218,75 +218,76 @@ export default function WaitlistDashboard() {
   });
 
   return (
-    <div className="flex-1 p-6 space-y-6 overflow-auto">
-      <div className="flex items-center justify-between">
+    <div className="flex-1 p-4 md:p-6 space-y-4 md:space-y-6 overflow-auto">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold" data-testid="page-title">Liste d'attente</h1>
-          <p className="text-muted-foreground">Gérez les demandes de créneaux en attente</p>
+          <h1 className="text-xl md:text-2xl font-bold" data-testid="page-title">Liste d'attente</h1>
+          <p className="text-sm md:text-base text-muted-foreground">Gérez les demandes de créneaux en attente</p>
         </div>
         <Button 
           variant="outline" 
           size="sm"
           onClick={() => queryClient.invalidateQueries({ queryKey: ['/api/waitlist'] })}
           data-testid="button-refresh"
+          className="w-full md:w-auto"
         >
           <RefreshCw className="h-4 w-4 mr-2" />
           Actualiser
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         <Card data-testid="stat-total">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-full bg-primary/10">
-                <Users className="h-6 w-6 text-primary" />
+          <CardContent className="p-3 md:pt-6 md:px-6">
+            <div className="flex items-center gap-2 md:gap-4">
+              <div className="p-2 md:p-3 rounded-full bg-primary/10">
+                <Users className="h-4 w-4 md:h-6 md:w-6 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{stats?.totalEntries || 0}</p>
-                <p className="text-sm text-muted-foreground">Total demandes</p>
+                <p className="text-lg md:text-2xl font-bold">{stats?.totalEntries || 0}</p>
+                <p className="text-xs md:text-sm text-muted-foreground">Total</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card data-testid="stat-pending">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-full bg-yellow-100 dark:bg-yellow-900/30">
-                <Clock className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
+          <CardContent className="p-3 md:pt-6 md:px-6">
+            <div className="flex items-center gap-2 md:gap-4">
+              <div className="p-2 md:p-3 rounded-full bg-yellow-100 dark:bg-yellow-900/30">
+                <Clock className="h-4 w-4 md:h-6 md:w-6 text-yellow-600 dark:text-yellow-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{stats?.pendingEntries || 0}</p>
-                <p className="text-sm text-muted-foreground">En attente</p>
+                <p className="text-lg md:text-2xl font-bold">{stats?.pendingEntries || 0}</p>
+                <p className="text-xs md:text-sm text-muted-foreground">En attente</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card data-testid="stat-confirmed">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-full bg-green-100 dark:bg-green-900/30">
-                <CheckCircle2 className="h-6 w-6 text-green-600 dark:text-green-400" />
+          <CardContent className="p-3 md:pt-6 md:px-6">
+            <div className="flex items-center gap-2 md:gap-4">
+              <div className="p-2 md:p-3 rounded-full bg-green-100 dark:bg-green-900/30">
+                <CheckCircle2 className="h-4 w-4 md:h-6 md:w-6 text-green-600 dark:text-green-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{stats?.confirmedEntries || 0}</p>
-                <p className="text-sm text-muted-foreground">Confirmées</p>
+                <p className="text-lg md:text-2xl font-bold">{stats?.confirmedEntries || 0}</p>
+                <p className="text-xs md:text-sm text-muted-foreground">Confirmées</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card data-testid="stat-conversion">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-full bg-blue-100 dark:bg-blue-900/30">
-                <TrendingUp className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+          <CardContent className="p-3 md:pt-6 md:px-6">
+            <div className="flex items-center gap-2 md:gap-4">
+              <div className="p-2 md:p-3 rounded-full bg-blue-100 dark:bg-blue-900/30">
+                <TrendingUp className="h-4 w-4 md:h-6 md:w-6 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{stats?.conversionRate || 0}%</p>
-                <p className="text-sm text-muted-foreground">Taux conversion</p>
+                <p className="text-lg md:text-2xl font-bold">{stats?.conversionRate || 0}%</p>
+                <p className="text-xs md:text-sm text-muted-foreground">Conversion</p>
               </div>
             </div>
           </CardContent>
@@ -294,25 +295,25 @@ export default function WaitlistDashboard() {
       </div>
 
       <Tabs defaultValue="entries" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="entries" data-testid="tab-entries">
-            <ListOrdered className="h-4 w-4 mr-2" />
-            Demandes ({entries.length})
+        <TabsList className="w-full md:w-auto flex-wrap h-auto gap-1 p-1">
+          <TabsTrigger value="entries" data-testid="tab-entries" className="text-xs md:text-sm flex-1 md:flex-none">
+            <ListOrdered className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1 md:mr-2" />
+            <span className="hidden md:inline">Demandes</span> ({entries.length})
           </TabsTrigger>
-          <TabsTrigger value="slots" data-testid="tab-slots">
-            <Timer className="h-4 w-4 mr-2" />
-            Créneaux surveillés ({slots.filter(s => s.status === 'monitoring').length})
+          <TabsTrigger value="slots" data-testid="tab-slots" className="text-xs md:text-sm flex-1 md:flex-none">
+            <Timer className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1 md:mr-2" />
+            <span className="hidden md:inline">Créneaux</span> ({slots.filter(s => s.status === 'monitoring').length})
           </TabsTrigger>
-          <TabsTrigger value="settings" data-testid="tab-settings">
-            <Settings className="h-4 w-4 mr-2" />
-            Paramètres
+          <TabsTrigger value="settings" data-testid="tab-settings" className="text-xs md:text-sm flex-1 md:flex-none">
+            <Settings className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1 md:mr-2" />
+            <span className="hidden md:inline">Paramètres</span>
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="entries" className="space-y-4">
-          <div className="flex flex-wrap gap-4">
+          <div className="flex flex-col md:flex-row gap-2 md:gap-4">
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]" data-testid="filter-status">
+              <SelectTrigger className="w-full md:w-[180px]" data-testid="filter-status">
                 <SelectValue placeholder="Filtrer par statut" />
               </SelectTrigger>
               <SelectContent>
@@ -326,7 +327,7 @@ export default function WaitlistDashboard() {
             </Select>
 
             <Select value={dateFilter} onValueChange={setDateFilter}>
-              <SelectTrigger className="w-[180px]" data-testid="filter-date">
+              <SelectTrigger className="w-full md:w-[180px]" data-testid="filter-date">
                 <SelectValue placeholder="Filtrer par date" />
               </SelectTrigger>
               <SelectContent>
