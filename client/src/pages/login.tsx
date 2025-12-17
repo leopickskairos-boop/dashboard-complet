@@ -79,57 +79,13 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden flex items-center justify-center">
-      {/* Animated Background */}
-      <div className="absolute inset-0 bg-[#0a0a0b]">
-        {/* Floating gradient orbs */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div 
-            className="absolute w-[800px] h-[800px] rounded-full opacity-[0.03] blur-3xl animate-float-1"
-            style={{ 
-              background: 'radial-gradient(circle, #C8B88A 0%, transparent 70%)',
-              top: '-20%',
-              left: '-10%',
-            }}
-          />
-          <div 
-            className="absolute w-[600px] h-[600px] rounded-full opacity-[0.04] blur-3xl animate-float-2"
-            style={{ 
-              background: 'radial-gradient(circle, #4CEFAD 0%, transparent 70%)',
-              bottom: '-15%',
-              right: '-5%',
-            }}
-          />
-          <div 
-            className="absolute w-[500px] h-[500px] rounded-full opacity-[0.02] blur-3xl animate-float-3"
-            style={{ 
-              background: 'radial-gradient(circle, #C8B88A 0%, transparent 70%)',
-              top: '40%',
-              right: '20%',
-            }}
-          />
-        </div>
-
-        {/* Subtle grid pattern */}
-        <div 
-          className="absolute inset-0 opacity-[0.015]"
-          style={{
-            backgroundImage: `
-              linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)
-            `,
-            backgroundSize: '100px 100px',
-          }}
-        />
-      </div>
-
+    <div className="min-h-screen bg-[#0a0a0b] flex items-center justify-center p-4">
       {/* Login Card */}
-      <div className="relative z-10 w-full max-w-md mx-4 animate-fade-in">
-        {/* Glassmorphism card */}
-        <div className="bg-white/[0.03] backdrop-blur-xl rounded-2xl p-8 md:p-10 border border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
+      <div className="w-full max-w-md">
+        <div className="bg-[#111113] rounded-2xl p-8 md:p-10 border border-white/[0.06]">
           {/* Header */}
           <div className="text-center mb-8">
-            <h1 className="text-2xl md:text-3xl font-light tracking-wide text-white mb-2">
+            <h1 className="text-2xl font-light tracking-wide text-white mb-2">
               MEGIN
             </h1>
             <p className="text-sm text-white/40">
@@ -150,7 +106,7 @@ export default function Login() {
                       <Input
                         type="email"
                         placeholder="votre@email.com"
-                        className="h-12 bg-white/[0.03] border-white/[0.08] text-white placeholder:text-white/20 focus:border-[#C8B88A]/40 focus:ring-[#C8B88A]/10 rounded-xl"
+                        className="h-12 bg-[#0a0a0b] border-white/[0.08] text-white placeholder:text-white/20 focus:border-[#C8B88A]/40 focus:ring-[#C8B88A]/10 rounded-xl"
                         data-testid="input-email"
                         {...field}
                       />
@@ -171,7 +127,7 @@ export default function Login() {
                         <Input
                           type={showPassword ? "text" : "password"}
                           placeholder="••••••••"
-                          className="h-12 bg-white/[0.03] border-white/[0.08] text-white placeholder:text-white/20 focus:border-[#C8B88A]/40 focus:ring-[#C8B88A]/10 pr-11 rounded-xl"
+                          className="h-12 bg-[#0a0a0b] border-white/[0.08] text-white placeholder:text-white/20 focus:border-[#C8B88A]/40 focus:ring-[#C8B88A]/10 pr-11 rounded-xl"
                           data-testid="input-password"
                           {...field}
                         />
@@ -197,7 +153,7 @@ export default function Login() {
 
               <Button
                 type="submit"
-                className="w-full h-12 bg-[#C8B88A] hover:bg-[#B5A67A] text-[#0a0a0b] font-medium rounded-xl transition-all duration-300"
+                className="w-full h-12 bg-[#C8B88A] hover:bg-[#B5A67A] text-[#0a0a0b] font-medium rounded-xl transition-colors"
                 disabled={isLoading}
                 data-testid="button-submit"
               >
@@ -238,58 +194,6 @@ export default function Login() {
           </p>
         </div>
       </div>
-
-      {/* CSS Animations */}
-      <style>{`
-        @keyframes float1 {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          25% { transform: translate(50px, -30px) scale(1.05); }
-          50% { transform: translate(20px, 40px) scale(0.95); }
-          75% { transform: translate(-30px, 20px) scale(1.02); }
-        }
-        
-        @keyframes float2 {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          25% { transform: translate(-40px, 30px) scale(0.98); }
-          50% { transform: translate(30px, -20px) scale(1.03); }
-          75% { transform: translate(10px, -40px) scale(0.97); }
-        }
-        
-        @keyframes float3 {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          33% { transform: translate(-60px, -40px) scale(1.04); }
-          66% { transform: translate(40px, 30px) scale(0.96); }
-        }
-
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        
-        .animate-float-1 {
-          animation: float1 30s ease-in-out infinite;
-        }
-        
-        .animate-float-2 {
-          animation: float2 25s ease-in-out infinite;
-        }
-        
-        .animate-float-3 {
-          animation: float3 35s ease-in-out infinite;
-        }
-
-        .animate-fade-in {
-          animation: fadeIn 0.6s ease-out;
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          .animate-float-1,
-          .animate-float-2,
-          .animate-float-3 {
-            animation: none;
-          }
-        }
-      `}</style>
     </div>
   );
 }
