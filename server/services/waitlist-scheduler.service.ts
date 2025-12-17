@@ -1,6 +1,8 @@
 import { db } from '../db';
-import { waitlistSlots, waitlistEntries, WaitlistSlot } from '@shared/schema';
+import { waitlistSlots, waitlistEntries, waitlistCalendarConfig, WaitlistSlot } from '@shared/schema';
 import { eq, and, inArray, lt, sql, asc } from 'drizzle-orm';
+import { GoogleCalendarService, refreshCalendarAccessToken } from './google-calendar.service';
+import { waitlistService } from './waitlist.service';
 
 const DISABLE_INTERNAL_CRONS = process.env.DISABLE_INTERNAL_CRONS === 'true';
 
@@ -160,11 +162,37 @@ class WaitlistScheduler {
         .set({ lastCheckAt: new Date(), updatedAt: new Date() })
         .where(eq(waitlistSlots.id, slotId));
 
-      // TODO: Here you would check actual calendar availability
-      // For now, we just reschedule the next check
-      // When integrated with Google Calendar, this would check if slot became available
+      // Check calendar availability if configured
+      const isAvailable = await this.checkCalendarAvailability(slot);
+      
+      if (isAvailable) {
+        console.log(`[WaitlistScheduler] Slot ${slotId} is now AVAILABLE - notifying first entry`);
+        
+        // Mark slot as available
+        await db.update(waitlistSlots)
+          .set({ status: 'available', updatedAt: new Date() })
+          .where(eq(waitlistSlots.id, slotId));
+        
+        // Notify the first pending entry (ordered by priority and creation)
+        const [firstEntry] = await db.select()
+          .from(waitlistEntries)
+          .where(and(
+            eq(waitlistEntries.slotId, slotId),
+            eq(waitlistEntries.status, 'pending')
+          ))
+          .orderBy(asc(waitlistEntries.priority), asc(waitlistEntries.createdAt))
+          .limit(1);
+        
+        if (firstEntry) {
+          await waitlistService.notifyEntryOfAvailability(firstEntry.id);
+        }
+        
+        // Stop monitoring this slot (it's been handled)
+        this.clearSlotTimer(slotId);
+        return;
+      }
 
-      // Reschedule next check
+      // Reschedule next check (slot still occupied)
       await this.scheduleSlotCheck(slot);
 
     } catch (error) {
@@ -237,6 +265,84 @@ class WaitlistScheduler {
 
   getActiveTimersCount(): number {
     return this.timers.size;
+  }
+
+  /**
+   * Check calendar availability for a slot using Google Calendar
+   * Returns true if the slot is available (no conflicting events)
+   */
+  private async checkCalendarAvailability(slot: WaitlistSlot): Promise<boolean> {
+    try {
+      // Get calendar config for the slot owner
+      const [calendarConfig] = await db.select()
+        .from(waitlistCalendarConfig)
+        .where(eq(waitlistCalendarConfig.userId, slot.userId))
+        .limit(1);
+
+      // If no calendar configured or not enabled, cannot determine availability
+      if (!calendarConfig || !calendarConfig.isEnabled || !calendarConfig.calendarId) {
+        // Log minimal info - no calendar configured is expected for some users
+        return false; // Cannot verify, assume not available
+      }
+
+      if (!calendarConfig.googleAccessToken) {
+        console.warn(`[WaitlistScheduler] No access token for user ${slot.userId}`);
+        return false;
+      }
+
+      let accessToken = calendarConfig.googleAccessToken;
+
+      // Refresh token if expired
+      if (calendarConfig.googleTokenExpiry && calendarConfig.googleTokenExpiry < new Date()) {
+        if (!calendarConfig.googleRefreshToken) {
+          await db.update(waitlistCalendarConfig)
+            .set({ lastError: 'Token expiré, reconnexion nécessaire', updatedAt: new Date() })
+            .where(eq(waitlistCalendarConfig.userId, slot.userId));
+          return false;
+        }
+
+        const newTokens = await refreshCalendarAccessToken(calendarConfig.googleRefreshToken);
+        if (!newTokens) {
+          await db.update(waitlistCalendarConfig)
+            .set({ lastError: 'Impossible de rafraîchir le token', updatedAt: new Date() })
+            .where(eq(waitlistCalendarConfig.userId, slot.userId));
+          return false;
+        }
+
+        accessToken = newTokens.accessToken;
+
+        // Update stored token
+        await db.update(waitlistCalendarConfig)
+          .set({
+            googleAccessToken: newTokens.accessToken,
+            googleTokenExpiry: new Date(Date.now() + newTokens.expiresIn * 1000),
+            lastError: null,
+            updatedAt: new Date(),
+          })
+          .where(eq(waitlistCalendarConfig.userId, slot.userId));
+      }
+
+      // Check calendar for conflicts
+      const calendarService = new GoogleCalendarService(accessToken);
+      const slotEnd = slot.slotEnd || new Date(slot.slotStart.getTime() + 60 * 60 * 1000); // Default 1 hour
+
+      const availability = await calendarService.checkSlotAvailability(
+        calendarConfig.calendarId,
+        slot.slotStart,
+        slotEnd
+      );
+
+      // Update last sync time
+      await db.update(waitlistCalendarConfig)
+        .set({ lastSyncAt: new Date(), lastError: null, updatedAt: new Date() })
+        .where(eq(waitlistCalendarConfig.userId, slot.userId));
+
+      return availability.isAvailable;
+
+    } catch (error: any) {
+      console.error(`[WaitlistScheduler] Error checking calendar for slot ${slot.id}:`, error.message);
+      return false; // Assume not available on error
+    }
   }
 
   async shutdown(): Promise<void> {

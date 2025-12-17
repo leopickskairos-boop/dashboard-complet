@@ -424,6 +424,79 @@ class WaitlistService {
 
     return expiredSlots.length;
   }
+
+  /**
+   * Notify a waitlist entry that their slot is now available
+   * Sends SMS with confirmation link
+   */
+  async notifyEntryOfAvailability(entryId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      // Get entry with slot info
+      const [entry] = await db.select()
+        .from(waitlistEntries)
+        .where(eq(waitlistEntries.id, entryId))
+        .limit(1);
+
+      if (!entry) {
+        return { success: false, error: 'Entrée non trouvée' };
+      }
+
+      // Get slot info
+      const [slot] = await db.select()
+        .from(waitlistSlots)
+        .where(eq(waitlistSlots.id, entry.slotId))
+        .limit(1);
+
+      if (!slot) {
+        return { success: false, error: 'Créneau non trouvé' };
+      }
+
+      // Create confirmation token
+      const tokenData = await this.createToken(entryId, 'confirmation');
+      if (!tokenData) {
+        return { success: false, error: 'Erreur création token' };
+      }
+
+      // Build confirmation URL
+      const frontendUrl = process.env.FRONTEND_URL || 
+        `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`;
+      const confirmUrl = `${frontendUrl}/waitlist/${tokenData.token}`;
+
+      // Send SMS notification
+      const { sendWaitlistAvailabilitySms } = await import('./twilio-sms.service');
+      
+      const smsResult = await sendWaitlistAvailabilitySms(
+        entry.phone,
+        entry.firstName,
+        slot.businessName || 'Notre établissement',
+        slot.slotStart,
+        confirmUrl
+      );
+
+      if (!smsResult.success) {
+        console.error(`[WaitlistService] Failed to send availability SMS: ${smsResult.error}`);
+        return { success: false, error: smsResult.error };
+      }
+
+      // Update entry status
+      await db.update(waitlistEntries)
+        .set({
+          status: 'notified',
+          notifiedAt: new Date(),
+          smsMessageSid: smsResult.messageId,
+          responseDeadline: new Date(Date.now() + 30 * 60 * 1000), // 30 minutes to respond
+          updatedAt: new Date()
+        })
+        .where(eq(waitlistEntries.id, entryId));
+
+      console.log(`✅ [WaitlistService] Notified entry ${entryId} of availability`);
+      return { success: true };
+
+    } catch (error: any) {
+      console.error(`[WaitlistService] Error notifying entry ${entryId}:`, error);
+      return { success: false, error: error.message };
+    }
+  }
 }
 
 export const waitlistService = new WaitlistService();

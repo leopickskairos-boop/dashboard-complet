@@ -259,6 +259,31 @@ export async function sendAppointmentReminderSms(
   return service.sendSms({ to: phone, message });
 }
 
+export async function sendWaitlistAvailabilitySms(
+  phone: string,
+  firstName: string,
+  companyName: string,
+  slotStart: Date,
+  confirmUrl: string
+): Promise<SmsResult> {
+  const service = getTwilioService();
+
+  if (!service.isConfigured()) {
+    console.warn('[WaitlistSMS] Platform Twilio not configured');
+    return { success: false, error: 'SMS service not configured' };
+  }
+
+  const dateStr = formatDateShort(slotStart);
+  const timeStr = slotStart.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  
+  const message = `🎉 Bonne nouvelle ${firstName} !\n\n` +
+    `Un créneau s'est libéré chez ${companyName} :\n` +
+    `📅 ${dateStr} à ${timeStr}\n\n` +
+    `Confirmez vite (30 min) :\n${confirmUrl}`;
+
+  return service.sendSms({ to: phone, message });
+}
+
 export function isSmsConfigured(): boolean {
   return getTwilioService().isConfigured();
 }

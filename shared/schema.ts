@@ -3065,3 +3065,61 @@ export type InsertWaitlistToken = z.infer<typeof insertWaitlistTokenSchema>;
 export type WaitlistToken = typeof waitlistTokens.$inferSelect;
 export type TriggerWaitlistData = z.infer<typeof triggerWaitlistSchema>;
 export type ConfirmWaitlistData = z.infer<typeof confirmWaitlistSchema>;
+
+// ===== WAITLIST CALENDAR CONFIGURATION =====
+
+// Calendar provider enum
+export const calendarProviderEnum = pgEnum('calendar_provider', [
+  'google_calendar',
+  'cal_com',
+  'calendly',
+  'outlook',
+  'custom'
+]);
+
+// Waitlist calendar config table - stores calendar OAuth and settings per user
+export const waitlistCalendarConfig = pgTable("waitlist_calendar_config", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }).unique(),
+  
+  // Calendar provider
+  provider: calendarProviderEnum("provider").notNull().default('google_calendar'),
+  
+  // Google Calendar OAuth tokens (encrypted in practice)
+  googleAccessToken: text("google_access_token"),
+  googleRefreshToken: text("google_refresh_token"),
+  googleTokenExpiry: timestamp("google_token_expiry"),
+  
+  // Selected calendar
+  calendarId: text("calendar_id"), // e.g., "primary" or specific calendar ID
+  calendarName: text("calendar_name"),
+  
+  // Configuration
+  isEnabled: boolean("is_enabled").notNull().default(false),
+  checkIntervalMinutes: integer("check_interval_minutes").default(10),
+  
+  // Webhook for real-time updates (future)
+  webhookChannelId: text("webhook_channel_id"),
+  webhookResourceId: text("webhook_resource_id"),
+  webhookExpiry: timestamp("webhook_expiry"),
+  
+  // Metadata
+  lastSyncAt: timestamp("last_sync_at"),
+  lastError: text("last_error"),
+  
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Insert schema for calendar config
+export const insertWaitlistCalendarConfigSchema = createInsertSchema(waitlistCalendarConfig).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastSyncAt: true,
+  lastError: true,
+});
+
+// Types for calendar config
+export type InsertWaitlistCalendarConfig = z.infer<typeof insertWaitlistCalendarConfigSchema>;
+export type WaitlistCalendarConfig = typeof waitlistCalendarConfig.$inferSelect;
