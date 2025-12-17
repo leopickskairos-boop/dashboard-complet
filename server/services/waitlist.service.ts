@@ -198,11 +198,11 @@ class WaitlistService {
     const hoursUntilSlot = (slotStart.getTime() - now.getTime()) / (1000 * 60 * 60);
 
     if (hoursUntilSlot <= 6) {
-      return 3; // 3 minutes on day of slot
+      return 10; // 10 minutes when < 6h before slot
     } else if (hoursUntilSlot <= 24) {
-      return 5; // 5 minutes within 24h
+      return 30; // 30 minutes when 6-24h before slot
     } else {
-      return 10; // 10 minutes otherwise
+      return 60; // 1 hour when > 24h before slot
     }
   }
 
