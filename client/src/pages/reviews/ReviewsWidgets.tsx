@@ -214,27 +214,28 @@ export default function ReviewsWidgets() {
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4 md:space-y-6 p-4 md:p-6">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">QR Codes & Widgets</h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Générez des QR codes et widgets pour collecter plus d'avis
+        <h1 className="text-xl md:text-2xl font-bold text-foreground">QR Codes & Widgets</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Générez des QR codes et widgets
         </p>
       </div>
 
-      <Tabs defaultValue="qrcode" className="space-y-6">
-        <TabsList className="bg-[#1A1C1F] border border-border/40">
-          <TabsTrigger value="qrcode" className="data-[state=active]:bg-[#C8B88A]/20 data-[state=active]:text-[#C8B88A]" data-testid="tab-qrcode">
-            <QrCode className="h-4 w-4 mr-2" />
-            QR Code
+      <Tabs defaultValue="qrcode" className="space-y-4 md:space-y-6">
+        <TabsList className="bg-[#1A1C1F] border border-border/40 w-full md:w-auto flex">
+          <TabsTrigger value="qrcode" className="flex-1 md:flex-none data-[state=active]:bg-[#C8B88A]/20 data-[state=active]:text-[#C8B88A] text-xs md:text-sm" data-testid="tab-qrcode">
+            <QrCode className="h-4 w-4 mr-1 md:mr-2" />
+            <span className="hidden md:inline">QR Code</span>
+            <span className="md:hidden">QR</span>
           </TabsTrigger>
-          <TabsTrigger value="widget" className="data-[state=active]:bg-[#C8B88A]/20 data-[state=active]:text-[#C8B88A]" data-testid="tab-widget">
-            <Layout className="h-4 w-4 mr-2" />
-            Widget Avis
+          <TabsTrigger value="widget" className="flex-1 md:flex-none data-[state=active]:bg-[#C8B88A]/20 data-[state=active]:text-[#C8B88A] text-xs md:text-sm" data-testid="tab-widget">
+            <Layout className="h-4 w-4 mr-1 md:mr-2" />
+            Widget
           </TabsTrigger>
-          <TabsTrigger value="badge" className="data-[state=active]:bg-[#C8B88A]/20 data-[state=active]:text-[#C8B88A]" data-testid="tab-badge">
-            <Star className="h-4 w-4 mr-2" />
-            Badge Confiance
+          <TabsTrigger value="badge" className="flex-1 md:flex-none data-[state=active]:bg-[#C8B88A]/20 data-[state=active]:text-[#C8B88A] text-xs md:text-sm" data-testid="tab-badge">
+            <Star className="h-4 w-4 mr-1 md:mr-2" />
+            Badge
           </TabsTrigger>
         </TabsList>
 
