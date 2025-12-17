@@ -534,20 +534,20 @@ export default function ReviewsSettings() {
   const summary = getSummaryText();
 
   return (
-    <div className="space-y-5 pb-8 max-w-3xl mx-auto">
+    <div className="space-y-4 md:space-y-5 pb-8 max-w-3xl mx-auto p-4 md:p-0">
       {/* Header */}
-      <div className="pl-1">
-        <h1 className="text-lg font-semibold text-foreground">Configuration des envois automatiques</h1>
-        <p className="text-xs text-muted-foreground mt-0.5">Paramétrez l'envoi automatique des demandes d'avis après une interaction client</p>
+      <div className="pl-0 md:pl-1">
+        <h1 className="text-xl md:text-lg font-semibold text-foreground">Configuration envois</h1>
+        <p className="text-sm md:text-xs text-muted-foreground mt-0.5">Paramétrez l'envoi automatique des demandes d'avis</p>
       </div>
 
       {/* UX Copy Banner */}
-      <div className="flex items-start gap-3 p-4 rounded-xl bg-[#C8B88A]/10 border border-[#C8B88A]/20">
+      <div className="flex items-start gap-3 p-3 md:p-4 rounded-xl bg-[#C8B88A]/10 border border-[#C8B88A]/20">
         <Info className="h-5 w-5 text-[#C8B88A] mt-0.5 shrink-0" />
         <div>
-          <p className="text-sm font-medium text-foreground">Cette configuration s'applique uniquement aux envois automatiques</p>
+          <p className="text-sm font-medium text-foreground">Envois automatiques uniquement</p>
           <p className="text-xs text-muted-foreground mt-1">
-            Pour les envois ponctuels ou de masse, utilisez la section <span className="font-medium text-foreground">Campagnes</span>.
+            Pour les envois de masse, utilisez <span className="font-medium text-foreground">Campagnes</span>.
           </p>
         </div>
       </div>

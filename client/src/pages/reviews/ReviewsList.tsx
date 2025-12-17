@@ -133,29 +133,30 @@ export default function ReviewsList() {
   }
 
   return (
-    <div className="space-y-5 pb-8">
-      <div className="flex items-center justify-between pl-1">
+    <div className="space-y-4 md:space-y-5 pb-8 p-4 md:p-0">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 pl-0 md:pl-1">
         <div>
-          <h1 className="text-lg font-semibold text-foreground">Tous les avis</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">Consultez et gérez vos avis clients</p>
+          <h1 className="text-xl md:text-lg font-semibold text-foreground">Tous les avis</h1>
+          <p className="text-sm md:text-xs text-muted-foreground mt-0.5">Gérez vos avis clients</p>
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-4">
-        <div className="relative flex-1 min-w-[200px]">
+      <div className="flex flex-col md:flex-row gap-3 md:gap-4">
+        <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Rechercher un avis..."
+            placeholder="Rechercher..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-10"
             data-testid="input-search-reviews"
           />
         </div>
-        <Select value={platformFilter} onValueChange={setPlatformFilter}>
-          <SelectTrigger className="w-[180px]" data-testid="select-platform-filter">
-            <SelectValue placeholder="Plateforme" />
-          </SelectTrigger>
+        <div className="flex gap-2">
+          <Select value={platformFilter} onValueChange={setPlatformFilter}>
+            <SelectTrigger className="flex-1 md:w-[150px]" data-testid="select-platform-filter">
+              <SelectValue placeholder="Plateforme" />
+            </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Toutes les plateformes</SelectItem>
             <SelectItem value="google">Google</SelectItem>
@@ -164,19 +165,20 @@ export default function ReviewsList() {
             <SelectItem value="yelp">Yelp</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={ratingFilter} onValueChange={setRatingFilter}>
-          <SelectTrigger className="w-[150px]" data-testid="select-rating-filter">
-            <SelectValue placeholder="Note" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Toutes les notes</SelectItem>
-            <SelectItem value="5">5 étoiles</SelectItem>
-            <SelectItem value="4">4 étoiles</SelectItem>
-            <SelectItem value="3">3 étoiles</SelectItem>
-            <SelectItem value="2">2 étoiles</SelectItem>
-            <SelectItem value="1">1 étoile</SelectItem>
-          </SelectContent>
-        </Select>
+          <Select value={ratingFilter} onValueChange={setRatingFilter}>
+            <SelectTrigger className="flex-1 md:w-[120px]" data-testid="select-rating-filter">
+              <SelectValue placeholder="Note" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Toutes</SelectItem>
+              <SelectItem value="5">5 étoiles</SelectItem>
+              <SelectItem value="4">4 étoiles</SelectItem>
+              <SelectItem value="3">3 étoiles</SelectItem>
+              <SelectItem value="2">2 étoiles</SelectItem>
+              <SelectItem value="1">1 étoile</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {reviews && reviews.length > 0 ? (

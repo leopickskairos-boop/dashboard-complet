@@ -380,20 +380,21 @@ export default function ReviewsCampaigns() {
   }
 
   return (
-    <div className="space-y-5 pb-8">
+    <div className="space-y-4 md:space-y-5 pb-8 p-4 md:p-0">
       {/* Header avec UX Copy */}
-      <div className="flex items-center justify-between pl-1">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pl-0 md:pl-1">
         <div>
-          <h1 className="text-lg font-semibold text-foreground">Campagnes d'avis</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">Envoyez des demandes d'avis ponctuelles à vos clients</p>
+          <h1 className="text-xl md:text-lg font-semibold text-foreground">Campagnes d'avis</h1>
+          <p className="text-sm md:text-xs text-muted-foreground mt-0.5">Demandes d'avis ponctuelles</p>
         </div>
         <div className="flex items-center gap-2">
           {/* Bouton campagne de masse */}
           <Dialog open={isBulkOpen} onOpenChange={setIsBulkOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline" data-testid="button-bulk-campaign">
+              <Button variant="outline" size="sm" data-testid="button-bulk-campaign" className="w-full md:w-auto">
                 <Users className="h-4 w-4 mr-2" />
-                Nouvelle campagne
+                <span className="hidden md:inline">Nouvelle campagne</span>
+                <span className="md:hidden">Campagne</span>
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">

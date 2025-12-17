@@ -87,12 +87,10 @@ export default function MarketingTemplates() {
   const [editingTemplate, setEditingTemplate] = useState<any>(null);
   const [generatedTemplate, setGeneratedTemplate] = useState<any>(null);
 
-  // Vérifier si on doit ouvrir le dialog de génération IA depuis l'URL
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('generate') === 'true') {
       setIsAIGenerateOpen(true);
-      // Nettoyer l'URL
       setLocation('/marketing/templates', { replace: true });
     }
   }, [setLocation]);
@@ -242,38 +240,40 @@ export default function MarketingTemplates() {
   const userTemplates = filteredTemplates?.filter(t => !t.isSystem);
 
   return (
-    <div className="min-h-screen p-6 space-y-6">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
+    <div className="min-h-screen p-4 md:p-6 space-y-4 md:space-y-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Templates</h1>
-          <p className="text-muted-foreground">
-            Modèles d'emails et SMS réutilisables
+          <h1 className="text-xl md:text-2xl font-bold text-foreground">Templates</h1>
+          <p className="text-sm md:text-base text-muted-foreground">
+            Modèles réutilisables
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Button 
             variant="outline" 
+            size="sm"
             onClick={() => setIsAIGenerateOpen(true)} 
             data-testid="button-ai-generate"
-            className="border-[#C8B88A]/30 text-[#C8B88A] hover:bg-[#C8B88A]/10"
+            className="flex-1 md:flex-none border-[#C8B88A]/30 text-[#C8B88A] hover:bg-[#C8B88A]/10 text-xs"
           >
-            <Sparkles className="h-4 w-4 mr-2" />
-            Générer par IA
+            <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+            <span className="hidden md:inline">Générer par IA</span>
+            <span className="md:hidden">IA</span>
           </Button>
-          <Button onClick={() => setIsCreateOpen(true)} data-testid="button-new-template">
-            <Plus className="h-4 w-4 mr-2" />
-            Nouveau template
+          <Button size="sm" onClick={() => setIsCreateOpen(true)} data-testid="button-new-template" className="flex-1 md:flex-none text-xs">
+            <Plus className="h-3.5 w-3.5 mr-1.5" />
+            Nouveau
           </Button>
         </div>
       </div>
 
       <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center gap-4 flex-wrap">
-            <div className="relative flex-1 min-w-[200px]">
+        <CardContent className="p-3 md:p-4">
+          <div className="flex flex-col md:flex-row gap-3 md:gap-4">
+            <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Rechercher un template..."
+                placeholder="Rechercher..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-10"
@@ -281,7 +281,7 @@ export default function MarketingTemplates() {
               />
             </div>
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-[180px]" data-testid="select-category">
+              <SelectTrigger className="w-full md:w-[180px]" data-testid="select-category">
                 <SelectValue placeholder="Catégorie" />
               </SelectTrigger>
               <SelectContent>
@@ -298,7 +298,7 @@ export default function MarketingTemplates() {
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="all" className="space-y-4">
+      <Tabs defaultValue="all" className="space-y-3 md:space-y-4">
         <TabsList>
           <TabsTrigger value="all" data-testid="tab-all">
             Tous ({filteredTemplates?.length || 0})

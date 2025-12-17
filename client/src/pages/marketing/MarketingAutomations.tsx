@@ -225,28 +225,27 @@ export default function MarketingAutomations() {
   };
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-4 md:space-y-6 pb-8 p-4 md:p-0">
       {/* Header */}
-      <div className="flex items-center justify-between pl-1">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 pl-0 md:pl-1">
         <div>
-          <h1 className="text-lg font-semibold text-foreground">Automations</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">Automatisez vos communications marketing</p>
+          <h1 className="text-xl md:text-lg font-semibold text-foreground">Automations</h1>
+          <p className="text-sm md:text-xs text-muted-foreground mt-0.5">Automatisez vos communications</p>
         </div>
       </div>
 
       {/* ZONE A — COMPRÉHENSION & VALEUR */}
       <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
-        <CardContent className="p-8">
-          <div className="max-w-2xl mx-auto text-center space-y-4">
-            <div className="inline-flex items-center justify-center p-4 rounded-full bg-[#4CEFAD]/10 mb-2">
-              <Workflow className="h-10 w-10 text-[#4CEFAD]" />
+        <CardContent className="p-4 md:p-8">
+          <div className="max-w-2xl mx-auto text-center space-y-3 md:space-y-4">
+            <div className="inline-flex items-center justify-center p-3 md:p-4 rounded-full bg-[#4CEFAD]/10 mb-2">
+              <Workflow className="h-8 w-8 md:h-10 md:w-10 text-[#4CEFAD]" />
             </div>
-            <h2 className="text-2xl font-semibold text-foreground">
-              Automatisez votre communication
+            <h2 className="text-xl md:text-2xl font-semibold text-foreground">
+              Automatisez
             </h2>
-            <p className="text-base text-muted-foreground leading-relaxed">
-              Envoyez automatiquement le bon message, au bon moment,
-              sans avoir à intervenir.
+            <p className="text-sm md:text-base text-muted-foreground leading-relaxed">
+              Envoyez le bon message, au bon moment.
             </p>
           </div>
         </CardContent>

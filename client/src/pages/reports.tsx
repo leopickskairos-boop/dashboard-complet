@@ -103,10 +103,10 @@ export default function ReportsPage() {
 
   if (isLoading) {
     return (
-      <div className="p-6 space-y-6">
-        <div className="flex items-center gap-3">
-          <FileText className="h-8 w-8 text-[#C8B88A]" />
-          <h1 className="text-2xl font-bold" data-testid="text-reports-title">Rapports Mensuels</h1>
+      <div className="p-4 md:p-6 space-y-4 md:space-y-6">
+        <div className="flex items-center gap-2 md:gap-3">
+          <FileText className="h-6 w-6 md:h-8 md:w-8 text-[#C8B88A]" />
+          <h1 className="text-xl md:text-2xl font-bold" data-testid="text-reports-title">Rapports</h1>
         </div>
         <Card>
           <CardHeader>
@@ -130,10 +130,10 @@ export default function ReportsPage() {
 
   if (error) {
     return (
-      <div className="p-6 space-y-6">
-        <div className="flex items-center gap-3">
-          <FileText className="h-8 w-8 text-[#C8B88A]" />
-          <h1 className="text-2xl font-bold" data-testid="text-reports-title">Rapports Mensuels</h1>
+      <div className="p-4 md:p-6 space-y-4 md:space-y-6">
+        <div className="flex items-center gap-2 md:gap-3">
+          <FileText className="h-6 w-6 md:h-8 md:w-8 text-[#C8B88A]" />
+          <h1 className="text-xl md:text-2xl font-bold" data-testid="text-reports-title">Rapports</h1>
         </div>
         <Card>
           <CardContent className="p-6">
@@ -148,20 +148,20 @@ export default function ReportsPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center gap-3">
-        <FileText className="h-8 w-8 text-[#C8B88A]" />
-        <h1 className="text-2xl font-bold" data-testid="text-reports-title">Rapports Mensuels</h1>
+    <div className="p-4 md:p-6 space-y-4 md:space-y-6">
+      <div className="flex items-center gap-2 md:gap-3">
+        <FileText className="h-6 w-6 md:h-8 md:w-8 text-[#C8B88A]" />
+        <h1 className="text-xl md:text-2xl font-bold" data-testid="text-reports-title">Rapports</h1>
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            Historique des rapports
+        <CardHeader className="p-4 md:p-6">
+          <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+            <Calendar className="h-4 w-4 md:h-5 md:w-5" />
+            Historique
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 md:p-6 pt-0 md:pt-0">
           {!reports || reports.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground" data-testid="text-no-reports">
               <FileText className="h-16 w-16 mx-auto mb-4 opacity-30" />
@@ -173,24 +173,24 @@ export default function ReportsPage() {
               {reports.map((report) => (
                 <div
                   key={report.id}
-                  className="flex items-center justify-between p-4 border rounded-lg hover-elevate transition-colors"
+                  className="flex flex-col md:flex-row md:items-center justify-between gap-3 p-3 md:p-4 border rounded-lg hover-elevate transition-colors"
                   data-testid={`row-report-${report.id}`}
                 >
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-3 md:gap-4">
                     <div className="p-2 rounded-lg bg-[#C8B88A]/10">
-                      <FileText className="h-6 w-6 text-[#C8B88A]" />
+                      <FileText className="h-5 w-5 md:h-6 md:w-6 text-[#C8B88A]" />
                     </div>
                     <div>
-                      <p className="font-medium capitalize" data-testid={`text-report-period-${report.id}`}>
+                      <p className="font-medium capitalize text-sm md:text-base" data-testid={`text-report-period-${report.id}`}>
                         {formatReportMonth(report.report_month)}
                       </p>
-                      <p className="text-sm text-muted-foreground" data-testid={`text-report-date-${report.id}`}>
-                        Créé le {formatDate(report.created_at)}
+                      <p className="text-xs md:text-sm text-muted-foreground" data-testid={`text-report-date-${report.id}`}>
+                        {formatDate(report.created_at)}
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center justify-between md:justify-end gap-3 md:gap-4">
                     {getStatusBadge(report.status)}
                     
                     {(report.status === "pdf_generated" || report.status === "sent") && report.pdf_path && (
@@ -199,9 +199,10 @@ export default function ReportsPage() {
                         size="sm"
                         onClick={() => handleDownload(report.id)}
                         data-testid={`button-download-${report.id}`}
+                        className="text-xs"
                       >
-                        <Download className="h-4 w-4 mr-2" />
-                        Télécharger
+                        <Download className="h-4 w-4 md:mr-2" />
+                        <span className="hidden md:inline">Télécharger</span>
                       </Button>
                     )}
                   </div>

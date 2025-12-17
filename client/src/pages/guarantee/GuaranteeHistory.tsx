@@ -98,19 +98,19 @@ export default function GuaranteeHistory() {
   }
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto p-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 md:space-y-6 max-w-5xl mx-auto p-4 md:p-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-3">
-            <Shield className="h-7 w-7 text-[#C8B88A]" />
-            Historique des no-shows
+          <h1 className="text-xl md:text-2xl font-bold text-white flex items-center gap-2 md:gap-3">
+            <Shield className="h-5 w-5 md:h-7 md:w-7 text-[#C8B88A]" />
+            Historique no-shows
           </h1>
-          <p className="text-gray-400 mt-1">
-            Suivi des pénalités et récupération des no-shows
+          <p className="text-sm md:text-base text-gray-400 mt-1">
+            Suivi des pénalités
           </p>
         </div>
         <Select value={period} onValueChange={(v) => setPeriod(v as any)}>
-          <SelectTrigger className="w-[140px] bg-white/5 border-white/10" data-testid="select-period">
+          <SelectTrigger className="w-full md:w-[140px] bg-white/5 border-white/10" data-testid="select-period">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -122,7 +122,7 @@ export default function GuaranteeHistory() {
         </Select>
       </div>
 
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
         <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
           <CardContent className="p-5">
             <div className="flex items-center justify-between mb-3">

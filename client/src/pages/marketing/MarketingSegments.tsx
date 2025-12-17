@@ -164,26 +164,26 @@ export default function MarketingSegments() {
   });
 
   return (
-    <div className="min-h-screen p-6 space-y-6">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
+    <div className="min-h-screen p-4 md:p-6 space-y-4 md:space-y-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Segments</h1>
-          <p className="text-muted-foreground">
-            Créez des groupes de contacts ciblés
+          <h1 className="text-xl md:text-2xl font-bold text-foreground">Segments</h1>
+          <p className="text-sm md:text-base text-muted-foreground">
+            Groupes de contacts ciblés
           </p>
         </div>
-        <Button onClick={() => setIsCreateOpen(true)} data-testid="button-new-segment">
+        <Button size="sm" onClick={() => setIsCreateOpen(true)} data-testid="button-new-segment" className="w-full md:w-auto">
           <Plus className="h-4 w-4 mr-2" />
           Nouveau segment
         </Button>
       </div>
 
       <Card>
-        <CardContent className="p-4">
+        <CardContent className="p-3 md:p-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Rechercher un segment..."
+              placeholder="Rechercher..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-10"

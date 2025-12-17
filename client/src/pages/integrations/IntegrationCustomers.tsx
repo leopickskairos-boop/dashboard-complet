@@ -106,25 +106,25 @@ export default function IntegrationCustomers() {
   const uniqueSources = [...new Set(customers?.map(c => c.externalSource).filter(Boolean))];
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 md:space-y-6 p-4 md:p-0">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Clients</h1>
-          <p className="text-muted-foreground mt-1">
-            Vue unifiée de vos clients depuis toutes les sources
+          <h1 className="text-xl md:text-3xl font-bold text-foreground">Clients</h1>
+          <p className="text-sm md:text-base text-muted-foreground mt-1">
+            Vue unifiée de vos clients
           </p>
         </div>
       </div>
 
       {/* Filters */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-wrap gap-4">
-            <div className="flex-1 min-w-[200px]">
+        <CardContent className="p-3 md:pt-6 md:px-6">
+          <div className="flex flex-col md:flex-row gap-3 md:gap-4">
+            <div className="flex-1">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Rechercher par nom, email, téléphone..."
+                  placeholder="Rechercher..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="pl-10"
@@ -132,30 +132,32 @@ export default function IntegrationCustomers() {
                 />
               </div>
             </div>
-            <Select value={sourceFilter} onValueChange={setSourceFilter}>
-              <SelectTrigger className="w-[180px]" data-testid="select-source-filter">
-                <SelectValue placeholder="Source" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Toutes sources</SelectItem>
-                {uniqueSources.map(source => (
-                  <SelectItem key={source} value={source!} className="capitalize">{source}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={segmentFilter} onValueChange={setSegmentFilter}>
-              <SelectTrigger className="w-[180px]" data-testid="select-segment-filter">
-                <SelectValue placeholder="Segment" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tous segments</SelectItem>
-                <SelectItem value="vip">VIP</SelectItem>
-                <SelectItem value="regular">Régulier</SelectItem>
-                <SelectItem value="new">Nouveau</SelectItem>
-                <SelectItem value="at_risk">À risque</SelectItem>
-                <SelectItem value="lost">Perdu</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex gap-2">
+              <Select value={sourceFilter} onValueChange={setSourceFilter}>
+                <SelectTrigger className="flex-1 md:w-[150px]" data-testid="select-source-filter">
+                  <SelectValue placeholder="Source" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Toutes sources</SelectItem>
+                  {uniqueSources.map(source => (
+                    <SelectItem key={source} value={source!} className="capitalize">{source}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={segmentFilter} onValueChange={setSegmentFilter}>
+                <SelectTrigger className="flex-1 md:w-[150px]" data-testid="select-segment-filter">
+                  <SelectValue placeholder="Segment" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous</SelectItem>
+                  <SelectItem value="vip">VIP</SelectItem>
+                  <SelectItem value="regular">Régulier</SelectItem>
+                  <SelectItem value="new">Nouveau</SelectItem>
+                  <SelectItem value="at_risk">À risque</SelectItem>
+                  <SelectItem value="lost">Perdu</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardContent>
       </Card>

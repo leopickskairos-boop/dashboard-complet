@@ -124,27 +124,30 @@ export default function MarketingAnalytics() {
   ] : [];
 
   return (
-    <div className="min-h-screen p-6 space-y-6">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
+    <div className="min-h-screen p-4 md:p-6 space-y-4 md:space-y-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Analytics</h1>
-          <p className="text-muted-foreground">Analysez les performances de vos campagnes</p>
+          <h1 className="text-xl md:text-2xl font-bold text-foreground">Analytics</h1>
+          <p className="text-sm md:text-base text-muted-foreground">Performances campagnes</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 md:gap-3">
           <Select value={period} onValueChange={(v) => setPeriod(v as any)}>
-            <SelectTrigger className="w-[160px]" data-testid="select-period">
+            <SelectTrigger className="flex-1 md:w-[160px]" data-testid="select-period">
               <Calendar className="h-4 w-4 mr-2" />
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="week">7 derniers jours</SelectItem>
-              <SelectItem value="month">30 derniers jours</SelectItem>
-              <SelectItem value="year">12 derniers mois</SelectItem>
+              <SelectItem value="week">7 jours</SelectItem>
+              <SelectItem value="month">30 jours</SelectItem>
+              <SelectItem value="year">12 mois</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" data-testid="button-export">
+          <Button variant="outline" size="sm" data-testid="button-export" className="hidden md:flex">
             <Download className="h-4 w-4 mr-2" />
             Exporter
+          </Button>
+          <Button variant="outline" size="icon" data-testid="button-export-mobile" className="md:hidden">
+            <Download className="h-4 w-4" />
           </Button>
         </div>
       </div>

@@ -311,29 +311,31 @@ export default function AdminPage() {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="container mx-auto p-4 md:p-6 space-y-4 md:space-y-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Shield className="w-8 h-8" />
-            Panneau d'administration
+          <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
+            <Shield className="w-6 h-6 md:w-8 md:h-8" />
+            Administration
           </h1>
-          <p className="text-muted-foreground mt-1">
-            Gérez tous les utilisateurs de la plateforme
+          <p className="text-sm md:text-base text-muted-foreground mt-1">
+            Gérez les utilisateurs
           </p>
         </div>
         <Button
           onClick={handleGenerateTestReport}
           disabled={isGeneratingReport}
           variant="outline"
+          size="sm"
           data-testid="button-generate-test-report"
+          className="w-full md:w-auto"
         >
           {isGeneratingReport ? (
             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
           ) : (
             <Download className="w-4 h-4 mr-2" />
           )}
-          {isGeneratingReport ? "Génération..." : "Tester PDF Rapport"}
+          {isGeneratingReport ? "Génération..." : "Tester PDF"}
         </Button>
       </div>
 

@@ -206,19 +206,19 @@ export default function MarketingContacts() {
   const hasContacts = data && data.total > 0;
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-4 md:space-y-6 pb-8 p-4 md:p-0">
       {/* Header */}
-      <div className="flex items-center justify-between pl-1">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pl-0 md:pl-1">
         <div>
-          <h1 className="text-lg font-semibold text-foreground">Contacts</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">Gérez votre base de contacts marketing</p>
+          <h1 className="text-xl md:text-lg font-semibold text-foreground">Contacts</h1>
+          <p className="text-sm md:text-xs text-muted-foreground mt-0.5">Gérez votre base de contacts</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => setIsImportOpen(true)} className="text-xs">
+          <Button variant="outline" size="sm" onClick={() => setIsImportOpen(true)} className="text-xs flex-1 md:flex-none">
             <Upload className="h-3.5 w-3.5 mr-1.5" />
             Importer
           </Button>
-          <Button size="sm" onClick={() => setIsAddOpen(true)} className="text-xs">
+          <Button size="sm" onClick={() => setIsAddOpen(true)} className="text-xs flex-1 md:flex-none">
             <Plus className="h-3.5 w-3.5 mr-1.5" />
             Ajouter
           </Button>
@@ -226,7 +226,7 @@ export default function MarketingContacts() {
       </div>
 
       {/* ZONE A — VALEUR & PILOTAGE */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-3 md:gap-4 grid-cols-2 md:grid-cols-4">
         {/* Contacts totaux */}
         <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
           <CardContent className="p-4">

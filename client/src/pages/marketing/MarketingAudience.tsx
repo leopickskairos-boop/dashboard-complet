@@ -226,30 +226,31 @@ export default function MarketingAudience() {
   const hasSegments = segments && segments.length > 0;
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-4 md:space-y-6 pb-8 p-4 md:p-0">
       {/* Header */}
-      <div className="flex items-center justify-between pl-1">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pl-0 md:pl-1">
         <div>
-          <h1 className="text-lg font-semibold text-foreground">Audience</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">Gérez vos contacts et segments marketing</p>
+          <h1 className="text-xl md:text-lg font-semibold text-foreground">Audience</h1>
+          <p className="text-sm md:text-xs text-muted-foreground mt-0.5">Contacts et segments</p>
         </div>
         <div className="flex items-center gap-2">
           {activeTab === "contacts" && (
             <>
-              <Button variant="outline" size="sm" onClick={() => setIsImportOpen(true)} className="text-xs">
+              <Button variant="outline" size="sm" onClick={() => setIsImportOpen(true)} className="flex-1 md:flex-none text-xs">
                 <Upload className="h-3.5 w-3.5 mr-1.5" />
-                Importer
+                <span className="hidden md:inline">Importer</span>
+                <span className="md:hidden">Import</span>
               </Button>
-              <Button size="sm" onClick={() => setIsAddOpen(true)} className="text-xs">
+              <Button size="sm" onClick={() => setIsAddOpen(true)} className="flex-1 md:flex-none text-xs">
                 <Plus className="h-3.5 w-3.5 mr-1.5" />
                 Ajouter
               </Button>
             </>
           )}
           {activeTab === "segments" && (
-            <Button size="sm" onClick={() => setLocation("/marketing/segments")} className="text-xs">
+            <Button size="sm" onClick={() => setLocation("/marketing/segments")} className="w-full md:w-auto text-xs">
               <Plus className="h-3.5 w-3.5 mr-1.5" />
-              Créer un segment
+              Créer segment
             </Button>
           )}
         </div>

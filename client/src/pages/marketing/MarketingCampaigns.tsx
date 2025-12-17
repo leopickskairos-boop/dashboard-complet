@@ -320,17 +320,17 @@ export default function MarketingCampaigns() {
   };
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-4 md:space-y-6 pb-8 p-4 md:p-0">
       {/* Header */}
-      <div className="flex items-center justify-between pl-1">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pl-0 md:pl-1">
         <div>
-          <h1 className="text-lg font-semibold text-foreground">Campagnes</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">Créez et gérez vos campagnes marketing</p>
+          <h1 className="text-xl md:text-lg font-semibold text-foreground">Campagnes</h1>
+          <p className="text-sm md:text-xs text-muted-foreground mt-0.5">Gérez vos campagnes marketing</p>
         </div>
       </div>
 
       {/* ZONE A — PILOTAGE RAPIDE */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-3 md:gap-4 grid-cols-2 md:grid-cols-4">
         {/* Campagnes envoyées - Card dominante */}
         <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06] md:col-span-2">
           <CardContent className="p-5">
