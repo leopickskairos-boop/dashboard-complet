@@ -142,7 +142,17 @@ function NavSection({
   unreadCount?: number;
   color?: string;
 }) {
-  const [openItems, setOpenItems] = useState<string[]>([]);
+  const isChildActive = (children?: any[]) => {
+    if (!children) return false;
+    return children.some(child => location === child.url || location.startsWith(child.url + '/'));
+  };
+
+  // Initialize with active items open, but allow manual toggle
+  const [openItems, setOpenItems] = useState<string[]>(() => {
+    return items
+      .filter(item => item.children && isChildActive(item.children))
+      .map(item => item.title);
+  });
 
   const toggleItem = (itemTitle: string) => {
     setOpenItems(prev => 
@@ -150,11 +160,6 @@ function NavSection({
         ? prev.filter(t => t !== itemTitle)
         : [...prev, itemTitle]
     );
-  };
-
-  const isChildActive = (children?: any[]) => {
-    if (!children) return false;
-    return children.some(child => location === child.url || location.startsWith(child.url + '/'));
   };
 
   return (
@@ -166,7 +171,7 @@ function NavSection({
         <SidebarMenu>
           {items.map((item) => {
             if (item.children) {
-              const isOpen = openItems.includes(item.title) || isChildActive(item.children);
+              const isOpen = openItems.includes(item.title);
               return (
                 <Collapsible key={item.title} open={isOpen}>
                   <SidebarMenuItem>
