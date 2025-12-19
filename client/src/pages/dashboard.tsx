@@ -1352,7 +1352,7 @@ export default function Dashboard() {
                             </div>
                           </td>
                           <td className="py-5 px-4">
-                            <div className="text-[13px] font-mono text-foreground/80">{call.phoneNumber}</div>
+                            <div className="text-[11px] md:text-[13px] font-mono text-foreground/80 truncate max-w-[100px] md:max-w-none">{call.phoneNumber}</div>
                           </td>
                           <td className="py-5 px-4 hidden md:table-cell">
                             {call.eventType ? (
@@ -1489,7 +1489,7 @@ export default function Dashboard() {
                     <div className="text-[10px] text-[#9A9A9A] uppercase tracking-wider mb-1.5 font-medium">
                       Téléphone
                     </div>
-                    <div className="text-[14px] font-mono text-[#F5F5F5]">{selectedCall.phoneNumber}</div>
+                    <div className="text-[12px] md:text-[14px] font-mono text-[#F5F5F5] break-all">{selectedCall.phoneNumber}</div>
                   </div>
                   <div>
                     <div className="text-[10px] text-[#9A9A9A] uppercase tracking-wider mb-1.5 font-medium">

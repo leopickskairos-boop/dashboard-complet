@@ -426,27 +426,13 @@ export default function ReviewsStats() {
       <div className="grid gap-3 md:gap-4 grid-cols-2 md:grid-cols-5">
         <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
           <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-[#C8B88A]/10">
-                <Star className="h-5 w-5 text-[#C8B88A]" />
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="p-2 md:p-2.5 rounded-xl bg-[#C8B88A]/10 shrink-0">
+                <Star className="h-4 w-4 md:h-5 md:w-5 text-[#C8B88A]" />
               </div>
-              <div>
-                <p className="text-2xl font-bold">{stats?.globalScore?.toFixed(1) || "-"}</p>
-                <p className="text-xs text-muted-foreground">Note moyenne</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-[#4CEFAD]/10">
-                <MessageSquare className="h-5 w-5 text-[#4CEFAD]" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats?.totalReviews || 0}</p>
-                <p className="text-xs text-muted-foreground">Nombre d'avis</p>
+              <div className="min-w-0">
+                <p className="text-xl md:text-2xl font-bold">{stats?.globalScore?.toFixed(1) || "-"}</p>
+                <p className="text-[10px] md:text-xs text-muted-foreground truncate">Note moy.</p>
               </div>
             </div>
           </CardContent>
@@ -454,19 +440,35 @@ export default function ReviewsStats() {
 
         <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
           <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-red-500/10">
-                <AlertTriangle className="h-5 w-5 text-red-400" />
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="p-2 md:p-2.5 rounded-xl bg-[#4CEFAD]/10 shrink-0">
+                <MessageSquare className="h-4 w-4 md:h-5 md:w-5 text-[#4CEFAD]" />
               </div>
-              <div className="flex-1">
-                <p className="text-2xl font-bold">{stats?.unansweredReviews || 0}</p>
-                <p className="text-xs text-muted-foreground">Avis non répondus</p>
+              <div className="min-w-0">
+                <p className="text-xl md:text-2xl font-bold">{stats?.totalReviews || 0}</p>
+                <p className="text-[10px] md:text-xs text-muted-foreground truncate">Nb d'avis</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
+          <CardContent className="p-4">
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-3">
+                <div className="p-2 md:p-2.5 rounded-xl bg-red-500/10 shrink-0">
+                  <AlertTriangle className="h-4 w-4 md:h-5 md:w-5 text-red-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xl md:text-2xl font-bold">{stats?.unansweredReviews || 0}</p>
+                  <p className="text-[10px] md:text-xs text-muted-foreground truncate">Non répondus</p>
+                </div>
               </div>
               {stats?.unansweredReviews && stats.unansweredReviews > 0 && (
                 <Button
                   size="sm"
                   variant="outline"
-                  className="text-xs h-7"
+                  className="text-[10px] md:text-xs h-6 md:h-7 w-full whitespace-nowrap"
                   onClick={() => setLocation("/reviews?responseStatus=none")}
                 >
                   Répondre
@@ -478,13 +480,13 @@ export default function ReviewsStats() {
 
         <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
           <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-purple-500/10">
-                <MessageSquare className="h-5 w-5 text-purple-400" />
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="p-2 md:p-2.5 rounded-xl bg-purple-500/10 shrink-0">
+                <MessageSquare className="h-4 w-4 md:h-5 md:w-5 text-purple-400" />
               </div>
-              <div>
-                <p className="text-2xl font-bold">{stats?.responseRate || 0}%</p>
-                <p className="text-xs text-muted-foreground">Taux de réponse</p>
+              <div className="min-w-0">
+                <p className="text-xl md:text-2xl font-bold">{stats?.responseRate || 0}%</p>
+                <p className="text-[10px] md:text-xs text-muted-foreground truncate">Taux rép.</p>
               </div>
             </div>
           </CardContent>
@@ -492,29 +494,29 @@ export default function ReviewsStats() {
 
         <Card className="bg-gradient-to-br from-[#1A1C1F] to-[#151618] shadow-[0_0_12px_rgba(0,0,0,0.25)] border-white/[0.06]">
           <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-blue-500/10">
-                <MousePointerClick className="h-5 w-5 text-blue-400" />
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="p-2 md:p-2.5 rounded-xl bg-blue-500/10 shrink-0">
+                <MousePointerClick className="h-4 w-4 md:h-5 md:w-5 text-blue-400" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <div className="flex items-center gap-1">
-                  <p className="text-2xl font-bold">
+                  <p className="text-xl md:text-2xl font-bold">
                     {stats?.clickThroughRateDataAvailable ? `${stats.clickThroughRate || 0}%` : "N/A"}
                   </p>
                   {!stats?.clickThroughRateDataAvailable && (
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                          <HelpCircle className="h-3 w-3 md:h-3.5 md:w-3.5 text-muted-foreground cursor-help" />
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p className="text-xs">Données insuffisantes pour calculer le CTR</p>
+                          <p className="text-xs">Données insuffisantes</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground">CTR</p>
+                <p className="text-[10px] md:text-xs text-muted-foreground">CTR</p>
               </div>
             </div>
           </CardContent>
