@@ -3,6 +3,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import cookieParser from "cookie-parser";
 import { registerRoutes } from "./routes";
 import { registerCronApiRoutes } from "./cron-api-routes";
+import { registerDemoRoutes } from "./demo-routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { monthlyReportCron } from "./monthly-report.cron";
 import { trialExpirationCron } from "./trial-expiration.cron";
@@ -69,6 +70,9 @@ app.use((req, res, next) => {
   
   // Register cron API routes for external triggering (always available)
   registerCronApiRoutes(app);
+  
+  // Register demo routes for presentation mode
+  registerDemoRoutes(app);
 
   // Start internal cron jobs only if not disabled
   // In production with Autoscale, set DISABLE_INTERNAL_CRONS=true and use external triggers (N8N/cron-job.org)

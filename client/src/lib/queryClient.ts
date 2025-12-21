@@ -1,10 +1,16 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { getDemoUrl, DEMO_MODE } from "./demo-mode";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
     throw new Error(`${res.status}: ${text}`);
   }
+}
+
+// Log demo mode status at startup
+if (DEMO_MODE) {
+  console.log('[Demo] Mode démonstration activé - données fictives');
 }
 
 export async function apiRequest(
@@ -29,7 +35,13 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey.join("/") as string, {
+    // Build URL from queryKey - handle both string arrays and single string
+    let url = Array.isArray(queryKey) ? String(queryKey[0]) : String(queryKey);
+    
+    // In demo mode, redirect supported endpoints to demo routes
+    url = getDemoUrl(url);
+    
+    const res = await fetch(url, {
       credentials: "include",
     });
 
