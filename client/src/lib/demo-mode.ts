@@ -26,6 +26,9 @@ export function getDemoUrl(url: string): string {
     '/api/waitlist',
     '/api/recommendations',
     '/api/notifications',
+    '/api/auth',
+    '/api/user',
+    '/api/settings',
   ];
   
   // Vérifier si l'URL correspond à un endpoint de démo

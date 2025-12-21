@@ -324,20 +324,42 @@ export function registerDemoRoutes(app: Express) {
 
   // ========== USER / ACCOUNT ==========
   
+  const demoUser = {
+    id: "demo-user-001",
+    email: "demo@lepetitbistrot.fr",
+    role: "user",
+    companyName: "Le Petit Bistrot",
+    phone: "+33 1 42 36 58 74",
+    accountStatus: "active",
+    subscriptionStatus: "active",
+    plan: "premium",
+    trialEndsAt: null,
+    isVerified: true,
+    onboardingCompleted: true,
+    createdAt: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
+  };
+  
   app.get("/api/demo/auth/me", (req, res) => {
+    res.json(demoUser);
+  });
+  
+  app.get("/api/demo/user", (req, res) => {
+    res.json(demoUser);
+  });
+  
+  app.get("/api/demo/user/profile", (req, res) => {
+    res.json(demoUser);
+  });
+  
+  app.get("/api/demo/settings", (req, res) => {
     res.json({
-      id: "demo-user-001",
-      email: "demo@lepetitbistrot.fr",
-      role: "user",
-      companyName: "Le Petit Bistrot",
-      phone: "+33 1 42 36 58 74",
-      accountStatus: "active",
-      subscriptionStatus: "active",
-      plan: "premium",
-      trialEndsAt: null,
-      isVerified: true,
-      onboardingCompleted: true,
-      createdAt: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
+      notifications: {
+        email: true,
+        sms: true,
+        push: true,
+      },
+      language: "fr",
+      timezone: "Europe/Paris",
     });
   });
 
