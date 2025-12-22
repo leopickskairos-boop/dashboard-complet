@@ -51,10 +51,16 @@ export async function requireApiKey(req: Request, res: Response, next: NextFunct
     console.log("=".repeat(60));
     
     const authHeader = req.headers.authorization;
+    const xApiKeyHeader = req.headers['x-api-key'] as string | undefined;
     let apiKey: string | null = null;
 
-    // Try to get API key from Authorization header first
-    if (authHeader) {
+    // Try X-API-Key header first (most common for N8N)
+    if (xApiKeyHeader) {
+      apiKey = xApiKeyHeader.trim();
+      console.log("🔑 [DEBUG] API key from X-API-Key header, length:", apiKey.length);
+    }
+    // Then try Authorization header
+    else if (authHeader) {
       console.log("🔑 [DEBUG] Raw authHeader length:", authHeader.length);
       console.log("🔑 [DEBUG] Raw authHeader:", JSON.stringify(authHeader));
       
@@ -62,7 +68,16 @@ export async function requireApiKey(req: Request, res: Response, next: NextFunct
       console.log("🔑 [DEBUG] Parts after split:", parts.length, "| Part[0]:", JSON.stringify(parts[0]), "| Part[1] length:", parts[1]?.length);
       
       if (parts.length === 2 && parts[0] === "Bearer") {
+        // Standard format: Bearer xxx
         apiKey = parts[1];
+        console.log("🔑 [DEBUG] Extracted API key from Bearer format");
+      } else if (parts.length === 1 && parts[0].startsWith('speedai_')) {
+        // Direct format: speedai_live_xxx (without Bearer prefix)
+        apiKey = parts[0];
+        console.log("🔑 [DEBUG] Extracted API key directly (no Bearer prefix)");
+      }
+      
+      if (apiKey) {
         console.log("🔑 [DEBUG] Extracted API key length:", apiKey.length);
         console.log("🔑 [DEBUG] API key first 30 chars:", apiKey.substring(0, 30));
         console.log("🔑 [DEBUG] API key last 10 chars:", apiKey.substring(apiKey.length - 10));
