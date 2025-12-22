@@ -599,6 +599,61 @@ router.post("/disconnect-stripe", requireAuth, async (req, res) => {
 
 // ===== SESSIONS (N8N + Dashboard) =====
 
+// Check if guarantee is enabled for a client (N8N via API key)
+router.get("/check-status", requireApiKey, async (req, res) => {
+  try {
+    const userId = (req as any).user?.id || (req as any).userId;
+    
+    const config = await storage.getGuaranteeConfig(userId);
+    const user = await storage.getUser(userId);
+    
+    if (!config) {
+      return res.json({
+        success: true,
+        guaranteeEnabled: false,
+        reason: "no_config",
+        message: "Configuration garantie CB non trouvée"
+      });
+    }
+    
+    if (!config.enabled) {
+      return res.json({
+        success: true,
+        guaranteeEnabled: false,
+        reason: "disabled",
+        message: "Garantie CB désactivée"
+      });
+    }
+    
+    if (!config.stripeAccountId) {
+      return res.json({
+        success: true,
+        guaranteeEnabled: false,
+        reason: "stripe_not_connected",
+        message: "Compte Stripe non connecté"
+      });
+    }
+    
+    res.json({
+      success: true,
+      guaranteeEnabled: true,
+      config: {
+        penaltyAmount: config.penaltyAmount,
+        cancellationDelay: config.cancellationDelay,
+        applyTo: config.applyTo,
+        minPersons: config.minPersons,
+        companyName: config.companyName || user?.companyName,
+        smsEnabled: config.smsEnabled,
+        autoSendEmailOnCreate: config.autoSendEmailOnCreate,
+        autoSendSmsOnCreate: config.autoSendSmsOnCreate,
+      }
+    });
+  } catch (error: any) {
+    console.error('[Guarantee] Error checking status:', error);
+    res.status(500).json({ success: false, message: "Erreur serveur" });
+  }
+});
+
 // Create guarantee session (N8N via API key)
 router.post("/create-session", requireApiKey, async (req, res) => {
   try {
