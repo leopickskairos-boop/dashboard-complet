@@ -134,10 +134,15 @@ export async function requireApiKey(req: Request, res: Response, next: NextFunct
       console.log("❌ [DEBUG] No Authorization header found");
     }
     
-    // Fallback: Try to get API key from request body (N8N sends it as dashboard_api_key)
-    if (!apiKey && req.body && req.body.dashboard_api_key) {
-      apiKey = req.body.dashboard_api_key;
-      console.log("🔑 API Key from body (dashboard_api_key)");
+    // Fallback: Try to get API key from request body (N8N sends it as dashboard_api_key or client_api_key)
+    if (!apiKey && req.body) {
+      if (req.body.dashboard_api_key) {
+        apiKey = req.body.dashboard_api_key;
+        console.log("🔑 API Key from body (dashboard_api_key)");
+      } else if (req.body.client_api_key) {
+        apiKey = req.body.client_api_key;
+        console.log("🔑 API Key from body (client_api_key)");
+      }
     }
 
     if (!apiKey) {
