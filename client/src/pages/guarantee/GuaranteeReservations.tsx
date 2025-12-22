@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest, queryClient } from '@/lib/queryClient';
+import { getDemoUrl } from '@/lib/demo-mode';
 import { formatDistanceToNow, format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -62,7 +63,7 @@ export default function GuaranteeReservations() {
   const { data, isLoading, refetch } = useQuery<ReservationsResponse>({
     queryKey: ['/api/guarantee/reservations', period],
     queryFn: async () => {
-      const response = await fetch(`/api/guarantee/reservations?period=${period}`, {
+      const response = await fetch(getDemoUrl(`/api/guarantee/reservations?period=${period}`), {
         credentials: 'include',
       });
       return response.json();

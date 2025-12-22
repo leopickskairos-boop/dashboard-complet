@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/table';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { getDemoUrl } from '@/lib/demo-mode';
 
 interface GuaranteeStats {
   noshowCount: number;
@@ -63,7 +64,7 @@ export default function GuaranteeHistory() {
   const { data: stats, isLoading: statsLoading } = useQuery<GuaranteeStats>({
     queryKey: ['/api/guarantee/stats', period],
     queryFn: async () => {
-      const response = await fetch(`/api/guarantee/stats?period=${period}`, {
+      const response = await fetch(getDemoUrl(`/api/guarantee/stats?period=${period}`), {
         credentials: 'include',
       });
       return response.json();
@@ -73,7 +74,7 @@ export default function GuaranteeHistory() {
   const { data: history, isLoading: historyLoading } = useQuery<NoshowCharge[]>({
     queryKey: ['/api/guarantee/history', period],
     queryFn: async () => {
-      const response = await fetch(`/api/guarantee/history?period=${period}`, {
+      const response = await fetch(getDemoUrl(`/api/guarantee/history?period=${period}`), {
         credentials: 'include',
       });
       return response.json();
