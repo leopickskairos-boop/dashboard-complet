@@ -254,18 +254,42 @@ export function registerDemoRoutes(app: Express) {
 
   app.get("/api/demo/guarantee/config", (req, res) => {
     res.json({
-      isEnabled: true,
-      penaltyAmountPerPerson: 25,
-      cancellationDelayHours: 24,
-      minimumGuests: 4,
-      stripeAccountId: "acct_demo_xxxxx",
+      config: {
+        enabled: true,
+        penaltyAmount: 25,
+        cancellationDelay: 24,
+        applyTo: 'min_persons',
+        minPersons: 4,
+        logoUrl: null,
+        brandColor: "#C8B88A",
+        senderEmail: "demo@lepetitbistrot.fr",
+        gmailSenderEmail: "contact@lepetitbistrot.fr",
+        gmailSenderName: "Le Petit Bistrot",
+        gmailAppPassword: "****",
+        termsUrl: null,
+        companyName: "Le Petit Bistrot",
+        companyAddress: "15 Rue de la Gastronomie, 75001 Paris",
+        companyPhone: "+33 1 42 36 58 74",
+        stripeAccountId: "acct_demo_xxxxx",
+        smsEnabled: true,
+        autoSendEmailOnCreate: true,
+        autoSendSmsOnCreate: true,
+        autoSendEmailOnValidation: true,
+        autoSendSmsOnValidation: true,
+      },
       stripeConnected: true,
-      companyLogo: null,
-      brandColor: "#C8B88A",
-      companyName: "Le Petit Bistrot",
-      smsEnabled: true,
-      emailEnabled: true,
-      autoSendEnabled: true,
+      user: {
+        email: "demo@lepetitbistrot.fr",
+      },
+    });
+  });
+
+  app.get("/api/demo/guarantee/stripe-status", (req, res) => {
+    res.json({
+      connected: true,
+      detailsSubmitted: true,
+      chargesEnabled: true,
+      payoutsEnabled: true,
     });
   });
 
