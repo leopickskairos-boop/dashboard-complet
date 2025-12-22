@@ -52,12 +52,18 @@ export async function requireApiKey(req: Request, res: Response, next: NextFunct
     
     const authHeader = req.headers.authorization;
     const xApiKeyHeader = req.headers['x-api-key'] as string | undefined;
+    const queryApiKey = req.query.api_key as string | undefined;
     let apiKey: string | null = null;
 
     // Try X-API-Key header first (most common for N8N)
     if (xApiKeyHeader) {
       apiKey = xApiKeyHeader.trim();
       console.log("🔑 [DEBUG] API key from X-API-Key header, length:", apiKey.length);
+    }
+    // Then try query parameter (useful for N8N when headers don't persist)
+    else if (queryApiKey) {
+      apiKey = queryApiKey.trim();
+      console.log("🔑 [DEBUG] API key from query parameter, length:", apiKey.length);
     }
     // Then try Authorization header
     else if (authHeader) {
