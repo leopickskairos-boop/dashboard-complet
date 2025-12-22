@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,11 +10,29 @@ import { apiRequest } from "@/lib/queryClient";
 export default function VerifyEmailSent() {
   const { toast } = useToast();
   const [isResending, setIsResending] = useState(false);
+  const [email, setEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Get email from URL params or localStorage
+    const params = new URLSearchParams(window.location.search);
+    const emailParam = params.get('email');
+    const storedEmail = localStorage.getItem('pendingVerificationEmail');
+    setEmail(emailParam || storedEmail);
+  }, []);
 
   async function handleResend() {
+    if (!email) {
+      toast({
+        title: "Erreur",
+        description: "Email non trouvé. Veuillez vous réinscrire.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsResending(true);
     try {
-      const response = await apiRequest("POST", "/api/auth/resend-verification", {});
+      const response = await apiRequest("POST", "/api/auth/resend-verification", { email });
       
       if (!response.ok) {
         const error = await response.json();

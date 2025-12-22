@@ -554,10 +554,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Resend verification email
-  app.post("/api/auth/resend-verification", requireAuth, async (req, res) => {
+  // Resend verification email (no auth required - user provides email)
+  app.post("/api/auth/resend-verification", async (req, res) => {
     try {
-      const user = (req as any).user;
+      const { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({ message: "Email requis" });
+      }
+
+      // Find user by email
+      const user = await storage.getUserByEmail(email);
+
+      // Always return success to prevent email enumeration
+      if (!user) {
+        return res.json({ message: "Si cet email existe, un lien de vérification a été envoyé." });
+      }
 
       if (user.isVerified) {
         return res.status(400).json({ message: "Email déjà vérifié" });

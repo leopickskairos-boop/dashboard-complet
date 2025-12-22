@@ -43,12 +43,15 @@ export default function Signup() {
       // CRITICAL FIX: Invalidate cached user data to prevent cross-user data leak
       queryClient.removeQueries({ queryKey: ['/api/auth/me'] });
 
+      // Store email for resend verification feature
+      localStorage.setItem('pendingVerificationEmail', email);
+
       toast({
         title: "Inscription réussie !",
         description: "Un email de vérification vous a été envoyé. Veuillez consulter votre boîte de réception.",
       });
 
-      setLocation("/verify-email-sent");
+      setLocation(`/verify-email-sent?email=${encodeURIComponent(email)}`);
     } catch (error: any) {
       toast({
         title: "Erreur",
