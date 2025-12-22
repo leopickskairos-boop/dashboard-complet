@@ -2657,6 +2657,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ===== WEBHOOK ROUTES (API Key Authentication) =====
 
+  // N8N Webhook - Sync reservation data from workflow
+  // Route: POST /api/webhooks/n8n/reservation
+  // Auth: API key (X-API-Key or Authorization header)
+  // Body: Flexible reservation data format
+  app.post("/api/webhooks/n8n/reservation", requireApiKey, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const data = req.body;
+
+      console.log(`📅 N8N Reservation Webhook: Données reçues pour user ${userId}`, data);
+
+      // Helper to parse flexible datetime
+      const parseFlexibleDate = (value: string | number | null | undefined): Date | undefined => {
+        if (value === null || value === undefined || value === 'N/A' || value === '') return undefined;
+        if (typeof value === 'number') {
+          const ts = value > 9999999999 ? value : value * 1000;
+          return new Date(ts);
+        }
+        return new Date(value);
+      };
+
+      // Normalize email (accept N/A or empty as null)
+      const normalizeEmail = (email: string | null | undefined): string | null => {
+        if (!email || email === 'N/A' || email === '' || email === 'undefined') return null;
+        return email;
+      };
+
+      // Build call data from reservation format
+      const callData: any = {
+        userId,
+        phoneNumber: data.customer_phone || data.client_phone || 'N/A',
+        status: 'completed',
+        startTime: new Date(),
+        eventType: 'reservation',
+        conversionResult: 'rdv',
+        callSuccessful: true,
+        callAnswered: true,
+        
+        // Client info
+        clientName: data.customer_name || data.client_name,
+        clientEmail: normalizeEmail(data.customer_email || data.client_email),
+        
+        // Appointment details
+        appointmentDate: parseFlexibleDate(data.reservation_date),
+        
+        // Store reservation ID and other details in metadata
+        metadata: {
+          reservation_id: data.reservation_id,
+          reservation_time: data.reservation_time,
+          client_email: normalizeEmail(data.client_email),
+          customer_email: normalizeEmail(data.customer_email),
+          nb_persons: data.nb_persons,
+          source: 'n8n_reservation_webhook',
+          raw_data: data,
+        },
+      };
+      
+      // Remove undefined values
+      Object.keys(callData).forEach(key => {
+        if (callData[key] === undefined) {
+          delete callData[key];
+        }
+      });
+
+      // Create call record
+      const call = await storage.createCall(callData);
+
+      console.log(`✅ N8N Reservation: Créé avec succès - ID: ${call.id}`);
+
+      res.json({
+        success: true,
+        message: "Réservation synchronisée",
+        call_id: call.id,
+        data: {
+          customer_name: callData.clientName,
+          reservation_date: data.reservation_date,
+          reservation_time: data.reservation_time,
+        }
+      });
+
+    } catch (error: any) {
+      console.error("❌ N8N Reservation Webhook error:", error);
+      res.status(500).json({
+        success: false,
+        error: "Erreur serveur",
+        message: error.message
+      });
+    }
+  });
+
   // N8N Webhook - Create a call from external automation with rich data
   // Route: POST /api/webhooks/n8n
   // Auth: Bearer token (API key)
