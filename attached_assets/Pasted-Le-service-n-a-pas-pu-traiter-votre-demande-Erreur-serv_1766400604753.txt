@@ -1,0 +1,41 @@
+Le service n'a pas pu traiter votre demande.
+Erreur serveur
+
+Demandé
+Détails de l'erreur
+
+À partir d'une requête HTTP
+Code d'erreur
+
+500
+
+Message complet
+
+500 - "{\"success\":false,\"error\":\"Erreur serveur\",\"message\":\"Invalid time value\"}"
+Demande
+
+{ "body": { "client_email": "N/A", "customer_name": "Pierry Labec", "customer_email": "N/A", "customer_phone": "+33664408873", "reservation_id": "qi654bpl54t59oa9ndicau8m10", "reservation_date": "23 décembre 2025", "reservation_time": "13:00" }, "headers": { "authorization": "**hidden**", "content-type": "application/json", "accept": "application/json,text/html,application/xhtml+xml,application/xml,text/*;q=0.9, image/*;q=0.8, */*;q=0.7" }, "method": "POST", "uri": "https://e4aa688c-f155-4eb6-8237-5b890594f8e0-00-2inoxeldcfvl7.picard.replit.dev/api/webhooks/n8n/reservation", "gzip": true, "rejectUnauthorized": true, "followRedirect": true, "resolveWithFullResponse": true, "followAllRedirects": true, "timeout": 300000, "encoding": null, "json": false, "useStream": true }
+Autres informations
+Index des articles
+
+0
+
+Type de nœud
+
+n8n-nodes-base.httpRequest
+
+Version Node
+
+4.3 (Latest)
+
+version n8n
+
+1.121.3 (Cloud)
+
+Temps
+
+22/12/2025 10:49:01
+
+trace de la pile
+
+NodeApiError: The service was not able to process your request at ExecuteContext.execute (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-nodes-base@file+packages+nodes-base_@aws-sdk+credential-providers@3.808.0_asn1.js@5_8da18263ca0574b0db58d4fefd8173ce/node_modules/n8n-nodes-base/nodes/HttpRequest/V3/HttpRequestV3.node.ts:858:16) at processTicksAndRejections (node:internal/process/task_queues:105:5) at WorkflowExecute.executeNode (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-core@file+packages+core_@opentelemetry+api@1.9.0_@opentelemetry+sdk-trace-base@1.30_08b575bec2313d5d8a4cc75358971443/node_modules/n8n-core/src/execution-engine/workflow-execute.ts:1074:8) at WorkflowExecute.runNode (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-core@file+packages+core_@opentelemetry+api@1.9.0_@opentelemetry+sdk-trace-base@1.30_08b575bec2313d5d8a4cc75358971443/node_modules/n8n-core/src/execution-engine/workflow-execute.ts:1255:11) at /usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-core@file+packages+core_@opentelemetry+api@1.9.0_@opentelemetry+sdk-trace-base@1.30_08b575bec2313d5d8a4cc75358971443/node_modules/n8n-core/src/execution-engine/workflow-execute.ts:1691:27 at /usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-core@file+packages+core_@opentelemetry+api@1.9.0_@opentelemetry+sdk-trace-base@1.30_08b575bec2313d5d8a4cc75358971443/node_modules/n8n-core/src/execution-engine/workflow-execute.ts:2307:11

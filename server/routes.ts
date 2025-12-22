@@ -2668,14 +2668,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`📅 N8N Reservation Webhook: Données reçues pour user ${userId}`, data);
 
-      // Helper to parse flexible datetime
+      // Helper to parse flexible datetime including French dates
       const parseFlexibleDate = (value: string | number | null | undefined): Date | undefined => {
         if (value === null || value === undefined || value === 'N/A' || value === '') return undefined;
         if (typeof value === 'number') {
           const ts = value > 9999999999 ? value : value * 1000;
           return new Date(ts);
         }
-        return new Date(value);
+        
+        // Try parsing French date format like "23 décembre 2025"
+        const frenchMonths: { [key: string]: number } = {
+          'janvier': 0, 'février': 1, 'fevrier': 1, 'mars': 2, 'avril': 3,
+          'mai': 4, 'juin': 5, 'juillet': 6, 'août': 7, 'aout': 7,
+          'septembre': 8, 'octobre': 9, 'novembre': 10, 'décembre': 11, 'decembre': 11
+        };
+        
+        const frenchMatch = String(value).match(/(\d{1,2})\s+(\w+)\s+(\d{4})/i);
+        if (frenchMatch) {
+          const day = parseInt(frenchMatch[1], 10);
+          const monthName = frenchMatch[2].toLowerCase();
+          const year = parseInt(frenchMatch[3], 10);
+          const month = frenchMonths[monthName];
+          if (month !== undefined) {
+            return new Date(year, month, day);
+          }
+        }
+        
+        // Fallback to standard parsing
+        const parsed = new Date(value);
+        return isNaN(parsed.getTime()) ? undefined : parsed;
       };
 
       // Normalize email (accept N/A or empty as null)
