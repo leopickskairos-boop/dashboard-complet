@@ -18,6 +18,7 @@ import { Send, Loader2, Mail, Phone, CheckCircle2, Clock, Eye, MousePointer, Tic
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import type { ReviewRequest, ReviewIncentive, MarketingSegment } from "@shared/schema";
+import { getDemoUrl, useDemoQueryKey } from "@/lib/demo-mode";
 
 type EligibleContact = {
   id: string;
@@ -74,17 +75,20 @@ export default function ReviewsCampaigns() {
     isActive: true,
   });
 
-  const { data: requests, isLoading: requestsLoading } = useQuery<ReviewRequest[]>({
-    queryKey: ["/api/reviews/requests"],
+  const { data: requestsData, isLoading: requestsLoading } = useQuery<{ requests: ReviewRequest[] } | ReviewRequest[]>({
+    queryKey: [getDemoUrl("/api/reviews/requests")],
   });
+  const requests = Array.isArray(requestsData) ? requestsData : (requestsData?.requests || []);
 
-  const { data: incentives } = useQuery<ReviewIncentive[]>({
-    queryKey: ["/api/reviews/incentives"],
+  const { data: incentivesData } = useQuery<ReviewIncentive[] | ReviewIncentive[]>({
+    queryKey: [getDemoUrl("/api/reviews/incentives")],
   });
+  const incentives = Array.isArray(incentivesData) ? incentivesData : [];
 
-  const { data: segments } = useQuery<MarketingSegment[]>({
-    queryKey: ["/api/marketing/segments"],
+  const { data: segmentsData } = useQuery<{ segments: MarketingSegment[] } | MarketingSegment[]>({
+    queryKey: [getDemoUrl("/api/marketing/segments")],
   });
+  const segments = Array.isArray(segmentsData) ? segmentsData : (segmentsData?.segments || []);
 
   // Construire l'URL avec les filtres
   const buildEligibleContactsUrl = () => {
@@ -127,7 +131,7 @@ export default function ReviewsCampaigns() {
     promosUsed: number;
     revenueGenerated: number;
   }>({
-    queryKey: ["/api/reviews/requests/stats"],
+    queryKey: [getDemoUrl("/api/reviews/requests/stats")],
   });
 
   const sendMutation = useMutation({
@@ -1186,9 +1190,9 @@ Pierre Bernard, , +33698765432`}
                     <TableCell className="font-medium text-sm">{request.customerName}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
-                        {request.channel === "email" && <Mail className="h-3.5 w-3.5 text-muted-foreground" />}
-                        {request.channel === "sms" && <Phone className="h-3.5 w-3.5 text-muted-foreground" />}
-                        {request.channel === "both" && (
+                        {request.sendMethod === "email" && <Mail className="h-3.5 w-3.5 text-muted-foreground" />}
+                        {request.sendMethod === "sms" && <Phone className="h-3.5 w-3.5 text-muted-foreground" />}
+                        {request.sendMethod === "both" && (
                           <>
                             <Mail className="h-3.5 w-3.5 text-muted-foreground" />
                             <Phone className="h-3.5 w-3.5 text-muted-foreground" />
@@ -1201,7 +1205,7 @@ Pierre Bernard, , +33698765432`}
                       {request.promoCode ? (
                         <div className="flex items-center gap-2">
                           <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{request.promoCode}</code>
-                          {request.promoUsedAt ? (
+                          {request.status === "promo_used" ? (
                             <Badge className="text-[10px] bg-[#4CEFAD]/15 text-[#4CEFAD]">Utilisé</Badge>
                           ) : (
                             <Button

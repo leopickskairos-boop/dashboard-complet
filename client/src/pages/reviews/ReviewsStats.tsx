@@ -25,6 +25,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
+import { getDemoUrl } from "@/lib/demo-mode";
 
 interface ReviewStats {
   globalScore: number;
@@ -61,9 +62,9 @@ export default function ReviewsStats() {
   const [, setLocation] = useLocation();
 
   const { data: stats, isLoading } = useQuery<ReviewStats>({
-    queryKey: ["/api/reviews/stats", { period }],
+    queryKey: [getDemoUrl("/api/reviews/stats"), { period }],
     queryFn: async () => {
-      const response = await fetch(`/api/reviews/stats?period=${period}`, { credentials: "include" });
+      const response = await fetch(getDemoUrl(`/api/reviews/stats?period=${period}`), { credentials: "include" });
       if (!response.ok) throw new Error("Failed to fetch stats");
       return response.json();
     },

@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { getDemoUrl } from "@/lib/demo-mode";
 import { Star, Search, Filter, MessageSquare, Flag, Eye, Loader2, Send, Sparkles } from "lucide-react";
 import { SiGoogle, SiFacebook, SiTripadvisor, SiYelp } from "react-icons/si";
 import { format } from "date-fns";
@@ -25,7 +26,7 @@ export default function ReviewsList() {
   const [responseText, setResponseText] = useState("");
 
   const { data: reviews, isLoading } = useQuery<Review[]>({
-    queryKey: ["/api/reviews", { search, platform: platformFilter !== "all" ? platformFilter : undefined, ratingMin: ratingFilter !== "all" ? parseInt(ratingFilter) : undefined }],
+    queryKey: [getDemoUrl("/api/reviews"), { search, platform: platformFilter !== "all" ? platformFilter : undefined, ratingMin: ratingFilter !== "all" ? parseInt(ratingFilter) : undefined }],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (search) params.append("search", search);
@@ -34,7 +35,7 @@ export default function ReviewsList() {
         params.append("ratingMin", ratingFilter);
         params.append("ratingMax", ratingFilter);
       }
-      const response = await fetch(`/api/reviews?${params.toString()}`, { credentials: "include" });
+      const response = await fetch(getDemoUrl(`/api/reviews?${params.toString()}`), { credentials: "include" });
       if (!response.ok) throw new Error("Failed to fetch reviews");
       return response.json();
     },
