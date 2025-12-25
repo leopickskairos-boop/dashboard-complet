@@ -105,17 +105,20 @@ export default function MarketingAutomations() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingAutomation, setEditingAutomation] = useState<any>(null);
 
-  const { data: automations, isLoading } = useQuery<any[]>({
+  const { data: automationsData, isLoading } = useQuery<{ automations: any[] }>({
     queryKey: ['/api/marketing/automations'],
   });
+  const automations = automationsData?.automations || [];
 
-  const { data: templates } = useQuery<any[]>({
+  const { data: templatesData } = useQuery<{ templates: any[] }>({
     queryKey: ['/api/marketing/templates'],
   });
+  const templates = templatesData?.templates || [];
 
-  const { data: segments } = useQuery<any[]>({
+  const { data: segmentsData } = useQuery<{ segments: any[] }>({
     queryKey: ['/api/marketing/segments'],
   });
+  const segments = segmentsData?.segments || [];
 
   const form = useForm<AutomationFormData>({
     resolver: zodResolver(automationFormSchema),
@@ -140,7 +143,7 @@ export default function MarketingAutomations() {
     onSuccess: () => {
       toast({ title: editingAutomation ? "Automation modifiée" : "Automation créée" });
       handleCloseCreate();
-      queryClientInst.invalidateQueries({ predicate: (query) => query.queryKey[0]?.toString().startsWith('/api/marketing/automations') });
+      queryClientInst.invalidateQueries({ predicate: (query) => query.queryKey[0]?.toString().startsWith('/api/marketing/automations') || false });
     },
     onError: (error: any) => {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
@@ -152,7 +155,7 @@ export default function MarketingAutomations() {
       return apiRequest('POST', `/api/marketing/automations/${id}/toggle`);
     },
     onSuccess: () => {
-      queryClientInst.invalidateQueries({ predicate: (query) => query.queryKey[0]?.toString().startsWith('/api/marketing/automations') });
+      queryClientInst.invalidateQueries({ predicate: (query) => query.queryKey[0]?.toString().startsWith('/api/marketing/automations') || false });
     },
     onError: (error: any) => {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
@@ -165,7 +168,7 @@ export default function MarketingAutomations() {
     },
     onSuccess: () => {
       toast({ title: "Automation supprimée" });
-      queryClientInst.invalidateQueries({ predicate: (query) => query.queryKey[0]?.toString().startsWith('/api/marketing/automations') });
+      queryClientInst.invalidateQueries({ predicate: (query) => query.queryKey[0]?.toString().startsWith('/api/marketing/automations') || false });
     },
     onError: (error: any) => {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });

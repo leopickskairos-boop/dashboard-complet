@@ -84,9 +84,10 @@ export default function IntegrationCustomers() {
   const [segmentFilter, setSegmentFilter] = useState("all");
   const [selectedCustomer, setSelectedCustomer] = useState<string | null>(null);
 
-  const { data: customers, isLoading } = useQuery<ExternalCustomer[]>({
+  const { data: customersData, isLoading } = useQuery<{ customers: ExternalCustomer[] }>({
     queryKey: ["/api/integrations/customers", { search, source: sourceFilter !== "all" ? sourceFilter : undefined, segment: segmentFilter !== "all" ? segmentFilter : undefined }],
   });
+  const customers = customersData?.customers || [];
 
   const { data: customerDetail, isLoading: loadingDetail } = useQuery<CustomerDetail>({
     queryKey: ["/api/integrations/customers", selectedCustomer],
@@ -103,7 +104,7 @@ export default function IntegrationCustomers() {
     return new Date(dateStr).toLocaleDateString('fr-FR');
   };
 
-  const uniqueSources = [...new Set(customers?.map(c => c.externalSource).filter(Boolean))];
+  const uniqueSources = Array.from(new Set(customers.map(c => c.externalSource).filter(Boolean)));
 
   return (
     <div className="space-y-4 md:space-y-6 p-4 md:p-0">

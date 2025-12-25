@@ -107,13 +107,15 @@ export default function MarketingCampaigns() {
   const [selectedCampaign, setSelectedCampaign] = useState<any>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
-  const { data: campaigns, isLoading } = useQuery<any[]>({
+  const { data: campaignsData, isLoading } = useQuery<{ campaigns: any[] }>({
     queryKey: [`/api/marketing/campaigns`],
   });
+  const campaigns = campaignsData?.campaigns || [];
 
-  const { data: templates } = useQuery<any[]>({
+  const { data: templatesData } = useQuery<{ templates: any[] }>({
     queryKey: ['/api/marketing/templates'],
   });
+  const templates = templatesData?.templates || [];
 
   const form = useForm<CampaignFormData>({
     resolver: zodResolver(campaignFormSchema),
@@ -141,7 +143,7 @@ export default function MarketingCampaigns() {
       toast({ title: "Campagne créée" });
       setIsCreateOpen(false);
       form.reset();
-      queryClientInst.invalidateQueries({ predicate: (query) => query.queryKey[0]?.toString().startsWith('/api/marketing/campaigns') });
+      queryClientInst.invalidateQueries({ predicate: (query) => query.queryKey[0]?.toString().startsWith('/api/marketing/campaigns') || false });
     },
     onError: (error: any) => {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
@@ -154,7 +156,7 @@ export default function MarketingCampaigns() {
     },
     onSuccess: () => {
       toast({ title: "Campagne supprimée" });
-      queryClientInst.invalidateQueries({ predicate: (query) => query.queryKey[0]?.toString().startsWith('/api/marketing/campaigns') });
+      queryClientInst.invalidateQueries({ predicate: (query) => query.queryKey[0]?.toString().startsWith('/api/marketing/campaigns') || false });
     },
     onError: (error: any) => {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
@@ -167,7 +169,7 @@ export default function MarketingCampaigns() {
     },
     onSuccess: () => {
       toast({ title: "Envoi lancé", description: "La campagne est en cours d'envoi" });
-      queryClientInst.invalidateQueries({ predicate: (query) => query.queryKey[0]?.toString().startsWith('/api/marketing/campaigns') });
+      queryClientInst.invalidateQueries({ predicate: (query) => query.queryKey[0]?.toString().startsWith('/api/marketing/campaigns') || false });
     },
     onError: (error: any) => {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });

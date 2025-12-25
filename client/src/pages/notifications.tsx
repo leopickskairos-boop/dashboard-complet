@@ -106,9 +106,10 @@ export default function Notifications() {
     ? `/api/notifications?${queryString}` 
     : '/api/notifications';
 
-  const { data: notifications = [], isLoading } = useQuery<Notification[]>({
+  const { data: notificationsData, isLoading } = useQuery<{ notifications: Notification[] } | Notification[]>({
     queryKey: [queryKey],
   });
+  const notifications = Array.isArray(notificationsData) ? notificationsData : (notificationsData?.notifications || []);
 
   const markAsReadMutation = useMutation({
     mutationFn: async (id: string) => {
