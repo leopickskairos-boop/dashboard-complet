@@ -405,24 +405,66 @@ export const demoReviewStats = {
 // ========== MARKETING ==========
 export const demoMarketingStats = {
   totalContacts: 1847,
+  contactsGrowth: 8.5,
   newContactsPeriod: 124,
   totalCampaigns: 12,
   campaignsSentPeriod: 3,
   totalEmailsSent: 4523,
+  totalSmsSent: 1256,
   avgOpenRate: 42.8,
   avgClickRate: 8.6,
+  globalOpenRate: 42.8,
+  globalClickRate: 8.6,
+  globalBounceRate: 1.2,
+  globalUnsubRate: 0.35,
   totalRevenue: 12450,
   costPerConversion: 2.3,
 };
 
 export const demoMarketingChartData = [
-  { date: daysAgo(6), emailsSent: 320, opened: 142, clicked: 28 },
-  { date: daysAgo(5), emailsSent: 0, opened: 0, clicked: 0 },
-  { date: daysAgo(4), emailsSent: 450, opened: 198, clicked: 42 },
-  { date: daysAgo(3), emailsSent: 0, opened: 0, clicked: 0 },
-  { date: daysAgo(2), emailsSent: 280, opened: 118, clicked: 22 },
-  { date: daysAgo(1), emailsSent: 0, opened: 0, clicked: 0 },
-  { date: daysAgo(0), emailsSent: 180, opened: 72, clicked: 15 },
+  { date: daysAgo(29), sent: 245, opened: 102, clicked: 18 },
+  { date: daysAgo(28), sent: 0, opened: 0, clicked: 0 },
+  { date: daysAgo(27), sent: 380, opened: 158, clicked: 32 },
+  { date: daysAgo(26), sent: 0, opened: 0, clicked: 0 },
+  { date: daysAgo(25), sent: 290, opened: 125, clicked: 24 },
+  { date: daysAgo(24), sent: 0, opened: 0, clicked: 0 },
+  { date: daysAgo(23), sent: 410, opened: 185, clicked: 38 },
+  { date: daysAgo(22), sent: 0, opened: 0, clicked: 0 },
+  { date: daysAgo(21), sent: 350, opened: 148, clicked: 29 },
+  { date: daysAgo(20), sent: 0, opened: 0, clicked: 0 },
+  { date: daysAgo(19), sent: 425, opened: 195, clicked: 42 },
+  { date: daysAgo(18), sent: 0, opened: 0, clicked: 0 },
+  { date: daysAgo(17), sent: 280, opened: 118, clicked: 22 },
+  { date: daysAgo(16), sent: 0, opened: 0, clicked: 0 },
+  { date: daysAgo(15), sent: 390, opened: 172, clicked: 35 },
+  { date: daysAgo(14), sent: 0, opened: 0, clicked: 0 },
+  { date: daysAgo(13), sent: 310, opened: 138, clicked: 28 },
+  { date: daysAgo(12), sent: 890, opened: 412, clicked: 85 },
+  { date: daysAgo(11), sent: 0, opened: 0, clicked: 0 },
+  { date: daysAgo(10), sent: 265, opened: 112, clicked: 21 },
+  { date: daysAgo(9), sent: 0, opened: 0, clicked: 0 },
+  { date: daysAgo(8), sent: 345, opened: 152, clicked: 31 },
+  { date: daysAgo(7), sent: 0, opened: 0, clicked: 0 },
+  { date: daysAgo(6), sent: 320, opened: 142, clicked: 28 },
+  { date: daysAgo(5), sent: 1245, opened: 598, clicked: 156 },
+  { date: daysAgo(4), sent: 450, opened: 198, clicked: 42 },
+  { date: daysAgo(3), sent: 0, opened: 0, clicked: 0 },
+  { date: daysAgo(2), sent: 280, opened: 118, clicked: 22 },
+  { date: daysAgo(1), sent: 0, opened: 0, clicked: 0 },
+  { date: daysAgo(0), sent: 180, opened: 72, clicked: 15 },
+];
+
+export const demoMarketingChannelBreakdown = {
+  email: { sent: 4523, opened: 1935, clicked: 389 },
+  sms: { sent: 1256, delivered: 1218 },
+};
+
+export const demoMarketingTopCampaigns = [
+  { id: "camp-001", name: "Menu de Noël 2024", type: "email", sentAt: daysAgo(5), recipientCount: 1245, openRate: 48.2, clickRate: 12.5, revenue: 3450 },
+  { id: "camp-002", name: "Brunch Spécial Dimanche", type: "sms", sentAt: daysAgo(12), recipientCount: 890, openRate: null, clickRate: 15.8, revenue: 2890 },
+  { id: "camp-005", name: "Newsletter Décembre", type: "email", sentAt: daysAgo(18), recipientCount: 1623, openRate: 38.5, clickRate: 6.2, revenue: 1820 },
+  { id: "camp-006", name: "Happy Hour Vendredi", type: "sms", sentAt: daysAgo(25), recipientCount: 756, openRate: null, clickRate: 22.1, revenue: 2150 },
+  { id: "camp-007", name: "Soirée Jazz Live", type: "email", sentAt: daysAgo(32), recipientCount: 945, openRate: 52.3, clickRate: 18.7, revenue: 4280 },
 ];
 
 export const demoMarketingContacts = [

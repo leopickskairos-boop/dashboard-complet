@@ -15,6 +15,8 @@ import {
   demoMarketingChartData,
   demoMarketingContacts,
   demoMarketingCampaigns,
+  demoMarketingChannelBreakdown,
+  demoMarketingTopCampaigns,
   demoGuaranteeSessions,
   demoNoShows,
   demoGuaranteeStats,
@@ -173,7 +175,15 @@ export function registerDemoRoutes(app: Express) {
   });
 
   app.get("/api/demo/marketing/analytics/performance", (req, res) => {
-    res.json(demoMarketingChartData);
+    res.json({ datasets: demoMarketingChartData });
+  });
+
+  app.get("/api/demo/marketing/analytics/channels", (req, res) => {
+    res.json(demoMarketingChannelBreakdown);
+  });
+
+  app.get("/api/demo/marketing/analytics/top-campaigns", (req, res) => {
+    res.json(demoMarketingTopCampaigns);
   });
 
   app.get("/api/demo/marketing/contacts", (req, res) => {

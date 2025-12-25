@@ -28,6 +28,7 @@ import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, 
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Area, AreaChart 
 } from "recharts";
+import { getDemoUrl } from "@/lib/demo-mode";
 
 export default function MarketingAnalytics() {
   const [period, setPeriod] = useState<'week' | 'month' | 'year'>('month');
@@ -43,24 +44,24 @@ export default function MarketingAnalytics() {
     globalBounceRate: number;
     globalUnsubRate: number;
   }>({
-    queryKey: [`/api/marketing/analytics/overview?period=${period}`],
+    queryKey: [getDemoUrl(`/api/marketing/analytics/overview?period=${period}`)],
   });
 
   const { data: performanceData, isLoading: performanceLoading } = useQuery<{
     datasets: { date: string; sent: number; opened: number; clicked: number }[];
   }>({
-    queryKey: [`/api/marketing/analytics/performance?period=${period}`],
+    queryKey: [getDemoUrl(`/api/marketing/analytics/performance?period=${period}`)],
   });
 
   const { data: channelBreakdown } = useQuery<{
     email: { sent: number; opened: number; clicked: number };
     sms: { sent: number; delivered: number };
   }>({
-    queryKey: [`/api/marketing/analytics/channels?period=${period}`],
+    queryKey: [getDemoUrl(`/api/marketing/analytics/channels?period=${period}`)],
   });
 
   const { data: topCampaigns } = useQuery<any[]>({
-    queryKey: [`/api/marketing/analytics/top-campaigns?period=${period}`],
+    queryKey: [getDemoUrl(`/api/marketing/analytics/top-campaigns?period=${period}`)],
   });
 
   const kpiCards = [
