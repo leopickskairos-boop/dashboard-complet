@@ -76,14 +76,6 @@ export function registerDemoRoutes(app: Express) {
     });
   });
 
-  app.get("/api/demo/calls/:id", (req, res) => {
-    const call = demoCalls.find(c => c.id === req.params.id);
-    if (!call) {
-      return res.status(404).json({ message: "Appel non trouvé" });
-    }
-    res.json(call);
-  });
-
   app.get("/api/demo/calls/chart-data", (req, res) => {
     res.json(demoChartData);
   });
@@ -93,6 +85,14 @@ export function registerDemoRoutes(app: Express) {
       insights: demoAIInsights,
       generated: true,
     });
+  });
+
+  app.get("/api/demo/calls/:id", (req, res) => {
+    const call = demoCalls.find(c => c.id === req.params.id);
+    if (!call) {
+      return res.status(404).json({ message: "Appel non trouvé" });
+    }
+    res.json(call);
   });
 
   // ========== REVIEWS ==========
@@ -125,12 +125,17 @@ export function registerDemoRoutes(app: Express) {
     res.json(demoReviewStats);
   });
 
-  app.get("/api/demo/reviews/:id", (req, res) => {
-    const review = demoReviews.find(r => r.id === req.params.id);
-    if (!review) {
-      return res.status(404).json({ message: "Avis non trouvé" });
-    }
-    res.json(review);
+  app.get("/api/demo/reviews/requests", (req, res) => {
+    res.json({
+      requests: [
+        { id: "rr-001", customerName: "Jean Dupont", customerEmail: "jean@example.com", customerPhone: "+33612345678", status: "sent", sentAt: "2024-12-20T10:30:00Z", platform: "google" },
+        { id: "rr-002", customerName: "Marie Martin", customerEmail: "marie@example.com", customerPhone: "+33698765432", status: "completed", sentAt: "2024-12-19T14:20:00Z", completedAt: "2024-12-19T16:45:00Z", platform: "tripadvisor" },
+        { id: "rr-003", customerName: "Pierre Lefebvre", customerEmail: "pierre@example.com", customerPhone: "+33678901234", status: "pending", scheduledFor: "2024-12-22T09:00:00Z", platform: "google" },
+        { id: "rr-004", customerName: "Sophie Bernard", customerEmail: "sophie@example.com", customerPhone: "+33645678901", status: "sent", sentAt: "2024-12-21T11:00:00Z", platform: "facebook" },
+        { id: "rr-005", customerName: "Luc Moreau", customerEmail: "luc@example.com", customerPhone: "+33623456789", status: "clicked", sentAt: "2024-12-18T16:30:00Z", clickedAt: "2024-12-18T17:00:00Z", platform: "google" },
+      ],
+      total: 5,
+    });
   });
 
   app.get("/api/demo/reviews/requests/stats", (req, res) => {
@@ -143,6 +148,22 @@ export function registerDemoRoutes(app: Express) {
       promosUsed: 12,
       revenueGenerated: 1840,
     });
+  });
+
+  app.get("/api/demo/reviews/incentives", (req, res) => {
+    res.json([
+      { id: "inc-001", name: "10% de réduction", type: "percentage", value: 10, minPurchase: 30, isDefault: true, usageCount: 45, createdAt: "2024-10-01T00:00:00Z" },
+      { id: "inc-002", name: "5€ offerts", type: "fixed_amount", value: 5, minPurchase: 25, isDefault: false, usageCount: 23, createdAt: "2024-11-01T00:00:00Z" },
+      { id: "inc-003", name: "Dessert offert", type: "free_item", description: "Un dessert au choix offert", isDefault: false, usageCount: 18, createdAt: "2024-11-15T00:00:00Z" },
+    ]);
+  });
+
+  app.get("/api/demo/reviews/:id", (req, res) => {
+    const review = demoReviews.find(r => r.id === req.params.id);
+    if (!review) {
+      return res.status(404).json({ message: "Avis non trouvé" });
+    }
+    res.json(review);
   });
 
   // ========== MARKETING ==========
