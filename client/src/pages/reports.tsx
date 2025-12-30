@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { FileText, Download, Calendar, Clock, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
+import { getDemoUrl } from "@/lib/demo-mode";
 
 function parseDate(dateStr: string | null | undefined): Date | null {
   if (!dateStr) return null;
@@ -93,9 +94,11 @@ function formatReportMonth(reportMonth: string | null | undefined) {
 }
 
 export default function ReportsPage() {
-  const { data: reports, isLoading, error } = useQuery<MonthlyReportRow[]>({
-    queryKey: ["/api/reports"],
+  const { data: reportsData, isLoading, error } = useQuery<{ reports: MonthlyReportRow[] } | MonthlyReportRow[]>({
+    queryKey: [getDemoUrl("/api/reports")],
   });
+  
+  const reports = Array.isArray(reportsData) ? reportsData : (reportsData?.reports || []);
 
   const handleDownload = async (reportId: number) => {
     window.open(`/api/reports/${reportId}/download`, "_blank");

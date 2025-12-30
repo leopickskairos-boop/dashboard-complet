@@ -128,13 +128,14 @@ export function registerDemoRoutes(app: Express) {
   });
 
   app.get("/api/demo/reviews/requests", (req, res) => {
+    const now = new Date();
     res.json({
       requests: [
-        { id: "rr-001", customerName: "Jean Dupont", customerEmail: "jean@example.com", customerPhone: "+33612345678", status: "sent", sentAt: "2024-12-20T10:30:00Z", platform: "google" },
-        { id: "rr-002", customerName: "Marie Martin", customerEmail: "marie@example.com", customerPhone: "+33698765432", status: "completed", sentAt: "2024-12-19T14:20:00Z", completedAt: "2024-12-19T16:45:00Z", platform: "tripadvisor" },
-        { id: "rr-003", customerName: "Pierre Lefebvre", customerEmail: "pierre@example.com", customerPhone: "+33678901234", status: "pending", scheduledFor: "2024-12-22T09:00:00Z", platform: "google" },
-        { id: "rr-004", customerName: "Sophie Bernard", customerEmail: "sophie@example.com", customerPhone: "+33645678901", status: "sent", sentAt: "2024-12-21T11:00:00Z", platform: "facebook" },
-        { id: "rr-005", customerName: "Luc Moreau", customerEmail: "luc@example.com", customerPhone: "+33623456789", status: "clicked", sentAt: "2024-12-18T16:30:00Z", clickedAt: "2024-12-18T17:00:00Z", platform: "google" },
+        { id: "rr-001", customerName: "Jean Dupont", customerEmail: "jean@example.com", customerPhone: "+33612345678", status: "sent", sendMethod: "both", sentAt: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(), createdAt: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString(), platform: "google", promoCode: "MERCI-A1B2C3" },
+        { id: "rr-002", customerName: "Marie Martin", customerEmail: "marie@example.com", customerPhone: "+33698765432", status: "promo_used", sendMethod: "email", sentAt: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000).toISOString(), completedAt: new Date(now.getTime() - 4 * 24 * 60 * 60 * 1000).toISOString(), createdAt: new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000).toISOString(), platform: "tripadvisor", promoCode: "MERCI-D4E5F6" },
+        { id: "rr-003", customerName: "Pierre Lefebvre", customerEmail: "pierre@example.com", customerPhone: "+33678901234", status: "pending", sendMethod: "sms", scheduledFor: new Date(now.getTime() + 1 * 24 * 60 * 60 * 1000).toISOString(), createdAt: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000).toISOString(), platform: "google" },
+        { id: "rr-004", customerName: "Sophie Bernard", customerEmail: "sophie@example.com", customerPhone: "+33645678901", status: "sent", sendMethod: "email", sentAt: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000).toISOString(), createdAt: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(), platform: "facebook", promoCode: "MERCI-G7H8I9" },
+        { id: "rr-005", customerName: "Luc Moreau", customerEmail: "luc@example.com", customerPhone: "+33623456789", status: "clicked", sendMethod: "both", sentAt: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString(), clickedAt: new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000).toISOString(), createdAt: new Date(now.getTime() - 8 * 24 * 60 * 60 * 1000).toISOString(), platform: "google" },
       ],
       total: 5,
     });

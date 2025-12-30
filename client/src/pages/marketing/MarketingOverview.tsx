@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from "recharts";
 import { cn } from "@/lib/utils";
+import { getDemoUrl } from "@/lib/demo-mode";
 
 interface MarketingStats {
   totalContacts: number;
@@ -43,23 +44,30 @@ interface MarketingStats {
   costPerConversion?: number;
 }
 
+interface ChartDataItem {
+  date: string;
+  sent?: number;
+  emailsSent?: number;
+  opened: number;
+  clicked: number;
+  conversions?: number;
+}
+
 export default function MarketingOverview() {
   const [period, setPeriod] = useState<'week' | 'month' | 'year'>('month');
   const [, setLocation] = useLocation();
 
   const { data: stats, isLoading: statsLoading } = useQuery<MarketingStats>({
-    queryKey: [`/api/marketing/analytics/overview?period=${period}`],
+    queryKey: [getDemoUrl(`/api/marketing/analytics/overview?period=${period}`)],
   });
 
-  const { data: chartData, isLoading: chartLoading } = useQuery<Array<{
-    date: string;
-    emailsSent: number;
-    opened: number;
-    clicked: number;
-    conversions?: number;
-  }>>({
-    queryKey: [`/api/marketing/analytics/performance?period=${period}`],
+  const { data: chartDataResponse, isLoading: chartLoading } = useQuery<{ datasets: ChartDataItem[] } | ChartDataItem[]>({
+    queryKey: [getDemoUrl(`/api/marketing/analytics/performance?period=${period}`)],
   });
+  
+  const chartData = Array.isArray(chartDataResponse) 
+    ? chartDataResponse 
+    : (chartDataResponse?.datasets || []);
 
   const formatTrendDate = (date: string) => {
     const d = new Date(date);
