@@ -287,7 +287,7 @@ const flexibleDateTime = z.union([
 
 export const n8nCallWebhookSchema = z.object({
   // Basic call info (required)
-  phoneNumber: z.string().min(1, "Numéro de téléphone requis"),
+  phoneNumber: z.string().nullable().optional(), // Accept null or undefined from N8N
   status: z.enum(['active', 'completed', 'failed', 'canceled', 'no_answer']),
   startTime: flexibleDateTime, // Accept string, number, or null
   

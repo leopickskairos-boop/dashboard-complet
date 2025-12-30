@@ -2804,7 +2804,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId,
         
         // Basic call info
-        phoneNumber: data.phoneNumber,
+        phoneNumber: data.phoneNumber || 'Numéro masqué', // Default if null/undefined
         status: data.status,
         startTime: parseFlexibleDate(data.startTime) || new Date(), // Default to now if missing
         endTime: parseFlexibleDate(data.endTime),
